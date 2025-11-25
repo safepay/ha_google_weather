@@ -1,12 +1,12 @@
 {
   "domain": "google_weather",
   "name": "Google Weather",
-  "codeowners": ["@yourusername"],
+  "codeowners": ["@safepay"],
   "config_flow": true,
-  "documentation": "https://github.com/yourusername/ha-google-weather",
+  "documentation": "https://github.com/safepay/ha_google_weather",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/yourusername/ha-google-weather/issues",
+  "issue_tracker": "https://github.com/safepay/ha_google_weather/issues",
   "requirements": [
     "google-auth>=2.0.0",
     "google-auth-oauthlib>=0.4.0",
