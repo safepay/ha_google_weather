@@ -135,46 +135,47 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 3. Search for "Google Weather"
 4. Follow the OAuth flow to authenticate with Google
 5. Configure your location:
-   - **Location Name**: Friendly name (e.g., "Home", "Office", "Sydney")
-   - **Entity Prefix**: Prefix for all entities (default: "gw")
+   - **Location / Prefix**: Location name used for entity IDs (default: "home")
    - **Latitude**: Location latitude (defaults to Home Assistant location)
    - **Longitude**: Location longitude (defaults to Home Assistant location)
    - **Unit System**: Choose METRIC or IMPERIAL
 
 ## Entity Naming
 
-For a location named "Home" with prefix "gw", the combined prefix "gw_home" will be used for all entity IDs:
+The location field is used directly for all entity IDs (after converting to lowercase and replacing spaces with underscores).
+
+**Example: Location = "home"**
 
 ### Weather Entity
-- `weather.gw_home`
+- `weather.home`
 
 ### Observational Sensors (Device: "Home - Observational Sensors")
-- `sensor.gw_home_temperature`
-- `sensor.gw_home_feels_like`
-- `sensor.gw_home_humidity`
-- `sensor.gw_home_pressure`
-- `sensor.gw_home_wind_speed`
-- `sensor.gw_home_wind_gust`
-- `sensor.gw_home_wind_direction`
-- `sensor.gw_home_visibility`
-- `sensor.gw_home_cloud_cover`
-- `sensor.gw_home_uv_index`
-- `sensor.gw_home_precipitation_probability`
-- `sensor.gw_home_precipitation_amount`
-- `sensor.gw_home_thunderstorm_probability`
-- `sensor.gw_home_dew_point`
-- `sensor.gw_home_heat_index`
-- `sensor.gw_home_wind_chill`
-- `sensor.gw_home_temp_change_24h`
-- `sensor.gw_home_max_temp_24h`
-- `sensor.gw_home_min_temp_24h`
-- `sensor.gw_home_precipitation_24h`
-- `sensor.gw_home_weather_condition`
+- `sensor.home_temperature`
+- `sensor.home_feels_like`
+- `sensor.home_humidity`
+- `sensor.home_pressure`
+- `sensor.home_wind_speed`
+- `sensor.home_wind_gust`
+- `sensor.home_wind_direction`
+- `sensor.home_visibility`
+- `sensor.home_cloud_cover`
+- `sensor.home_uv_index`
+- `sensor.home_precipitation_probability`
+- `sensor.home_precipitation_amount`
+- `sensor.home_thunderstorm_probability`
+- `sensor.home_dew_point`
+- `sensor.home_heat_index`
+- `sensor.home_wind_chill`
+- `sensor.home_temp_change_24h`
+- `sensor.home_max_temp_24h`
+- `sensor.home_min_temp_24h`
+- `sensor.home_precipitation_24h`
+- `sensor.home_weather_condition`
 
 ### Weather Alert Binary Sensors (Device: "Home - Binary Warning Sensors")
-- `binary_sensor.gw_home_weather_alert`
-- `binary_sensor.gw_home_severe_weather_alert`
-- `binary_sensor.gw_home_urgent_weather_alert`
+- `binary_sensor.home_weather_alert`
+- `binary_sensor.home_severe_weather_alert`
+- `binary_sensor.home_urgent_weather_alert`
 
 ## Smart Polling & API Optimization
 
@@ -260,14 +261,15 @@ This automatically reduces API calls during nighttime hours when weather changes
 
 ### Location Configuration
 
-The prefix and location are combined to create entity IDs:
-- **Prefix**: Short identifier set during setup (default: "gw")
-- **Location Name**: Used in entity names and combined with prefix (e.g., "Home", "Office", "Melbourne")
+The location field serves as the entity ID prefix and friendly name:
+- **Location**: Identifier used in entity IDs (default: "home")
 - **Coordinates**: Default to your Home Assistant location but can be customized
+- **Friendly Names**: Auto-generated from location using title case
 
-Example: For prefix "gw" and location "Sydney Office", the combined prefix "gw_sydney_office" is used:
-- Weather entity: `weather.gw_sydney_office`
-- Sensors: `sensor.gw_sydney_office_temperature`, etc.
+Examples:
+- Location: "home" → Entity IDs: `weather.home`, `sensor.home_temperature`
+- Location: "office" → Entity IDs: `weather.office`, `sensor.office_temperature`
+- Location: "gw_home" → Entity IDs: `weather.gw_home`, `sensor.gw_home_temperature`
 
 ## Updating Configuration
 
@@ -307,7 +309,7 @@ The integration will automatically reload with the new settings. Changes to upda
 
 ```yaml
 type: weather-forecast
-entity: weather.gw_home
+entity: weather.home
 forecast_type: daily
 ```
 
@@ -318,13 +320,13 @@ automation:
   - alias: "Severe Weather Alert"
     trigger:
       - platform: state
-        entity_id: binary_sensor.gw_home_severe_weather_alert
+        entity_id: binary_sensor.home_severe_weather_alert
         to: "on"
     action:
       - service: notify.mobile_app
         data:
           message: >
-            {% set alerts = state_attr('binary_sensor.gw_home_severe_weather_alert', 'alerts') %}
+            {% set alerts = state_attr('binary_sensor.home_severe_weather_alert', 'alerts') %}
             {% for alert in alerts %}
             {{ alert.title }}: {{ alert.instruction }}
             {% endfor %}
@@ -338,7 +340,7 @@ automation:
   - alias: "High UV Index Alert"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.gw_home_uv_index
+        entity_id: sensor.home_uv_index
         above: 7
     condition:
       - condition: time
@@ -347,7 +349,7 @@ automation:
     action:
       - service: notify.family
         data:
-          message: "UV index is {{ states('sensor.gw_home_uv_index') }}. Remember sunscreen!"
+          message: "UV index is {{ states('sensor.home_uv_index') }}. Remember sunscreen!"
 ```
 
 ### Temperature Trend
@@ -360,7 +362,7 @@ sensor:
       temperature_trend:
         friendly_name: "Temperature Trend"
         value_template: >
-          {% set change = states('sensor.gw_home_temp_change_24h') | float %}
+          {% set change = states('sensor.home_temp_change_24h') | float %}
           {% if change > 5 %}
             Rising significantly
           {% elif change > 0 %}
@@ -377,7 +379,7 @@ sensor:
 The weather alert binary sensors include comprehensive attributes:
 
 ```yaml
-# Example attributes on binary_sensor.gw_home_weather_alert
+# Example attributes on binary_sensor.home_weather_alert
 alert_count: 2
 max_severity: "SEVERE"
 data_source: "National Weather Service"

@@ -5,7 +5,6 @@ DOMAIN = "google_weather"
 
 # Configuration
 CONF_LOCATION = "location"
-CONF_PREFIX = "prefix"
 CONF_LATITUDE = "latitude"
 CONF_LONGITUDE = "longitude"
 CONF_UNIT_SYSTEM = "unit_system"
@@ -23,7 +22,6 @@ CONF_NIGHT_START = "night_start"
 CONF_NIGHT_END = "night_end"
 
 # Defaults
-DEFAULT_PREFIX = "gw"
 DEFAULT_UPDATE_INTERVAL = timedelta(minutes=15)
 DEFAULT_UNIT_SYSTEM = "METRIC"
 
