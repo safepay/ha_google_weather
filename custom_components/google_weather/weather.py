@@ -22,7 +22,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_LOCATION, CONF_PREFIX, CONF_UNIT_SYSTEM, DOMAIN, UNIT_SYSTEM_IMPERIAL
+from .const import CONF_LOCATION, CONF_UNIT_SYSTEM, DOMAIN, UNIT_SYSTEM_IMPERIAL
 from .coordinator import GoogleWeatherCoordinator
 
 # Map Google Weather API condition types to Home Assistant condition types
@@ -65,10 +65,9 @@ async def async_setup_entry(
     """Set up Google Weather entity."""
     coordinator: GoogleWeatherCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    prefix = entry.data.get(CONF_PREFIX, "gw")
-    location = entry.data.get(CONF_LOCATION, "Home")
+    location = entry.data.get(CONF_LOCATION, "home")
 
-    async_add_entities([GoogleWeatherEntity(coordinator, entry, prefix, location)])
+    async_add_entities([GoogleWeatherEntity(coordinator, entry, location)])
 
 
 class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEntity):
@@ -82,17 +81,22 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
         self,
         coordinator: GoogleWeatherCoordinator,
         entry: ConfigEntry,
-        prefix: str,
         location: str,
     ) -> None:
         """Initialize the weather entity."""
         super().__init__(coordinator)
 
-        self._attr_name = f"{location} Weather"
-        self._attr_unique_id = f"{prefix}_{location.lower().replace(' ', '_')}_weather"
+        # Use location directly for entity ID (slugified)
+        location_slug = location.lower().replace(" ", "_")
+
+        # Create friendly name from location (title case)
+        location_name = location.replace("_", " ").title()
+
+        self._attr_name = f"{location_name} Weather"
+        self._attr_unique_id = location_slug
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": f"Google Weather - {location}",
+            "name": f"Google Weather - {location_name}",
             "manufacturer": "Google",
             "model": "Weather API",
             "sw_version": "v1",

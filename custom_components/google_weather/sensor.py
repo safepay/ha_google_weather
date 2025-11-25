@@ -25,7 +25,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_LOCATION, CONF_PREFIX, DOMAIN
+from .const import CONF_LOCATION, DOMAIN
 from .coordinator import GoogleWeatherCoordinator
 
 
@@ -254,11 +254,10 @@ async def async_setup_entry(
     """Set up Google Weather sensor entities."""
     coordinator: GoogleWeatherCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    prefix = entry.data.get(CONF_PREFIX, "gw")
-    location = entry.data.get(CONF_LOCATION, "Home")
+    location = entry.data.get(CONF_LOCATION, "home")
 
     async_add_entities(
-        GoogleWeatherSensor(coordinator, entry, description, prefix, location)
+        GoogleWeatherSensor(coordinator, entry, description, location)
         for description in SENSOR_TYPES
     )
 
@@ -275,19 +274,23 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
         coordinator: GoogleWeatherCoordinator,
         entry: ConfigEntry,
         description: GoogleWeatherSensorDescription,
-        prefix: str,
         location: str,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self.entity_description = description
 
+        # Use location directly for entity ID (slugified)
         location_slug = location.lower().replace(" ", "_")
-        self._attr_name = f"{location} {description.name}"
-        self._attr_unique_id = f"{prefix}_{location_slug}_{description.key}"
+
+        # Create friendly name from location (title case)
+        location_name = location.replace("_", " ").title()
+
+        self._attr_name = f"{location_name} {description.name}"
+        self._attr_unique_id = f"{location_slug}_{description.key}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_sensors")},
-            "name": f"{location} - Observational Sensors",
+            "name": f"{location_name} - Observational Sensors",
             "manufacturer": "Google",
             "model": "Weather API - Sensors",
             "sw_version": "v1",

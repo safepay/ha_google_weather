@@ -24,7 +24,6 @@ from .const import (
     CONF_LOCATION,
     CONF_NIGHT_END,
     CONF_NIGHT_START,
-    CONF_PREFIX,
     CONF_UNIT_SYSTEM,
     DEFAULT_ALERTS_DAY_INTERVAL,
     DEFAULT_ALERTS_NIGHT_INTERVAL,
@@ -36,7 +35,6 @@ from .const import (
     DEFAULT_HOURLY_NIGHT_INTERVAL,
     DEFAULT_NIGHT_END,
     DEFAULT_NIGHT_START,
-    DEFAULT_PREFIX,
     DEFAULT_UNIT_SYSTEM,
     DOMAIN,
     OAUTH2_SCOPES,
@@ -136,8 +134,7 @@ class OAuth2FlowHandler(
             step_id="location",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_LOCATION, default="Home"): str,
-                    vol.Optional(CONF_PREFIX, default=DEFAULT_PREFIX): str,
+                    vol.Required(CONF_LOCATION, default="home"): str,
                     vol.Required(CONF_LATITUDE, default=default_latitude): vol.Coerce(float),
                     vol.Required(CONF_LONGITUDE, default=default_longitude): vol.Coerce(float),
                     vol.Required(CONF_UNIT_SYSTEM, default=DEFAULT_UNIT_SYSTEM): vol.In(UNIT_SYSTEMS),

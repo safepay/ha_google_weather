@@ -135,18 +135,19 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 3. Search for "Google Weather"
 4. Follow the OAuth flow to authenticate with Google
 5. Configure your location:
-   - **Location Name**: Friendly name (e.g., "Home", "Office", "Sydney")
-   - **Entity Prefix**: Prefix for all entities (default: "gw")
+   - **Location / Prefix**: Location name used for entity IDs (default: "home")
    - **Latitude**: Location latitude (defaults to Home Assistant location)
    - **Longitude**: Location longitude (defaults to Home Assistant location)
    - **Unit System**: Choose METRIC or IMPERIAL
 
 ## Entity Naming
 
-For a location named "Home" with prefix "gw":
+The location field is used directly for all entity IDs (after converting to lowercase and replacing spaces with underscores).
+
+**Example: Location = "home"**
 
 ### Weather Entity
-- `weather.home_weather`
+- `weather.home`
 
 ### Observational Sensors (Device: "Home - Observational Sensors")
 - `sensor.home_temperature`
@@ -260,14 +261,15 @@ This automatically reduces API calls during nighttime hours when weather changes
 
 ### Location Configuration
 
-The prefix (e.g., "gw_melbourne") is fully configurable:
-- **Prefix**: Set during initial setup (default: "gw")
-- **Location Name**: Used in entity names (e.g., "Home", "Office", "Melbourne")
+The location field serves as the entity ID prefix and friendly name:
+- **Location**: Identifier used in entity IDs (default: "home")
 - **Coordinates**: Default to your Home Assistant location but can be customized
+- **Friendly Names**: Auto-generated from location using title case
 
-Example: For prefix "gw_syd" and location "Sydney Office":
-- Weather entity: `weather.sydney_office_weather`
-- Sensors: `sensor.sydney_office_temperature`, etc.
+Examples:
+- Location: "home" → Entity IDs: `weather.home`, `sensor.home_temperature`
+- Location: "office" → Entity IDs: `weather.office`, `sensor.office_temperature`
+- Location: "gw_home" → Entity IDs: `weather.gw_home`, `sensor.gw_home_temperature`
 
 ## Updating Configuration
 
@@ -307,7 +309,7 @@ The integration will automatically reload with the new settings. Changes to upda
 
 ```yaml
 type: weather-forecast
-entity: weather.home_weather
+entity: weather.home
 forecast_type: daily
 ```
 
