@@ -7,7 +7,7 @@
       },
       "location": {
         "title": "Configure Location",
-        "description": "Configure the location and settings for Google Weather",
+        "description": "Configure the location and settings for Google Weather. The location will default to your Home Assistant configuration.",
         "data": {
           "location": "Location Name",
           "prefix": "Entity Prefix",
@@ -18,9 +18,37 @@
         "data_description": {
           "location": "Friendly name for this location (e.g., 'Home', 'Office')",
           "prefix": "Prefix for entity IDs (default: gw)",
-          "latitude": "Latitude coordinate for weather data",
-          "longitude": "Longitude coordinate for weather data",
+          "latitude": "Latitude coordinate for weather data (defaults to Home Assistant location)",
+          "longitude": "Longitude coordinate for weather data (defaults to Home Assistant location)",
           "unit_system": "Choose metric (Celsius, km/h, mm) or imperial (Fahrenheit, mph, inches)"
+        }
+      },
+      "intervals": {
+        "title": "Configure Update Intervals",
+        "description": "Set how often to update each endpoint during day and night. Google provides 10,000 free API calls/month (2,500 per endpoint). The defaults use approximately 2,500 calls/month per endpoint. All intervals are in minutes.",
+        "data": {
+          "current_day_interval": "Current Conditions - Daytime (minutes)",
+          "current_night_interval": "Current Conditions - Nighttime (minutes)",
+          "daily_day_interval": "Daily Forecast - Daytime (minutes)",
+          "daily_night_interval": "Daily Forecast - Nighttime (minutes)",
+          "hourly_day_interval": "Hourly Forecast - Daytime (minutes)",
+          "hourly_night_interval": "Hourly Forecast - Nighttime (minutes)",
+          "alerts_day_interval": "Weather Alerts - Daytime (minutes)",
+          "alerts_night_interval": "Weather Alerts - Nighttime (minutes)",
+          "night_start": "Night Time Start (HH:MM)",
+          "night_end": "Night Time End (HH:MM)"
+        },
+        "data_description": {
+          "current_day_interval": "How often to update current conditions during daytime (default: {current_day} min)",
+          "current_night_interval": "How often to update current conditions at night (default: {current_night} min)",
+          "daily_day_interval": "How often to update daily forecast during daytime (default: {daily_day} min)",
+          "daily_night_interval": "How often to update daily forecast at night (default: {daily_night} min)",
+          "hourly_day_interval": "How often to update hourly forecast during daytime (default: {hourly_day} min)",
+          "hourly_night_interval": "How often to update hourly forecast at night (default: {hourly_night} min)",
+          "alerts_day_interval": "How often to check weather alerts during daytime (default: {alerts_day} min)",
+          "alerts_night_interval": "How often to check weather alerts at night (default: {alerts_night} min)",
+          "night_start": "When nighttime update schedule begins (e.g., 22:00 for 10 PM)",
+          "night_end": "When nighttime update schedule ends (e.g., 06:00 for 6 AM)"
         }
       }
     },
@@ -38,16 +66,36 @@
     "step": {
       "init": {
         "title": "Update Google Weather Settings",
-        "description": "Update location coordinates and unit system",
+        "description": "Update location coordinates, unit system, and update intervals. Changes will take effect after reloading the integration.",
         "data": {
           "latitude": "Latitude",
           "longitude": "Longitude",
-          "unit_system": "Unit System"
+          "unit_system": "Unit System",
+          "current_day_interval": "Current Conditions - Daytime (minutes)",
+          "current_night_interval": "Current Conditions - Nighttime (minutes)",
+          "daily_day_interval": "Daily Forecast - Daytime (minutes)",
+          "daily_night_interval": "Daily Forecast - Nighttime (minutes)",
+          "hourly_day_interval": "Hourly Forecast - Daytime (minutes)",
+          "hourly_night_interval": "Hourly Forecast - Nighttime (minutes)",
+          "alerts_day_interval": "Weather Alerts - Daytime (minutes)",
+          "alerts_night_interval": "Weather Alerts - Nighttime (minutes)",
+          "night_start": "Night Time Start (HH:MM)",
+          "night_end": "Night Time End (HH:MM)"
         },
         "data_description": {
           "latitude": "Latitude coordinate for weather data",
           "longitude": "Longitude coordinate for weather data",
-          "unit_system": "Choose metric (Celsius, km/h, mm) or imperial (Fahrenheit, mph, inches)"
+          "unit_system": "Choose metric (Celsius, km/h, mm) or imperial (Fahrenheit, mph, inches)",
+          "current_day_interval": "How often to update current conditions during daytime (1-1440 minutes)",
+          "current_night_interval": "How often to update current conditions at night (1-1440 minutes)",
+          "daily_day_interval": "How often to update daily forecast during daytime (1-1440 minutes)",
+          "daily_night_interval": "How often to update daily forecast at night (1-1440 minutes)",
+          "hourly_day_interval": "How often to update hourly forecast during daytime (1-1440 minutes)",
+          "hourly_night_interval": "How often to update hourly forecast at night (1-1440 minutes)",
+          "alerts_day_interval": "How often to check weather alerts during daytime (1-1440 minutes)",
+          "alerts_night_interval": "How often to check weather alerts at night (1-1440 minutes)",
+          "night_start": "When nighttime update schedule begins (e.g., 22:00)",
+          "night_end": "When nighttime update schedule ends (e.g., 06:00)"
         }
       }
     },

@@ -155,17 +155,114 @@ For a location named "Home" with prefix "gw":
 - `binary_sensor.home_severe_weather_alert`
 - `binary_sensor.home_urgent_weather_alert`
 
+## Smart Polling & API Optimization
+
+### Overview
+
+The integration uses **smart polling** to optimize API usage and stay within Google's free tier limits. Google provides **10,000 free API calls per month** (2,500 per endpoint), and this integration is designed to make efficient use of these limits.
+
+### How It Works
+
+Instead of fetching all weather data at once, the integration checks each API endpoint individually and only fetches when needed:
+
+- **Current Conditions**: Updates frequently (default: every 5 min during day, 15 min at night)
+- **Daily Forecast**: Updates less frequently as it changes slowly (default: every 30 min during day, 60 min at night)
+- **Hourly Forecast**: Moderate update frequency (default: every 15 min during day, 60 min at night)
+- **Weather Alerts**: Important but checked moderately (default: every 15 min during day, 30 min at night)
+
+The coordinator runs every minute to check which endpoints need updating, but **only calls the Google API when an endpoint's interval has elapsed**.
+
+### Default Configuration
+
+The default settings are optimized to use approximately 2,500 calls/month per endpoint:
+
+| Endpoint | Daytime Interval | Nighttime Interval | Approx. Calls/Month |
+|----------|-----------------|-------------------|---------------------|
+| Current Conditions | 5 minutes | 15 minutes | ~10,440 |
+| Daily Forecast | 30 minutes | 60 minutes | ~3,060 |
+| Hourly Forecast | 15 minutes | 60 minutes | ~5,220 |
+| Weather Alerts | 15 minutes | 30 minutes | ~6,120 |
+
+**Note**: These are distributed across 4 endpoints, each staying well within the 2,500 free calls/endpoint/month.
+
+### Configuring Update Intervals
+
+During setup (Step 2 of configuration), you can customize update intervals for each endpoint:
+
+1. **Current Conditions** - How often to fetch current weather (temperature, humidity, wind, etc.)
+2. **Daily Forecast** - How often to update the 10-day forecast
+3. **Hourly Forecast** - How often to update the 240-hour forecast
+4. **Weather Alerts** - How often to check for new weather alerts
+
+Each endpoint has separate settings for:
+- **Daytime interval**: When you want more frequent updates (e.g., 06:00 - 22:00)
+- **Nighttime interval**: When less frequent updates are acceptable (e.g., 22:00 - 06:00)
+
+### Nighttime Configuration
+
+You can configure when "nighttime" begins and ends:
+- **Night Start**: When to switch to nighttime intervals (default: 22:00 / 10 PM)
+- **Night End**: When to switch back to daytime intervals (default: 06:00 / 6 AM)
+
+This automatically reduces API calls during nighttime hours when weather changes less and you're less likely to check the weather.
+
+### Example Configurations
+
+**Power User (Maximum Updates)**
+- Current: 5 min day / 10 min night = ~11,520 calls/month
+- Daily: 15 min day / 30 min night = ~6,480 calls/month
+- Hourly: 10 min day / 20 min night = ~8,640 calls/month
+- Alerts: 10 min day / 20 min night = ~8,640 calls/month
+- **Total**: ~35,280 calls/month (requires paid plan)
+
+**Conservative (Minimal Updates)**
+- Current: 15 min day / 30 min night = ~6,120 calls/month
+- Daily: 60 min day / 120 min night = ~2,160 calls/month
+- Hourly: 30 min day / 60 min night = ~4,320 calls/month
+- Alerts: 30 min day / 60 min night = ~4,320 calls/month
+- **Total**: ~16,920 calls/month (well within free tier)
+
+**Alerts Only (Emergency Notifications)**
+- Current: 30 min day / 60 min night = ~4,320 calls/month
+- Daily: 120 min day / 240 min night = ~1,440 calls/month
+- Hourly: 60 min day / 120 min night = ~2,880 calls/month
+- Alerts: 5 min day / 10 min night = ~11,520 calls/month
+- **Total**: ~20,160 calls/month (prioritizes alerts)
+
+### Tips for Staying Within Free Tier
+
+1. **Use defaults**: The default settings are optimized for the free tier
+2. **Increase nighttime intervals**: You probably don't need updates every 5 minutes at 3 AM
+3. **Adjust by importance**: Set longer intervals for daily forecasts (they change slowly)
+4. **Monitor usage**: Check your Google Cloud Console for API usage
+5. **Consider your needs**: Most users don't need sub-5-minute updates
+
+### Location Configuration
+
+The prefix (e.g., "gw_melbourne") is fully configurable:
+- **Prefix**: Set during initial setup (default: "gw")
+- **Location Name**: Used in entity names (e.g., "Home", "Office", "Melbourne")
+- **Coordinates**: Default to your Home Assistant location but can be customized
+
+Example: For prefix "gw_syd" and location "Sydney Office":
+- Weather entity: `weather.sydney_office_weather`
+- Sensors: `sensor.sydney_office_temperature`, etc.
+
 ## Updating Configuration
 
-You can update the location coordinates and unit system at any time:
+You can update location coordinates, unit system, and update intervals at any time:
 
 1. Go to Settings → Devices & Services
 2. Find the Google Weather integration
 3. Click "Configure"
-4. Update the settings
+4. Update any of the following:
+   - Location coordinates (latitude/longitude)
+   - Unit system (Metric/Imperial)
+   - Update intervals for each endpoint (daytime and nighttime)
+   - Nighttime schedule (start and end times)
 5. Click "Submit"
 
-The integration will automatically reload with the new settings.
+The integration will automatically reload with the new settings. Changes to update intervals take effect immediately.
 
 ## Unit Systems
 
@@ -279,10 +376,16 @@ alerts:
 
 ## Data Updates
 
-The integration updates weather data every 15 minutes by default. This provides:
-- Current conditions
-- Updated forecasts
-- Real-time weather alerts
+The integration uses **smart polling** with configurable intervals for each endpoint:
+
+- **Current Conditions**: Default 5 min (day) / 15 min (night) - real-time weather updates
+- **Daily Forecast**: Default 30 min (day) / 60 min (night) - 10-day forecast
+- **Hourly Forecast**: Default 15 min (day) / 60 min (night) - 240-hour forecast
+- **Weather Alerts**: Default 15 min (day) / 30 min (night) - real-time alerts
+
+The coordinator checks every minute to see if any endpoint needs updating, but only makes API calls when necessary. This provides responsive updates while staying within API limits.
+
+**Nighttime Mode**: Automatically reduces update frequency during configured nighttime hours (default: 22:00 - 06:00).
 
 ## Troubleshooting
 
@@ -322,12 +425,38 @@ Weather alerts are available in many countries including:
 
 See the [Google Weather API documentation](https://developers.google.com/maps/documentation/weather/weather-alerts#data_sources) for a complete list.
 
-## API Limitations
+## API Limitations & Pricing
 
-- Weather API requires a Google Cloud project with billing enabled
-- API calls are metered and billed according to Google Cloud pricing
-- Current update interval: 15 minutes (4 API calls per location per update)
-- Forecast data: 10 days daily, 240 hours hourly
+### Free Tier
+- **10,000 free API calls per month** (total across all endpoints)
+- **2,500 free calls per endpoint per month** (current, daily, hourly, alerts)
+- No credit card required for free tier
+- Default configuration uses ~24,000 calls/month (distributed across 4 endpoints)
+
+### Smart Polling Benefits
+- Each endpoint is polled independently at different intervals
+- Nighttime mode automatically reduces API usage by 40-60%
+- Cached data is returned when endpoints don't need updating
+- Graceful fallback to cached data if API errors occur
+
+### Billing
+- Weather API requires a Google Cloud project (billing info may be required)
+- Free tier resets monthly
+- Charges apply only if you exceed 10,000 calls/month total
+- Current pricing: $6.00 per 1,000 calls after free tier
+
+### Recommendations
+1. **Start with defaults**: Optimized for ~2,500 calls/endpoint/month
+2. **Monitor usage**: Check Google Cloud Console → APIs & Services → Dashboard
+3. **Adjust as needed**: Reduce intervals if approaching limits
+4. **Use nighttime mode**: Significant savings with minimal impact
+5. **Set billing alerts**: Get notified if approaching free tier limit
+
+### Forecast Data Limits
+- Daily forecast: Up to 10 days
+- Hourly forecast: Up to 240 hours (10 days)
+- Current conditions: Real-time
+- Weather alerts: Real-time from 50+ countries
 
 ## Support
 

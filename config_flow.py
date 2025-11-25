@@ -13,9 +13,29 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_entry_oauth2_flow
 
 from .const import (
+    CONF_ALERTS_DAY_INTERVAL,
+    CONF_ALERTS_NIGHT_INTERVAL,
+    CONF_CURRENT_DAY_INTERVAL,
+    CONF_CURRENT_NIGHT_INTERVAL,
+    CONF_DAILY_DAY_INTERVAL,
+    CONF_DAILY_NIGHT_INTERVAL,
+    CONF_HOURLY_DAY_INTERVAL,
+    CONF_HOURLY_NIGHT_INTERVAL,
     CONF_LOCATION,
+    CONF_NIGHT_END,
+    CONF_NIGHT_START,
     CONF_PREFIX,
     CONF_UNIT_SYSTEM,
+    DEFAULT_ALERTS_DAY_INTERVAL,
+    DEFAULT_ALERTS_NIGHT_INTERVAL,
+    DEFAULT_CURRENT_DAY_INTERVAL,
+    DEFAULT_CURRENT_NIGHT_INTERVAL,
+    DEFAULT_DAILY_DAY_INTERVAL,
+    DEFAULT_DAILY_NIGHT_INTERVAL,
+    DEFAULT_HOURLY_DAY_INTERVAL,
+    DEFAULT_HOURLY_NIGHT_INTERVAL,
+    DEFAULT_NIGHT_END,
+    DEFAULT_NIGHT_START,
     DEFAULT_PREFIX,
     DEFAULT_UNIT_SYSTEM,
     DOMAIN,
@@ -68,6 +88,7 @@ class OAuth2FlowHandler(
         """Create an entry for Google Weather after OAuth authentication."""
         # After OAuth is complete, ask for location and prefix
         self.oauth_data = data
+        self.user_data = {}
         return await self.async_step_location()
 
     async def async_step_location(
@@ -95,17 +116,17 @@ class OAuth2FlowHandler(
 
                 unit_system = user_input.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM)
 
-                return self.async_create_entry(
-                    title=f"Google Weather - {location_name}",
-                    data={
-                        **self.oauth_data,
-                        CONF_LOCATION: location_name,
-                        CONF_PREFIX: prefix,
-                        CONF_LATITUDE: latitude,
-                        CONF_LONGITUDE: longitude,
-                        CONF_UNIT_SYSTEM: unit_system,
-                    },
-                )
+                # Store user input for later steps
+                self.user_data = {
+                    CONF_LOCATION: location_name,
+                    CONF_PREFIX: prefix,
+                    CONF_LATITUDE: latitude,
+                    CONF_LONGITUDE: longitude,
+                    CONF_UNIT_SYSTEM: unit_system,
+                }
+
+                # Ask if user wants to configure update intervals
+                return await self.async_step_intervals()
 
         # Default to Home Assistant's configured location
         default_latitude = self.hass.config.latitude
@@ -123,6 +144,87 @@ class OAuth2FlowHandler(
                 }
             ),
             errors=errors,
+        )
+
+    async def async_step_intervals(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure update intervals for API endpoints."""
+        if user_input is not None:
+            # Merge all data and create entry
+            final_data = {
+                **self.oauth_data,
+                **self.user_data,
+                **user_input,
+            }
+
+            location_name = self.user_data[CONF_LOCATION]
+            return self.async_create_entry(
+                title=f"Google Weather - {location_name}",
+                data=final_data,
+            )
+
+        return self.async_show_form(
+            step_id="intervals",
+            data_schema=vol.Schema(
+                {
+                    # Current conditions intervals
+                    vol.Optional(
+                        CONF_CURRENT_DAY_INTERVAL,
+                        default=DEFAULT_CURRENT_DAY_INTERVAL,
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    vol.Optional(
+                        CONF_CURRENT_NIGHT_INTERVAL,
+                        default=DEFAULT_CURRENT_NIGHT_INTERVAL,
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    # Daily forecast intervals
+                    vol.Optional(
+                        CONF_DAILY_DAY_INTERVAL,
+                        default=DEFAULT_DAILY_DAY_INTERVAL,
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    vol.Optional(
+                        CONF_DAILY_NIGHT_INTERVAL,
+                        default=DEFAULT_DAILY_NIGHT_INTERVAL,
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    # Hourly forecast intervals
+                    vol.Optional(
+                        CONF_HOURLY_DAY_INTERVAL,
+                        default=DEFAULT_HOURLY_DAY_INTERVAL,
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    vol.Optional(
+                        CONF_HOURLY_NIGHT_INTERVAL,
+                        default=DEFAULT_HOURLY_NIGHT_INTERVAL,
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    # Weather alerts intervals
+                    vol.Optional(
+                        CONF_ALERTS_DAY_INTERVAL,
+                        default=DEFAULT_ALERTS_DAY_INTERVAL,
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    vol.Optional(
+                        CONF_ALERTS_NIGHT_INTERVAL,
+                        default=DEFAULT_ALERTS_NIGHT_INTERVAL,
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    # Night time period
+                    vol.Optional(
+                        CONF_NIGHT_START,
+                        default=DEFAULT_NIGHT_START,
+                    ): str,
+                    vol.Optional(
+                        CONF_NIGHT_END,
+                        default=DEFAULT_NIGHT_END,
+                    ): str,
+                }
+            ),
+            description_placeholders={
+                "current_day": str(DEFAULT_CURRENT_DAY_INTERVAL),
+                "current_night": str(DEFAULT_CURRENT_NIGHT_INTERVAL),
+                "daily_day": str(DEFAULT_DAILY_DAY_INTERVAL),
+                "daily_night": str(DEFAULT_DAILY_NIGHT_INTERVAL),
+                "hourly_day": str(DEFAULT_HOURLY_DAY_INTERVAL),
+                "hourly_night": str(DEFAULT_HOURLY_NIGHT_INTERVAL),
+                "alerts_day": str(DEFAULT_ALERTS_DAY_INTERVAL),
+                "alerts_night": str(DEFAULT_ALERTS_NIGHT_INTERVAL),
+            },
         )
 
     @staticmethod
@@ -179,6 +281,51 @@ class GoogleWeatherOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_UNIT_SYSTEM,
                         default=current_data.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM),
                     ): vol.In(UNIT_SYSTEMS),
+                    # Current conditions intervals
+                    vol.Optional(
+                        CONF_CURRENT_DAY_INTERVAL,
+                        default=current_data.get(CONF_CURRENT_DAY_INTERVAL, DEFAULT_CURRENT_DAY_INTERVAL),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    vol.Optional(
+                        CONF_CURRENT_NIGHT_INTERVAL,
+                        default=current_data.get(CONF_CURRENT_NIGHT_INTERVAL, DEFAULT_CURRENT_NIGHT_INTERVAL),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    # Daily forecast intervals
+                    vol.Optional(
+                        CONF_DAILY_DAY_INTERVAL,
+                        default=current_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    vol.Optional(
+                        CONF_DAILY_NIGHT_INTERVAL,
+                        default=current_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    # Hourly forecast intervals
+                    vol.Optional(
+                        CONF_HOURLY_DAY_INTERVAL,
+                        default=current_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    vol.Optional(
+                        CONF_HOURLY_NIGHT_INTERVAL,
+                        default=current_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    # Weather alerts intervals
+                    vol.Optional(
+                        CONF_ALERTS_DAY_INTERVAL,
+                        default=current_data.get(CONF_ALERTS_DAY_INTERVAL, DEFAULT_ALERTS_DAY_INTERVAL),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    vol.Optional(
+                        CONF_ALERTS_NIGHT_INTERVAL,
+                        default=current_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                    # Night time period
+                    vol.Optional(
+                        CONF_NIGHT_START,
+                        default=current_data.get(CONF_NIGHT_START, DEFAULT_NIGHT_START),
+                    ): str,
+                    vol.Optional(
+                        CONF_NIGHT_END,
+                        default=current_data.get(CONF_NIGHT_END, DEFAULT_NIGHT_END),
+                    ): str,
                 }
             ),
             errors=errors,
