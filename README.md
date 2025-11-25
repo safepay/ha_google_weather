@@ -71,14 +71,35 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 1. Open HACS in Home Assistant
 2. Click on "Integrations"
 3. Click the three dots in the top right corner and select "Custom repositories"
-4. Add this repository URL and select "Integration" as the category
-5. Click "Install"
-6. Restart Home Assistant
+4. Add this repository URL: `https://github.com/yourusername/ha-google-weather`
+5. Select "Integration" as the category
+6. Click "Install"
+7. Restart Home Assistant
 
 ### Manual Installation
 
-1. Copy the `google_weather` folder to your `custom_components` directory
-2. Restart Home Assistant
+1. Download or clone this repository
+2. Copy the `custom_components/google_weather` folder to your Home Assistant `config/custom_components/` directory
+3. Your directory structure should look like:
+   ```
+   config/
+   └── custom_components/
+       └── google_weather/
+           ├── __init__.py
+           ├── manifest.json
+           ├── config_flow.py
+           ├── coordinator.py
+           ├── const.py
+           ├── weather.py
+           ├── sensor.py
+           ├── binary_sensor.py
+           ├── application_credentials.py
+           ├── strings.json
+           └── translations/
+               └── en.json
+   ```
+4. Restart Home Assistant
+5. The integration will appear in Settings → Devices & Services → Add Integration
 
 ## Configuration
 
