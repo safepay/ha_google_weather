@@ -74,8 +74,8 @@ Optimized for Google's free tier (10,000 calls/month):
 
 ## Support
 
-- [Documentation](https://github.com/yourusername/ha-google-weather)
-- [Issue Tracker](https://github.com/yourusername/ha-google-weather/issues)
+- [Documentation](https://github.com/safepay/ha_google_weather)
+- [Issue Tracker](https://github.com/safepay/ha_google_weather/issues)
 
 ---
 

@@ -71,7 +71,7 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 1. Open HACS in Home Assistant
 2. Click on "Integrations"
 3. Click the three dots in the top right corner and select "Custom repositories"
-4. Add this repository URL: `https://github.com/yourusername/ha-google-weather`
+4. Add this repository URL: `https://github.com/safepay/ha_google_weather`
 5. Select "Integration" as the category
 6. Click "Install"
 7. Restart Home Assistant
@@ -483,7 +483,7 @@ See the [Google Weather API documentation](https://developers.google.com/maps/do
 
 ## Support
 
-For issues and feature requests, please use the [GitHub issue tracker](https://github.com/yourusername/ha-google-weather/issues).
+For issues and feature requests, please use the [GitHub issue tracker](https://github.com/safepay/ha_google_weather/issues).
 
 ## License
 
