@@ -124,7 +124,7 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 1. In Home Assistant, go to Settings → Devices & Services
 2. Click "Application Credentials" (bottom of the page)
 3. Click "+ Add Application Credential"
-4. Select "Google"
+4. Select "Google Weather"
 5. Enter your OAuth Client ID and Client Secret
 6. Click "Create"
 
