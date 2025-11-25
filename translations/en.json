@@ -2,41 +2,135 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up Google Weather",
-        "description": "This integration uses your existing Google OAuth credentials. If you haven't set up Google OAuth yet, you'll need to do so first."
+        "title": "Authenticate with Google",
+        "description": "This integration requires Google Cloud credentials. Make sure you have set up application credentials before continuing."
       },
       "location": {
         "title": "Configure Location",
-        "description": "Enter the location details and entity prefix for your weather sensors.",
+        "description": "Configure the location and settings for Google Weather",
         "data": {
           "location": "Location Name",
-          "prefix": "Entity ID Prefix",
+          "prefix": "Entity Prefix",
           "latitude": "Latitude",
-          "longitude": "Longitude"
+          "longitude": "Longitude",
+          "unit_system": "Unit System"
+        },
+        "data_description": {
+          "location": "Friendly name for this location (e.g., 'Home', 'Office')",
+          "prefix": "Prefix for entity IDs (default: gw)",
+          "latitude": "Latitude coordinate for weather data",
+          "longitude": "Longitude coordinate for weather data",
+          "unit_system": "Choose metric (Celsius, km/h, mm) or imperial (Fahrenheit, mph, inches)"
         }
       }
     },
     "error": {
-      "invalid_latitude": "Invalid latitude (must be between -90 and 90)",
-      "invalid_longitude": "Invalid longitude (must be between -180 and 180)",
-      "missing_credentials": "Google OAuth credentials not configured. Please set up Google application credentials first."
+      "missing_credentials": "Google application credentials not configured. Please set up application credentials first.",
+      "invalid_latitude": "Latitude must be between -90 and 90",
+      "invalid_longitude": "Longitude must be between -180 and 180"
     },
     "abort": {
-      "already_configured": "This location with this prefix is already configured",
-      "missing_credentials": "Google OAuth credentials are not configured. Please add them in Settings → Devices & Services → Application Credentials."
+      "already_configured": "This location is already configured",
+      "missing_credentials": "Google application credentials not configured"
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Update Configuration",
-        "description": "Update the location and entity prefix settings.",
+        "title": "Update Google Weather Settings",
+        "description": "Update location coordinates and unit system",
         "data": {
-          "location": "Location Name",
-          "prefix": "Entity ID Prefix",
           "latitude": "Latitude",
-          "longitude": "Longitude"
+          "longitude": "Longitude",
+          "unit_system": "Unit System"
+        },
+        "data_description": {
+          "latitude": "Latitude coordinate for weather data",
+          "longitude": "Longitude coordinate for weather data",
+          "unit_system": "Choose metric (Celsius, km/h, mm) or imperial (Fahrenheit, mph, inches)"
         }
+      }
+    },
+    "error": {
+      "invalid_latitude": "Latitude must be between -90 and 90",
+      "invalid_longitude": "Longitude must be between -180 and 180"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Temperature"
+      },
+      "feels_like": {
+        "name": "Feels Like Temperature"
+      },
+      "dew_point": {
+        "name": "Dew Point"
+      },
+      "heat_index": {
+        "name": "Heat Index"
+      },
+      "wind_chill": {
+        "name": "Wind Chill"
+      },
+      "humidity": {
+        "name": "Humidity"
+      },
+      "pressure": {
+        "name": "Pressure"
+      },
+      "wind_speed": {
+        "name": "Wind Speed"
+      },
+      "wind_gust": {
+        "name": "Wind Gust"
+      },
+      "wind_direction": {
+        "name": "Wind Direction"
+      },
+      "visibility": {
+        "name": "Visibility"
+      },
+      "cloud_cover": {
+        "name": "Cloud Cover"
+      },
+      "uv_index": {
+        "name": "UV Index"
+      },
+      "precipitation_probability": {
+        "name": "Precipitation Probability"
+      },
+      "precipitation_amount": {
+        "name": "Precipitation Amount"
+      },
+      "thunderstorm_probability": {
+        "name": "Thunderstorm Probability"
+      },
+      "temp_change_24h": {
+        "name": "Temperature Change (24h)"
+      },
+      "max_temp_24h": {
+        "name": "Max Temperature (24h)"
+      },
+      "min_temp_24h": {
+        "name": "Min Temperature (24h)"
+      },
+      "precipitation_24h": {
+        "name": "Precipitation (24h)"
+      },
+      "weather_condition": {
+        "name": "Weather Condition"
+      }
+    },
+    "binary_sensor": {
+      "weather_alert": {
+        "name": "Weather Alert"
+      },
+      "severe_weather_alert": {
+        "name": "Severe Weather Alert"
+      },
+      "urgent_weather_alert": {
+        "name": "Urgent Weather Alert"
       }
     }
   }

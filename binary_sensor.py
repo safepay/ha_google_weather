@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -23,36 +24,139 @@ class GoogleWeatherBinarySensorDescription(BinarySensorEntityDescription):
     """Describes Google Weather binary sensor entity."""
 
     value_fn: Callable[[dict], bool] | None = None
-    attributes_fn: Callable[[dict], dict] | None = None
+    attributes_fn: Callable[[dict], dict[str, Any]] | None = None
+
+
+# Severity levels for filtering
+SEVERE_SEVERITIES = ["EXTREME", "SEVERE"]
+URGENT_URGENCIES = ["IMMEDIATE", "EXPECTED"]
+
+
+def has_alerts(data: dict) -> bool:
+    """Check if there are any weather alerts."""
+    return bool(data.get("alerts", []))
+
+
+def has_severe_alerts(data: dict) -> bool:
+    """Check if there are severe weather alerts."""
+    alerts = data.get("alerts", [])
+    return any(
+        alert.get("severity") in SEVERE_SEVERITIES
+        for alert in alerts
+    )
+
+
+def has_urgent_alerts(data: dict) -> bool:
+    """Check if there are urgent weather alerts."""
+    alerts = data.get("alerts", [])
+    return any(
+        alert.get("urgency") in URGENT_URGENCIES
+        for alert in alerts
+    )
+
+
+def get_alert_attributes(data: dict) -> dict[str, Any]:
+    """Get detailed attributes for all alerts."""
+    alerts = data.get("alerts", [])
+    if not alerts:
+        return {"alert_count": 0}
+
+    alert_details = []
+    for alert in alerts:
+        alert_info = {
+            "alert_id": alert.get("alertId"),
+            "title": alert.get("alertTitle", {}).get("text"),
+            "event_type": alert.get("eventType"),
+            "area": alert.get("areaName"),
+            "severity": alert.get("severity"),
+            "certainty": alert.get("certainty"),
+            "urgency": alert.get("urgency"),
+            "start_time": alert.get("startTime"),
+            "expiration_time": alert.get("expirationTime"),
+            "description": alert.get("description"),
+            "instruction": alert.get("instruction"),
+        }
+        # Filter out None values
+        alert_details.append({k: v for k, v in alert_info.items() if v is not None})
+
+    return {
+        "alert_count": len(alerts),
+        "alerts": alert_details,
+        "max_severity": max(
+            (alert.get("severity") for alert in alerts if alert.get("severity")),
+            default=None,
+        ),
+        "data_source": alerts[0].get("dataSource", {}).get("name") if alerts else None,
+    }
+
+
+def get_severe_alert_attributes(data: dict) -> dict[str, Any]:
+    """Get detailed attributes for severe alerts only."""
+    alerts = data.get("alerts", [])
+    severe_alerts = [
+        alert for alert in alerts
+        if alert.get("severity") in SEVERE_SEVERITIES
+    ]
+
+    if not severe_alerts:
+        return {"alert_count": 0}
+
+    alert_details = []
+    for alert in severe_alerts:
+        alert_info = {
+            "alert_id": alert.get("alertId"),
+            "title": alert.get("alertTitle", {}).get("text"),
+            "event_type": alert.get("eventType"),
+            "area": alert.get("areaName"),
+            "severity": alert.get("severity"),
+            "certainty": alert.get("certainty"),
+            "urgency": alert.get("urgency"),
+            "start_time": alert.get("startTime"),
+            "expiration_time": alert.get("expirationTime"),
+            "instruction": alert.get("instruction"),
+        }
+        alert_details.append({k: v for k, v in alert_info.items() if v is not None})
+
+    return {
+        "alert_count": len(severe_alerts),
+        "alerts": alert_details,
+    }
 
 
 BINARY_SENSOR_TYPES: tuple[GoogleWeatherBinarySensorDescription, ...] = (
     GoogleWeatherBinarySensorDescription(
-        key="severe_weather_warning",
-        name="Severe Weather Warning",
+        key="weather_alert",
+        name="Weather Alert",
         device_class=BinarySensorDeviceClass.SAFETY,
         icon="mdi:alert",
-        value_fn=lambda data: bool(
-            data.get("warnings", []) and 
-            any(w.get("severity") == "severe" for w in data.get("warnings", []))
-        ),
-        attributes_fn=lambda data: {
-            "warnings": [
-                w for w in data.get("warnings", []) 
-                if w.get("severity") == "severe"
-            ]
-        } if data.get("warnings") else {},
+        value_fn=has_alerts,
+        attributes_fn=get_alert_attributes,
     ),
     GoogleWeatherBinarySensorDescription(
-        key="weather_warning",
-        name="Weather Warning",
+        key="severe_weather_alert",
+        name="Severe Weather Alert",
         device_class=BinarySensorDeviceClass.SAFETY,
-        icon="mdi:weather-partly-cloudy",
-        value_fn=lambda data: bool(data.get("warnings", [])),
+        icon="mdi:alert-circle",
+        value_fn=has_severe_alerts,
+        attributes_fn=get_severe_alert_attributes,
+    ),
+    GoogleWeatherBinarySensorDescription(
+        key="urgent_weather_alert",
+        name="Urgent Weather Alert",
+        device_class=BinarySensorDeviceClass.SAFETY,
+        icon="mdi:alert-octagon",
+        value_fn=has_urgent_alerts,
         attributes_fn=lambda data: {
-            "warnings": data.get("warnings", []),
-            "warning_count": len(data.get("warnings", [])),
-        } if data.get("warnings") else {},
+            "urgent_alerts": [
+                {
+                    "title": alert.get("alertTitle", {}).get("text"),
+                    "urgency": alert.get("urgency"),
+                    "instruction": alert.get("instruction"),
+                }
+                for alert in data.get("alerts", [])
+                if alert.get("urgency") in URGENT_URGENCIES
+            ]
+        } if has_urgent_alerts(data) else {},
     ),
 )
 
@@ -64,7 +168,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up Google Weather binary sensor entities."""
     coordinator: GoogleWeatherCoordinator = hass.data[DOMAIN][entry.entry_id]
-    
+
     prefix = entry.data.get(CONF_PREFIX, "gw")
     location = entry.data.get(CONF_LOCATION, "Home")
 
@@ -80,6 +184,8 @@ class GoogleWeatherBinarySensor(
     """Representation of a Google Weather binary sensor."""
 
     entity_description: GoogleWeatherBinarySensorDescription
+    _attr_has_entity_name = True
+    _attr_translation_key = "warning_sensors"
 
     def __init__(
         self,
@@ -92,15 +198,17 @@ class GoogleWeatherBinarySensor(
         """Initialize the binary sensor."""
         super().__init__(coordinator)
         self.entity_description = description
-        
+
         location_slug = location.lower().replace(" ", "_")
         self._attr_name = f"{location} {description.name}"
         self._attr_unique_id = f"{prefix}_{location_slug}_{description.key}"
         self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": f"Google Weather - {location}",
+            "identifiers": {(DOMAIN, f"{entry.entry_id}_warnings")},
+            "name": f"{location} - Binary Warning Sensors",
             "manufacturer": "Google",
-            "model": "Weather API",
+            "model": "Weather API - Warnings",
+            "sw_version": "v1",
+            "via_device": (DOMAIN, entry.entry_id),
         }
 
     @property
@@ -111,7 +219,7 @@ class GoogleWeatherBinarySensor(
         return False
 
     @property
-    def extra_state_attributes(self) -> dict[str, any]:
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return additional state attributes."""
         if self.coordinator.data and self.entity_description.attributes_fn:
             return self.entity_description.attributes_fn(self.coordinator.data)

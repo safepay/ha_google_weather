@@ -15,9 +15,12 @@ from homeassistant.helpers import config_entry_oauth2_flow
 from .const import (
     CONF_LOCATION,
     CONF_PREFIX,
+    CONF_UNIT_SYSTEM,
     DEFAULT_PREFIX,
+    DEFAULT_UNIT_SYSTEM,
     DOMAIN,
     OAUTH2_SCOPES,
+    UNIT_SYSTEMS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -90,6 +93,8 @@ class OAuth2FlowHandler(
                 await self.async_set_unique_id(f"{prefix}_{location_name}")
                 self._abort_if_unique_id_configured()
 
+                unit_system = user_input.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM)
+
                 return self.async_create_entry(
                     title=f"Google Weather - {location_name}",
                     data={
@@ -98,6 +103,7 @@ class OAuth2FlowHandler(
                         CONF_PREFIX: prefix,
                         CONF_LATITUDE: latitude,
                         CONF_LONGITUDE: longitude,
+                        CONF_UNIT_SYSTEM: unit_system,
                     },
                 )
 
@@ -113,6 +119,7 @@ class OAuth2FlowHandler(
                     vol.Optional(CONF_PREFIX, default=DEFAULT_PREFIX): str,
                     vol.Required(CONF_LATITUDE, default=default_latitude): vol.Coerce(float),
                     vol.Required(CONF_LONGITUDE, default=default_longitude): vol.Coerce(float),
+                    vol.Required(CONF_UNIT_SYSTEM, default=DEFAULT_UNIT_SYSTEM): vol.In(UNIT_SYSTEMS),
                 }
             ),
             errors=errors,
@@ -138,29 +145,41 @@ class GoogleWeatherOptionsFlowHandler(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the options."""
+        errors = {}
+
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            # Validate latitude and longitude
+            latitude = user_input.get(CONF_LATITUDE)
+            longitude = user_input.get(CONF_LONGITUDE)
+
+            if not (-90 <= latitude <= 90):
+                errors[CONF_LATITUDE] = "invalid_latitude"
+            elif not (-180 <= longitude <= 180):
+                errors[CONF_LONGITUDE] = "invalid_longitude"
+            else:
+                # Update coordinator with new values
+                return self.async_create_entry(title="", data=user_input)
+
+        # Get current values from config or options
+        current_data = {**self.config_entry.data, **self.config_entry.options}
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        CONF_LOCATION,
-                        default=self.config_entry.data.get(CONF_LOCATION, "Home"),
-                    ): str,
-                    vol.Required(
-                        CONF_PREFIX,
-                        default=self.config_entry.data.get(CONF_PREFIX, DEFAULT_PREFIX),
-                    ): str,
-                    vol.Required(
                         CONF_LATITUDE,
-                        default=self.config_entry.data.get(CONF_LATITUDE),
+                        default=current_data.get(CONF_LATITUDE),
                     ): vol.Coerce(float),
                     vol.Required(
                         CONF_LONGITUDE,
-                        default=self.config_entry.data.get(CONF_LONGITUDE),
+                        default=current_data.get(CONF_LONGITUDE),
                     ): vol.Coerce(float),
+                    vol.Required(
+                        CONF_UNIT_SYSTEM,
+                        default=current_data.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM),
+                    ): vol.In(UNIT_SYSTEMS),
                 }
             ),
+            errors=errors,
         )
