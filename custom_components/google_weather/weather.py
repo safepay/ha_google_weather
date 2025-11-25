@@ -88,8 +88,12 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
         """Initialize the weather entity."""
         super().__init__(coordinator)
 
+        # Combine prefix and location to form entity ID prefix
+        location_slug = location.lower().replace(" ", "_")
+        entity_prefix = f"{prefix}_{location_slug}"
+
         self._attr_name = f"{location} Weather"
-        self._attr_unique_id = f"{prefix}_{location.lower().replace(' ', '_')}_weather"
+        self._attr_unique_id = entity_prefix
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": f"Google Weather - {location}",
