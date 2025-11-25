@@ -103,6 +103,8 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 
 ## Configuration
 
+⚠️ **Important**: Complete Steps 1-2 (Google Cloud setup) BEFORE installing the integration.
+
 ### Step 1: Enable Google Weather API
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
@@ -118,17 +120,24 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 3. Select "Web application"
 4. Add authorized redirect URI: `https://my.home-assistant.io/redirect/oauth`
 5. Save your Client ID and Client Secret
+6. **Keep these handy** - you'll need them in Step 4
 
-### Step 3: Add Application Credentials in Home Assistant
+### Step 3: Install the Integration
+
+Follow the installation steps above (HACS or Manual) and **restart Home Assistant**.
+
+After restarting, "Google Weather" will be available as an option in Application Credentials.
+
+### Step 4: Add Application Credentials in Home Assistant
 
 1. In Home Assistant, go to Settings → Devices & Services
 2. Click "Application Credentials" (bottom of the page)
 3. Click "+ Add Application Credential"
-4. Select "Google"
-5. Enter your OAuth Client ID and Client Secret
+4. Select "Google Weather" (appears after Step 3 restart)
+5. Enter your OAuth Client ID and Client Secret from Step 2
 6. Click "Create"
 
-### Step 4: Add the Integration
+### Step 5: Add the Integration
 
 1. Go to Settings → Devices & Services
 2. Click "+ Add Integration"
