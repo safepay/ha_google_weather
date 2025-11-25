@@ -1,0 +1,19 @@
+{
+  "domain": "google_weather",
+  "name": "Google Weather",
+  "codeowners": ["@yourusername"],
+  "config_flow": true,
+  "documentation": "https://github.com/yourusername/ha-google-weather",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/yourusername/ha-google-weather/issues",
+  "requirements": [
+    "google-auth>=2.0.0",
+    "google-auth-oauthlib>=0.4.0",
+    "google-auth-httplib2>=0.1.0",
+    "google-api-python-client>=2.0.0"
+  ],
+  "application_credentials": "google",
+  "dependencies": [],
+  "version": "1.0.0"
+}
