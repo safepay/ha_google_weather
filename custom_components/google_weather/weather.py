@@ -105,11 +105,12 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
             "sw_version": "v1",
         }
 
-        # Set units based on unit system
+        # Set units based on unit system - API returns values in the requested unit system
+        # Note: API always returns pressure in millibars regardless of unit system
         unit_system = entry.options.get(CONF_UNIT_SYSTEM) or entry.data.get(CONF_UNIT_SYSTEM, "METRIC")
         if unit_system == UNIT_SYSTEM_IMPERIAL:
             self._attr_native_temperature_unit = UnitOfTemperature.FAHRENHEIT
-            self._attr_native_pressure_unit = UnitOfPressure.INHG
+            self._attr_native_pressure_unit = UnitOfPressure.MBAR  # API does not convert pressure
             self._attr_native_wind_speed_unit = UnitOfSpeed.MILES_PER_HOUR
             self._attr_native_precipitation_unit = UnitOfPrecipitationDepth.INCHES
             self._attr_native_visibility_unit = UnitOfLength.MILES

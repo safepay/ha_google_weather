@@ -200,7 +200,7 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "key": self.api_key,
                 "location.latitude": self.latitude,
                 "location.longitude": self.longitude,
-                # "unitsSystem": self.unit_system,
+                "units_system": self.unit_system,
             }
 
             updated_data = {}
