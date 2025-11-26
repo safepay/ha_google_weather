@@ -296,6 +296,11 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
         }
 
     @property
+    def name(self) -> None:
+        """Return None to use unique_id for entity_id generation."""
+        return None
+
+    @property
     def native_value(self) -> float | int | str | None:
         """Return the state of the sensor."""
         if self.coordinator.data and self.entity_description.value_fn:

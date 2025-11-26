@@ -224,6 +224,11 @@ class GoogleWeatherBinarySensor(
         }
 
     @property
+    def name(self) -> None:
+        """Return None to use unique_id for entity_id generation."""
+        return None
+
+    @property
     def is_on(self) -> bool:
         """Return true if the binary sensor is on."""
         if self.coordinator.data and self.entity_description.value_fn:
