@@ -457,7 +457,7 @@ Weather alerts are available in many countries, but coverage varies by region:
   - ✅ **SA** - South Australian Country Fire Service (SA CFS)
   - ✅ **TAS** - Tasmania Fire Service (TFS)
   - ❌ **VIC** - Not supported (Victoria has its own [CFA RSS feeds](https://www.cfa.vic.gov.au/articlenav/news-and-media/incident-information/rss-feeds) which are not integrated with Google's API)
-  - ❌ **WA** - Not supported
+  - ❌ **WA** - Not supported (Western Australia has its own [Emergency WA system](https://www.emergency.wa.gov.au/) which is not integrated with Google's API)
   - ❌ **NT** - Not supported
 
 **Note**: If you're in an unsupported alert region (like Victoria or Western Australia), you'll receive HTTP 400 errors when the integration attempts to fetch alerts. This is normal and expected - the integration will gracefully handle this and continue providing all weather data and forecasts. The alert binary sensors will remain in the "off" state.
