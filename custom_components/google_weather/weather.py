@@ -95,7 +95,7 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        # Don't set name - let Home Assistant infer from entity_id
+        # Set unique_id and device info
         self._attr_unique_id = location_slug
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
@@ -106,7 +106,6 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
         }
 
         # Set units based on unit system - API returns values in the requested unit system
-        # Note: API always returns pressure in millibars regardless of unit system
         unit_system = entry.options.get(CONF_UNIT_SYSTEM) or entry.data.get(CONF_UNIT_SYSTEM, "METRIC")
         if unit_system == UNIT_SYSTEM_IMPERIAL:
             self._attr_native_temperature_unit = UnitOfTemperature.FAHRENHEIT
@@ -123,7 +122,7 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
     @property
     def name(self) -> None:
-        """Return None to use unique_id for entity_id generation."""
+        """Return None to let Home Assistant infer name from entity_id."""
         return None
 
     def _get_current_data(self) -> dict[str, Any] | None:

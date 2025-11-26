@@ -284,11 +284,11 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        # Don't set name - let Home Assistant infer from entity_id
+        # Set unique_id for entity_id generation
         self._attr_unique_id = f"{location_slug}_{description.key}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_sensors")},
-            "name": f"{location_name} Observational Sensors",
+            "name": location_name,
             "manufacturer": "Google",
             "model": "Weather API - Sensors",
             "sw_version": "v1",
@@ -297,7 +297,7 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
 
     @property
     def name(self) -> None:
-        """Return None to use unique_id for entity_id generation."""
+        """Return None to let Home Assistant infer name from entity_id."""
         return None
 
     @property
