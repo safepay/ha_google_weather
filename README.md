@@ -444,7 +444,6 @@ The coordinator checks every minute to see if any endpoint needs updating, but o
 - Check the integration logs for the message: "Weather alerts not available for this location (HTTP 404)"
 - This is normal and expected for unsupported regions - the integration will continue to work perfectly with all weather data and forecasts
 - Not all regions have weather alert support through Google's API (see [Supported Regions](#supported-regions) for details)
-- **Australia**: Only ACT, NSW, QLD, SA, and TAS are supported. Victoria and Western Australia are **not supported** by Google's publicAlerts endpoint
 
 ### No active weather alerts (sensors exist but show "off")
 - Weather alerts depend on whether there are currently active alerts in your area
@@ -466,34 +465,18 @@ Weather alerts are available in many countries, but coverage varies by region. *
 - If not supported (HTTP 404): Warning sensors are NOT created - this prevents misleading empty sensors
 - This detection happens once during initial setup and the result is cached
 
-**Regions with Alert Support:**
-
-**Full Coverage:**
-- United States (NOAA/NWS)
-- Most European countries (MeteoAlarm)
-- Japan, South Korea, Singapore
-- New Zealand, Brazil, Mexico
-- And many more
-
-**Limited Coverage:**
-- **Australia**: Only the following states/territories are supported by Google's publicAlerts endpoint:
-  - ✅ **ACT** - ACT Emergency Services Agency (ACT ESA)
-  - ✅ **NSW** - New South Wales Rural Fire Service (NSW RFS)
-  - ✅ **QLD** - Queensland Fire and Emergency Services (QFES)
-  - ✅ **SA** - South Australian Country Fire Service (SA CFS)
-  - ✅ **TAS** - Tasmania Fire Service (TFS)
-  - ❌ **VIC** - Not supported (Victoria has its own [CFA RSS feeds](https://www.cfa.vic.gov.au/articlenav/news-and-media/incident-information/rss-feeds) which are not integrated with Google's API)
-  - ❌ **WA** - Not supported (Western Australia has its own [Emergency WA system](https://www.emergency.wa.gov.au/) which is not integrated with Google's API)
-  - ❌ **NT** - Not supported
+**Alert Availability:**
+- Weather alert coverage varies significantly by country and region
+- Some countries have full national coverage, while others have limited regional support
+- The Google Weather API aggregates alerts from official government agencies worldwide
+- See the [Google Weather API documentation](https://developers.google.com/maps/documentation/weather/weather-alerts#data_sources) for specific coverage in your region
 
 **What Happens in Unsupported Regions:**
-- If you're in an unsupported alert region (like Victoria, Western Australia, or Northern Territory):
-  - You'll see a log message: "Weather alerts not available for this location (HTTP 404). Warning sensors will not be created."
-  - The "Warnings" device and its three binary sensors will NOT be created
-  - All other weather data and forecasts will work perfectly
-  - This is the expected behavior and prevents cluttering your UI with sensors that can never have data
-
-See the [Google Weather API documentation](https://developers.google.com/maps/documentation/weather/weather-alerts#data_sources) for a complete list of supported alert regions worldwide.
+If alerts are not available for your location:
+- You'll see a log message: "Weather alerts not available for this location (HTTP 404). Warning sensors will not be created."
+- The "Warnings" device and its three binary sensors will NOT be created
+- All other weather data and forecasts will work perfectly
+- This is the expected behavior and prevents cluttering your UI with sensors that can never have data
 
 ## API Limitations & Pricing
 
