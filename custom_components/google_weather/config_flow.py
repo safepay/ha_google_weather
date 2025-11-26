@@ -4,17 +4,18 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import requests
 import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import config_entry_oauth2_flow
 
 from .const import (
     CONF_ALERTS_DAY_INTERVAL,
     CONF_ALERTS_NIGHT_INTERVAL,
+    CONF_API_KEY,
     CONF_CURRENT_DAY_INTERVAL,
     CONF_CURRENT_NIGHT_INTERVAL,
     CONF_DAILY_DAY_INTERVAL,
@@ -37,93 +38,103 @@ from .const import (
     DEFAULT_NIGHT_START,
     DEFAULT_UNIT_SYSTEM,
     DOMAIN,
-    OAUTH2_SCOPES,
+    API_BASE_URL,
     UNIT_SYSTEMS,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class OAuth2FlowHandler(
-    config_entry_oauth2_flow.AbstractOAuth2FlowHandler,
-    domain=DOMAIN,
-):
-    """Config flow to handle Google Weather OAuth2 authentication."""
+class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Google Weather."""
 
-    DOMAIN = DOMAIN
+    VERSION = 1
 
-    @property
-    def logger(self) -> logging.Logger:
-        """Return logger."""
-        return _LOGGER
-
-    @property
-    def extra_authorize_data(self) -> dict[str, Any]:
-        """Extra data that needs to be appended to the authorize url."""
-        return {
-            "scope": " ".join(OAUTH2_SCOPES),
-            "access_type": "offline",
-            "prompt": "consent",
-        }
+    def __init__(self) -> None:
+        """Initialize config flow."""
+        self.api_key: str | None = None
+        self.user_data: dict[str, Any] = {}
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle a flow start."""
-        # Check if Google application credentials are configured
-        implementations = (
-            await config_entry_oauth2_flow.async_get_implementations(
-                self.hass, self.DOMAIN
-            )
+        """Handle the initial step - API key input."""
+        errors = {}
+
+        if user_input is not None:
+            api_key = user_input[CONF_API_KEY].strip()
+
+            # Validate API key by making a test request
+            try:
+                is_valid = await self.hass.async_add_executor_job(
+                    self._validate_api_key, api_key
+                )
+
+                if is_valid:
+                    self.api_key = api_key
+                    return await self.async_step_location()
+                else:
+                    errors["base"] = "invalid_api_key"
+            except Exception as err:
+                _LOGGER.error("Error validating API key: %s", err)
+                errors["base"] = "cannot_connect"
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema({
+                vol.Required(CONF_API_KEY): str,
+            }),
+            errors=errors,
         )
 
-        if not implementations:
-            return self.async_abort(reason="missing_credentials")
+    def _validate_api_key(self, api_key: str) -> bool:
+        """Validate the API key by making a test request."""
+        try:
+            # Use a default location for testing (Sydney, Australia)
+            url = f"{API_BASE_URL}/currentConditions:lookup"
+            params = {
+                "key": api_key,
+                "location.latitude": -33.8688,
+                "location.longitude": 151.2093,
+            }
+            response = requests.get(url, params=params, timeout=10)
 
-        return await super().async_step_user(user_input)
-
-    async def async_oauth_create_entry(self, data: dict[str, Any]) -> FlowResult:
-        """Create an entry for Google Weather after OAuth authentication."""
-        # After OAuth is complete, ask for location and prefix
-        self.oauth_data = data
-        self.user_data = {}
-        return await self.async_step_location()
+            # API key is valid if we get 200 or even 400 (bad request but key is accepted)
+            # 401/403 means invalid API key
+            if response.status_code in [200, 400]:
+                return True
+            elif response.status_code in [401, 403]:
+                return False
+            else:
+                # Other errors, consider it connection issue
+                return False
+        except requests.RequestException:
+            return False
 
     async def async_step_location(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Configure location and prefix."""
+        """Configure location and unit system."""
         errors = {}
 
         if user_input is not None:
             # Validate latitude and longitude
             latitude = user_input.get(CONF_LATITUDE)
             longitude = user_input.get(CONF_LONGITUDE)
-            
+
             if not (-90 <= latitude <= 90):
                 errors[CONF_LATITUDE] = "invalid_latitude"
-            elif not (-180 <= longitude <= 180):
+            if not (-180 <= longitude <= 180):
                 errors[CONF_LONGITUDE] = "invalid_longitude"
-            else:
-                # Create the config entry
-                location_name = user_input[CONF_LOCATION]
-                prefix = user_input.get(CONF_PREFIX, DEFAULT_PREFIX)
-                
-                await self.async_set_unique_id(f"{prefix}_{location_name}")
-                self._abort_if_unique_id_configured()
 
-                unit_system = user_input.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM)
-
-                # Store user input for later steps
+            if not errors:
+                # Store location data
                 self.user_data = {
-                    CONF_LOCATION: location_name,
-                    CONF_PREFIX: prefix,
+                    CONF_LOCATION: user_input[CONF_LOCATION],
                     CONF_LATITUDE: latitude,
                     CONF_LONGITUDE: longitude,
-                    CONF_UNIT_SYSTEM: unit_system,
+                    CONF_UNIT_SYSTEM: user_input[CONF_UNIT_SYSTEM],
                 }
-
-                # Ask if user wants to configure update intervals
                 return await self.async_step_intervals()
 
         # Default to Home Assistant's configured location
@@ -150,7 +161,7 @@ class OAuth2FlowHandler(
         if user_input is not None:
             # Merge all data and create entry
             final_data = {
-                **self.oauth_data,
+                CONF_API_KEY: self.api_key,
                 **self.user_data,
                 **user_input,
             }
@@ -212,28 +223,18 @@ class OAuth2FlowHandler(
                     ): str,
                 }
             ),
-            description_placeholders={
-                "current_day": str(DEFAULT_CURRENT_DAY_INTERVAL),
-                "current_night": str(DEFAULT_CURRENT_NIGHT_INTERVAL),
-                "daily_day": str(DEFAULT_DAILY_DAY_INTERVAL),
-                "daily_night": str(DEFAULT_DAILY_NIGHT_INTERVAL),
-                "hourly_day": str(DEFAULT_HOURLY_DAY_INTERVAL),
-                "hourly_night": str(DEFAULT_HOURLY_NIGHT_INTERVAL),
-                "alerts_day": str(DEFAULT_ALERTS_DAY_INTERVAL),
-                "alerts_night": str(DEFAULT_ALERTS_NIGHT_INTERVAL),
-            },
         )
 
     @staticmethod
     @callback
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
-    ) -> GoogleWeatherOptionsFlowHandler:
+    ) -> GoogleWeatherOptionsFlow:
         """Get the options flow for this handler."""
-        return GoogleWeatherOptionsFlowHandler(config_entry)
+        return GoogleWeatherOptionsFlow(config_entry)
 
 
-class GoogleWeatherOptionsFlowHandler(config_entries.OptionsFlow):
+class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Google Weather."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
@@ -253,13 +254,14 @@ class GoogleWeatherOptionsFlowHandler(config_entries.OptionsFlow):
 
             if not (-90 <= latitude <= 90):
                 errors[CONF_LATITUDE] = "invalid_latitude"
-            elif not (-180 <= longitude <= 180):
+            if not (-180 <= longitude <= 180):
                 errors[CONF_LONGITUDE] = "invalid_longitude"
-            else:
-                # Update coordinator with new values
+
+            if not errors:
+                # Update options
                 return self.async_create_entry(title="", data=user_input)
 
-        # Get current values from config or options
+        # Get current values from config_entry (data or options)
         current_data = {**self.config_entry.data, **self.config_entry.options}
 
         return self.async_show_form(
@@ -278,7 +280,7 @@ class GoogleWeatherOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_UNIT_SYSTEM,
                         default=current_data.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM),
                     ): vol.In(UNIT_SYSTEMS),
-                    # Current conditions intervals
+                    # Update intervals
                     vol.Optional(
                         CONF_CURRENT_DAY_INTERVAL,
                         default=current_data.get(CONF_CURRENT_DAY_INTERVAL, DEFAULT_CURRENT_DAY_INTERVAL),
@@ -287,7 +289,6 @@ class GoogleWeatherOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_CURRENT_NIGHT_INTERVAL,
                         default=current_data.get(CONF_CURRENT_NIGHT_INTERVAL, DEFAULT_CURRENT_NIGHT_INTERVAL),
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    # Daily forecast intervals
                     vol.Optional(
                         CONF_DAILY_DAY_INTERVAL,
                         default=current_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
@@ -296,7 +297,6 @@ class GoogleWeatherOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_DAILY_NIGHT_INTERVAL,
                         default=current_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    # Hourly forecast intervals
                     vol.Optional(
                         CONF_HOURLY_DAY_INTERVAL,
                         default=current_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
@@ -305,7 +305,6 @@ class GoogleWeatherOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_HOURLY_NIGHT_INTERVAL,
                         default=current_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    # Weather alerts intervals
                     vol.Optional(
                         CONF_ALERTS_DAY_INTERVAL,
                         default=current_data.get(CONF_ALERTS_DAY_INTERVAL, DEFAULT_ALERTS_DAY_INTERVAL),
@@ -314,7 +313,6 @@ class GoogleWeatherOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_ALERTS_NIGHT_INTERVAL,
                         default=current_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
                     ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    # Night time period
                     vol.Optional(
                         CONF_NIGHT_START,
                         default=current_data.get(CONF_NIGHT_START, DEFAULT_NIGHT_START),

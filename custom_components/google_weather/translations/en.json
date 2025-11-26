@@ -2,22 +2,26 @@
   "config": {
     "step": {
       "user": {
-        "title": "Authenticate with Google",
-        "description": "This integration requires Google Cloud credentials. Make sure you have set up application credentials before continuing."
+        "title": "Enter API Key",
+        "description": "Enter your Google Maps Platform API key. Make sure the Weather API is enabled in your Google Cloud project.",
+        "data": {
+          "api_key": "API Key"
+        },
+        "data_description": {
+          "api_key": "Your Google Maps Platform API key with Weather API enabled"
+        }
       },
       "location": {
         "title": "Configure Location",
         "description": "Configure the location and settings for Google Weather. The location will default to your Home Assistant configuration.",
         "data": {
-          "location": "Location Name",
-          "prefix": "Entity Prefix",
+          "location": "Location / Prefix",
           "latitude": "Latitude",
           "longitude": "Longitude",
           "unit_system": "Unit System"
         },
         "data_description": {
-          "location": "Friendly name for this location (e.g., 'Home', 'Office')",
-          "prefix": "Prefix for entity IDs (default: gw)",
+          "location": "Location name used for entity IDs (default: 'home'). Examples: 'home', 'office', 'gw_home'",
           "latitude": "Latitude coordinate for weather data (defaults to Home Assistant location)",
           "longitude": "Longitude coordinate for weather data (defaults to Home Assistant location)",
           "unit_system": "Choose metric (Celsius, km/h, mm) or imperial (Fahrenheit, mph, inches)"
@@ -53,13 +57,13 @@
       }
     },
     "error": {
-      "missing_credentials": "Google application credentials not configured. Please set up application credentials first.",
+      "invalid_api_key": "Invalid API key or Weather API not enabled. Please check your Google Cloud Console.",
+      "cannot_connect": "Unable to connect to Google Weather API. Please check your network connection.",
       "invalid_latitude": "Latitude must be between -90 and 90",
       "invalid_longitude": "Longitude must be between -180 and 180"
     },
     "abort": {
-      "already_configured": "This location is already configured",
-      "missing_credentials": "Google application credentials not configured"
+      "already_configured": "This location is already configured"
     }
   },
   "options": {

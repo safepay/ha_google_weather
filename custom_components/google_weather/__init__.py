@@ -2,12 +2,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_entry_oauth2_flow
 
 from .const import DOMAIN
 from .coordinator import GoogleWeatherCoordinator
@@ -19,16 +17,8 @@ PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.WEATHER]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Google Weather from a config entry."""
-    implementation = (
-        await config_entry_oauth2_flow.async_get_config_entry_implementation(
-            hass, entry
-        )
-    )
-
-    session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
-
     # Create coordinator
-    coordinator = GoogleWeatherCoordinator(hass, session, entry)
+    coordinator = GoogleWeatherCoordinator(hass, entry)
 
     await coordinator.async_config_entry_first_refresh()
 

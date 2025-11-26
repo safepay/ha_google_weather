@@ -103,51 +103,35 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 
 ## Configuration
 
-⚠️ **Important**: Complete Steps 1-2 (Google Cloud setup) BEFORE installing the integration.
-
-### Step 1: Enable Google Weather API
+### Step 1: Get Your API Key
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Select your project (or create a new one)
 3. Navigate to "APIs & Services" → "Library"
-4. Search for "Weather API"
-5. Click "Enable"
+4. Search for "Weather API" and click "Enable"
+5. Go to "APIs & Services" → "Credentials"
+6. Click "Create Credentials" → "API key"
+7. Copy your API key (you can add restrictions for better security)
 
-### Step 2: Configure OAuth Credentials
+💡 **Tip**: If you already have a Google Maps Platform API key, you can reuse it! Just make sure the Weather API is enabled for your project.
 
-1. In Google Cloud Console, go to "APIs & Services" → "Credentials"
-2. Click "Create Credentials" → "OAuth client ID"
-3. Select "Web application"
-4. Add authorized redirect URI: `https://my.home-assistant.io/redirect/oauth`
-5. Save your Client ID and Client Secret
-6. **Keep these handy** - you'll need them in Step 4
-
-### Step 3: Install the Integration
-
-Follow the installation steps above (HACS or Manual) and **restart Home Assistant**.
-
-After restarting, "Google Weather" will be available as an option in Application Credentials.
-
-### Step 4: Add Application Credentials in Home Assistant
-
-1. In Home Assistant, go to Settings → Devices & Services
-2. Click "Application Credentials" (bottom of the page)
-3. Click "+ Add Application Credential"
-4. Select "Google Weather" (appears after Step 3 restart)
-5. Enter your OAuth Client ID and Client Secret from Step 2
-6. Click "Create"
-
-### Step 5: Add the Integration
+### Step 2: Add the Integration
 
 1. Go to Settings → Devices & Services
 2. Click "+ Add Integration"
 3. Search for "Google Weather"
-4. Follow the OAuth flow to authenticate with Google
+4. Enter your API key from Step 1
 5. Configure your location:
-   - **Location / Prefix**: Location name used for entity IDs (default: "home")
+   - **Location**: Entity ID prefix (default: "home")
+     Examples: "home", "office", "weather_station"
    - **Latitude**: Location latitude (defaults to Home Assistant location)
    - **Longitude**: Location longitude (defaults to Home Assistant location)
    - **Unit System**: Choose METRIC or IMPERIAL
+6. Configure update intervals (optional):
+   - Set how often each endpoint updates during day/night
+   - Defaults are optimized for the free tier (10,000 calls/month)
+
+That's it! Your weather data will start flowing immediately.
 
 ## Entity Naming
 
