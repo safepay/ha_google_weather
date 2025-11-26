@@ -183,8 +183,6 @@ class GoogleWeatherBinarySensor(
     """Representation of a Google Weather binary sensor."""
 
     entity_description: GoogleWeatherBinarySensorDescription
-    _attr_has_entity_name = True
-    _attr_translation_key = "warning_sensors"
 
     def __init__(
         self,
@@ -201,14 +199,13 @@ class GoogleWeatherBinarySensor(
         location_slug = location.lower().replace(" ", "_")
 
         # Create friendly name from location (title case)
-        # location_name = location.replace("_", " ").title()
+        location_name = location.replace("_", " ").title()
 
-        # self._attr_name = f"{location_name} {description.name}"
-        self._attr_name = f"{description.name}"
+        # Don't set name - let Home Assistant infer from entity_id
         self._attr_unique_id = f"{location_slug}_{description.key}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_warnings")},
-            # "name": f"{location_name} - Binary Warning Sensors",
+            "name": f"{location_name} Warnings",
             "manufacturer": "Google",
             "model": "Weather API - Warnings",
             "sw_version": "v1",

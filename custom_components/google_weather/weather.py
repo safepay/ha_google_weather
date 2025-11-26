@@ -95,11 +95,11 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        self._attr_name = f"{location_name} Weather"
+        # Don't set name - let Home Assistant infer from entity_id
         self._attr_unique_id = location_slug
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": f"Google Weather - {location_name}",
+            "name": location_name,
             "manufacturer": "Google",
             "model": "Weather API",
             "sw_version": "v1",
