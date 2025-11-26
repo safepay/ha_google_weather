@@ -24,16 +24,15 @@ A comprehensive Home Assistant integration for Google Weather API with smart pol
 🔧 **User-Friendly**
 - Full config and options flow
 - No YAML configuration required
-- Easy OAuth setup
+- Simple API key setup
 - Comprehensive documentation
 
 ## Quick Start
 
 1. **Enable Google Weather API** in Google Cloud Console
-2. **Set up OAuth credentials** in Google Cloud
-3. **Add application credentials** in Home Assistant
-4. **Add integration** via UI
-5. **Configure** location and update intervals
+2. **Create an API key** in Google Cloud
+3. **Add integration** via UI and enter your API key
+4. **Configure** location and update intervals
 
 ## Default Settings
 
@@ -66,11 +65,13 @@ Optimized for Google's free tier (10,000 calls/month):
 - Urgent weather alerts (immediate/expected)
 - Detailed alert attributes with instructions
 
+**Note**: Alert coverage varies by region. Some areas (e.g., Victoria/WA in Australia) may not be supported.
+
 ## Requirements
 
 - Home Assistant 2023.1+
 - Google Cloud project with Weather API enabled
-- OAuth 2.0 credentials configured
+- Google Maps Platform API key
 
 ## Support
 
