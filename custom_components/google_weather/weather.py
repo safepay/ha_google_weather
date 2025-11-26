@@ -104,8 +104,6 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
             "model": "Weather API",
             "sw_version": "v1",
         }
-        # Set name to match location for friendly name
-        self._attr_name = location_name
 
         # Set units based on unit system - API returns values in the requested unit system
         unit_system = entry.options.get(CONF_UNIT_SYSTEM) or entry.data.get(CONF_UNIT_SYSTEM, "METRIC")
@@ -121,6 +119,11 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
             self._attr_native_wind_speed_unit = UnitOfSpeed.KILOMETERS_PER_HOUR
             self._attr_native_precipitation_unit = UnitOfPrecipitationDepth.MILLIMETERS
             self._attr_native_visibility_unit = UnitOfLength.KILOMETERS
+
+    @property
+    def name(self) -> None:
+        """Return None to let Home Assistant infer name from entity_id."""
+        return None
 
     def _get_current_data(self) -> dict[str, Any] | None:
         """Get current weather data."""
