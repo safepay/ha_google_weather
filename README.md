@@ -51,13 +51,16 @@ A comprehensive Home Assistant integration that provides weather data from the G
 - Total Precipitation
 
 ### Weather Alert Binary Sensors
+**Note**: These sensors are **only created if your region supports weather alerts**. The integration automatically detects alert support during initial setup.
+
+When available, you get three binary sensors:
 - **Weather Alert**: Any active weather alerts
 - **Severe Weather Alert**: Extreme or severe alerts only
 - **Urgent Weather Alert**: Immediate or expected urgency alerts
 
 All alert sensors include detailed attributes with alert descriptions, instructions, severity levels, and more.
 
-**Note**: Weather alert coverage varies by region. Some areas may not have alert support through Google's API (see [Supported Regions](#supported-regions) for details).
+**Alert Availability**: Weather alert coverage varies by region. If the Google Weather API returns a 404 error for your location, the warning sensors and "Warnings" device will not be created. This is normal and the integration will continue to provide all weather data and forecasts. See [Supported Regions](#supported-regions) for coverage details.
 
 ## Prerequisites
 
@@ -137,40 +140,45 @@ That's it! Your weather data will start flowing immediately.
 
 ## Entity Naming
 
-The location field is used directly for all entity IDs (after converting to lowercase and replacing spaces with underscores).
+The integration creates clean, simple entity IDs using your configured location prefix. Friendly names are automatically inferred by Home Assistant from the entity IDs.
 
 **Example: Location = "home"**
 
-### Weather Entity
-- `weather.home`
+### Main Device: "Home"
+**Weather Entity:**
+- `weather.home` → Friendly name: "Home"
 
-### Observational Sensors (Device: "Home - Observational Sensors")
-- `sensor.home_temperature`
-- `sensor.home_feels_like`
-- `sensor.home_humidity`
-- `sensor.home_pressure`
-- `sensor.home_wind_speed`
-- `sensor.home_wind_gust`
-- `sensor.home_wind_direction`
-- `sensor.home_visibility`
-- `sensor.home_cloud_cover`
-- `sensor.home_uv_index`
-- `sensor.home_precipitation_probability`
-- `sensor.home_precipitation_amount`
-- `sensor.home_thunderstorm_probability`
-- `sensor.home_dew_point`
-- `sensor.home_heat_index`
-- `sensor.home_wind_chill`
-- `sensor.home_temp_change_24h`
-- `sensor.home_max_temp_24h`
-- `sensor.home_min_temp_24h`
-- `sensor.home_precipitation_24h`
-- `sensor.home_weather_condition`
+### Device: "Home Observational Sensors"
+**Sensor Entities:**
+- `sensor.home_temperature` → Friendly name: "Home Temperature"
+- `sensor.home_feels_like` → Friendly name: "Home Feels Like"
+- `sensor.home_humidity` → Friendly name: "Home Humidity"
+- `sensor.home_pressure` → Friendly name: "Home Pressure"
+- `sensor.home_wind_speed` → Friendly name: "Home Wind Speed"
+- `sensor.home_wind_gust` → Friendly name: "Home Wind Gust"
+- `sensor.home_wind_direction` → Friendly name: "Home Wind Direction"
+- `sensor.home_visibility` → Friendly name: "Home Visibility"
+- `sensor.home_cloud_cover` → Friendly name: "Home Cloud Cover"
+- `sensor.home_uv_index` → Friendly name: "Home UV Index"
+- `sensor.home_precipitation_probability` → Friendly name: "Home Precipitation Probability"
+- `sensor.home_precipitation_amount` → Friendly name: "Home Precipitation Amount"
+- `sensor.home_thunderstorm_probability` → Friendly name: "Home Thunderstorm Probability"
+- `sensor.home_dew_point` → Friendly name: "Home Dew Point"
+- `sensor.home_heat_index` → Friendly name: "Home Heat Index"
+- `sensor.home_wind_chill` → Friendly name: "Home Wind Chill"
+- `sensor.home_temp_change_24h` → Friendly name: "Home Temp Change 24h"
+- `sensor.home_max_temp_24h` → Friendly name: "Home Max Temp 24h"
+- `sensor.home_min_temp_24h` → Friendly name: "Home Min Temp 24h"
+- `sensor.home_precipitation_24h` → Friendly name: "Home Precipitation 24h"
+- `sensor.home_weather_condition` → Friendly name: "Home Weather Condition"
 
-### Weather Alert Binary Sensors (Device: "Home - Binary Warning Sensors")
-- `binary_sensor.home_weather_alert`
-- `binary_sensor.home_severe_weather_alert`
-- `binary_sensor.home_urgent_weather_alert`
+### Device: "Home Warnings" (Only if region supports alerts)
+**Binary Sensor Entities:**
+- `binary_sensor.home_weather_alert` → Friendly name: "Home Weather Alert"
+- `binary_sensor.home_severe_weather_alert` → Friendly name: "Home Severe Weather Alert"
+- `binary_sensor.home_urgent_weather_alert` → Friendly name: "Home Urgent Weather Alert"
+
+**Note**: The "Home Warnings" device and its binary sensors are only created if the Google Weather API supports alerts for your location. If you receive a 404 error during initial setup, these entities will not be created.
 
 ## Smart Polling & API Optimization
 
@@ -284,6 +292,8 @@ The integration will automatically reload with the new settings. Changes to upda
 
 ## Unit Systems
 
+The integration supports both Metric and Imperial unit systems. Choose your preferred system during setup, and the Google Weather API will return data in those units.
+
 ### Metric (Default for most regions)
 - Temperature: Celsius (°C)
 - Wind Speed: Kilometers per hour (km/h)
@@ -296,7 +306,9 @@ The integration will automatically reload with the new settings. Changes to upda
 - Wind Speed: Miles per hour (mph)
 - Precipitation: Inches (in)
 - Visibility: Miles (mi)
-- Pressure: Inches of Mercury (inHg)
+- Pressure: Millibars (mbar) *Note: API does not convert pressure*
+
+**API Behavior**: The Google Weather API automatically converts most values based on your selected unit system. However, air pressure is always returned in millibars regardless of the unit system setting.
 
 ## Usage Examples
 
@@ -426,12 +438,17 @@ The coordinator checks every minute to see if any endpoint needs updating, but o
 - Check the unit system setting in the integration options
 - Reload the integration after changing the unit system
 
-### No weather alerts
-- Weather alerts depend on your location and whether there are active alerts
-- Check the `regionCode` in the integration logs to verify coverage
-- Not all regions have weather alert support through Google's API
-- **Australia**: Only ACT, NSW, QLD, SA, and TAS are supported. Victoria and Western Australia are **not supported** by Google's publicAlerts endpoint (despite having their own emergency alert systems like VIC's CFA RSS feeds)
-- If you receive HTTP 400 errors for weather alerts, this is normal for unsupported regions - the integration will continue to work with all other weather data
+### No weather alert sensors
+- **If you don't see any binary sensor entities** for alerts, your region does not support weather alerts through the Google Weather API
+- The integration automatically detects alert support on first setup - if the API returns a 404 error, warning sensors are not created
+- Check the integration logs for the message: "Weather alerts not available for this location (HTTP 404)"
+- This is normal and expected for unsupported regions - the integration will continue to work perfectly with all weather data and forecasts
+- Not all regions have weather alert support through Google's API (see [Supported Regions](#supported-regions) for details)
+
+### No active weather alerts (sensors exist but show "off")
+- Weather alerts depend on whether there are currently active alerts in your area
+- Binary sensors will be in the "off" state when there are no active alerts
+- This is normal - alerts only activate when severe weather is occurring or expected
 
 ## Supported Regions
 
@@ -440,29 +457,26 @@ Available **worldwide** for any latitude/longitude coordinates.
 
 ### Weather Alerts Coverage
 
-Weather alerts are available in many countries, but coverage varies by region:
+Weather alerts are available in many countries, but coverage varies by region. **The integration automatically detects whether your location supports alerts** during initial setup.
 
-**Full Coverage:**
-- United States (NOAA/NWS)
-- Most European countries (MeteoAlarm)
-- Japan, South Korea, Singapore
-- New Zealand, Brazil, Mexico
-- And many more
+**How Alert Detection Works:**
+- On first setup, the integration checks if the Google Weather API supports alerts for your location
+- If supported (HTTP 200): Warning sensors are created and will show alerts when active
+- If not supported (HTTP 404): Warning sensors are NOT created - this prevents misleading empty sensors
+- This detection happens once during initial setup and the result is cached
 
-**Limited Coverage:**
-- **Australia**: Only the following states/territories are supported by Google's publicAlerts endpoint:
-  - ✅ **ACT** - ACT Emergency Services Agency (ACT ESA)
-  - ✅ **NSW** - New South Wales Rural Fire Service (NSW RFS)
-  - ✅ **QLD** - Queensland Fire and Emergency Services (QFES)
-  - ✅ **SA** - South Australian Country Fire Service (SA CFS)
-  - ✅ **TAS** - Tasmania Fire Service (TFS)
-  - ❌ **VIC** - Not supported (Victoria has its own [CFA RSS feeds](https://www.cfa.vic.gov.au/articlenav/news-and-media/incident-information/rss-feeds) which are not integrated with Google's API)
-  - ❌ **WA** - Not supported (Western Australia has its own [Emergency WA system](https://www.emergency.wa.gov.au/) which is not integrated with Google's API)
-  - ❌ **NT** - Not supported
+**Alert Availability:**
+- Weather alert coverage varies significantly by country and region
+- Some countries have full national coverage, while others have limited regional support
+- The Google Weather API aggregates alerts from official government agencies worldwide
+- See the [Google Weather API documentation](https://developers.google.com/maps/documentation/weather/weather-alerts#data_sources) for specific coverage in your region
 
-**Note**: If you're in an unsupported alert region (like Victoria or Western Australia), you'll receive HTTP 400 errors when the integration attempts to fetch alerts. This is normal and expected - the integration will gracefully handle this and continue providing all weather data and forecasts. The alert binary sensors will remain in the "off" state.
-
-See the [Google Weather API documentation](https://developers.google.com/maps/documentation/weather/weather-alerts#data_sources) for a complete list of supported alert regions worldwide.
+**What Happens in Unsupported Regions:**
+If alerts are not available for your location:
+- You'll see a log message: "Weather alerts not available for this location (HTTP 404). Warning sensors will not be created."
+- The "Warnings" device and its three binary sensors will NOT be created
+- All other weather data and forecasts will work perfectly
+- This is the expected behavior and prevents cluttering your UI with sensors that can never have data
 
 ## API Limitations & Pricing
 

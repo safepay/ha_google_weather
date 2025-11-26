@@ -121,6 +121,11 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
             self._attr_native_precipitation_unit = UnitOfPrecipitationDepth.MILLIMETERS
             self._attr_native_visibility_unit = UnitOfLength.KILOMETERS
 
+    @property
+    def name(self) -> None:
+        """Return None to use unique_id for entity_id generation."""
+        return None
+
     def _get_current_data(self) -> dict[str, Any] | None:
         """Get current weather data."""
         if not self.coordinator.data:
