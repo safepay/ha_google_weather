@@ -262,9 +262,9 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     updated_data["alerts"] = alerts_data.get("alerts", [])
                 except requests.HTTPError as err:
                     # Handle 400 errors gracefully - may indicate region doesn't support alerts
-                    if err.response.status_code == 400:
+                    if err.response.status_code == 404:
                         _LOGGER.info(
-                            "Weather alerts not available for this location (HTTP 400). "
+                            "Weather alerts not available for this location (HTTP 404). "
                             "This is normal for regions without alert coverage."
                         )
                         updated_data["alerts"] = []
