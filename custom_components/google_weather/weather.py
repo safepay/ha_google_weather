@@ -95,21 +95,22 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        self._attr_name = f"{location_name} Weather"
+        # Don't set name - let Home Assistant infer from entity_id
         self._attr_unique_id = location_slug
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": f"Google Weather - {location_name}",
+            "name": location_name,
             "manufacturer": "Google",
             "model": "Weather API",
             "sw_version": "v1",
         }
 
-        # Set units based on unit system
+        # Set units based on unit system - API returns values in the requested unit system
+        # Note: API always returns pressure in millibars regardless of unit system
         unit_system = entry.options.get(CONF_UNIT_SYSTEM) or entry.data.get(CONF_UNIT_SYSTEM, "METRIC")
         if unit_system == UNIT_SYSTEM_IMPERIAL:
             self._attr_native_temperature_unit = UnitOfTemperature.FAHRENHEIT
-            self._attr_native_pressure_unit = UnitOfPressure.INHG
+            self._attr_native_pressure_unit = UnitOfPressure.MBAR  # API does not convert pressure
             self._attr_native_wind_speed_unit = UnitOfSpeed.MILES_PER_HOUR
             self._attr_native_precipitation_unit = UnitOfPrecipitationDepth.INCHES
             self._attr_native_visibility_unit = UnitOfLength.MILES

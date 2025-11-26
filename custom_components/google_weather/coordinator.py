@@ -101,6 +101,9 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Cache data for each endpoint
         self.endpoint_data: dict[str, Any] = {}
 
+        # Track whether alerts are supported for this location
+        self.alerts_supported: bool | None = None  # None = not checked yet
+
         # Use 1 minute update interval - checks frequently but only fetches when needed
         super().__init__(
             hass,
@@ -195,12 +198,19 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     ) -> dict[str, Any]:
         """Fetch weather data from Google Weather API (runs in executor)."""
         try:
-            # Prepare common parameters
-            params = {
+            # Prepare common parameters for weather endpoints (with units_system)
+            weather_params = {
                 "key": self.api_key,
                 "location.latitude": self.latitude,
                 "location.longitude": self.longitude,
-                # "unitsSystem": self.unit_system,
+                "units_system": self.unit_system,
+            }
+
+            # Prepare parameters for alerts endpoint (without units_system)
+            alerts_params = {
+                "key": self.api_key,
+                "location.latitude": self.latitude,
+                "location.longitude": self.longitude,
             }
 
             updated_data = {}
@@ -210,8 +220,8 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.debug("Fetching current conditions")
                 current_response = requests.get(
                     f"{API_BASE_URL}/currentConditions:lookup",
-                    params=params,
-                    # timeout=30,
+                    params=weather_params,
+                    timeout=10,
                 )
                 current_response.raise_for_status()
                 updated_data["current"] = current_response.json()
@@ -220,13 +230,13 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if endpoints_to_update.get(ENDPOINT_DAILY):
                 _LOGGER.debug("Fetching daily forecast")
                 daily_params = {
-                    **params,
+                    **weather_params,
                     "days": 10,  # Get 10 days of forecast
                 }
                 daily_response = requests.get(
                     f"{API_BASE_URL}/forecast/days:lookup",
                     params=daily_params,
-                    # timeout=30,
+                    timeout=10,
                 )
                 daily_response.raise_for_status()
                 forecast_data = daily_response.json()
@@ -236,13 +246,13 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if endpoints_to_update.get(ENDPOINT_HOURLY):
                 _LOGGER.debug("Fetching hourly forecast")
                 hourly_params = {
-                    **params,
+                    **weather_params,
                     "hours": 240,  # Get 240 hours (10 days) of forecast
                 }
                 hourly_response = requests.get(
                     f"{API_BASE_URL}/forecast/hours:lookup",
                     params=hourly_params,
-                    # timeout=30,
+                    timeout=10,
                 )
                 hourly_response.raise_for_status()
                 forecast_data = hourly_response.json()
@@ -254,19 +264,27 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 try:
                     alerts_response = requests.get(
                         f"{API_BASE_URL}/publicAlerts:lookup",
-                        params=params,
-                        # timeout=30,
+                        params=alerts_params,
+                        timeout=10,
                     )
                     alerts_response.raise_for_status()
                     alerts_data = alerts_response.json()
                     updated_data["alerts"] = alerts_data.get("weatherAlerts", [])
+                    # Mark alerts as supported for this location
+                    if self.alerts_supported is None:
+                        self.alerts_supported = True
+                        _LOGGER.info("Weather alerts are supported for this location")
                 except requests.HTTPError as err:
-                    # Handle 400 errors gracefully - may indicate region doesn't support alerts
+                    # Handle 404 errors gracefully - region doesn't support alerts
                     if err.response.status_code == 404:
-                        _LOGGER.info(
-                            "Weather alerts not available for this location (HTTP 404). "
-                            "This is normal for regions without alert coverage."
-                        )
+                        # Mark alerts as not supported for this location
+                        if self.alerts_supported is None:
+                            self.alerts_supported = False
+                            _LOGGER.info(
+                                "Weather alerts not available for this location (HTTP 404). "
+                                "This is normal for regions without alert coverage. "
+                                "Warning sensors will not be created."
+                            )
                         updated_data["alerts"] = []
                     else:
                         # Re-raise other HTTP errors

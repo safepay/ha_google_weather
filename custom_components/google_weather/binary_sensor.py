@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+import logging
 from typing import Any
 
 from homeassistant.components.binary_sensor import (
@@ -17,6 +18,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_LOCATION, DOMAIN
 from .coordinator import GoogleWeatherCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -169,6 +172,14 @@ async def async_setup_entry(
     """Set up Google Weather binary sensor entities."""
     coordinator: GoogleWeatherCoordinator = hass.data[DOMAIN][entry.entry_id]
 
+    # Check if alerts are supported for this location
+    # The coordinator has already done its first refresh by this point
+    if coordinator.alerts_supported is False:
+        _LOGGER.info(
+            "Skipping binary sensor setup - weather alerts not supported for this location"
+        )
+        return
+
     location = entry.data.get(CONF_LOCATION, "home")
 
     async_add_entities(
@@ -183,8 +194,6 @@ class GoogleWeatherBinarySensor(
     """Representation of a Google Weather binary sensor."""
 
     entity_description: GoogleWeatherBinarySensorDescription
-    _attr_has_entity_name = True
-    _attr_translation_key = "warning_sensors"
 
     def __init__(
         self,
@@ -201,14 +210,13 @@ class GoogleWeatherBinarySensor(
         location_slug = location.lower().replace(" ", "_")
 
         # Create friendly name from location (title case)
-        # location_name = location.replace("_", " ").title()
+        location_name = location.replace("_", " ").title()
 
-        # self._attr_name = f"{location_name} {description.name}"
-        self._attr_name = f"{description.name}"
+        # Don't set name - let Home Assistant infer from entity_id
         self._attr_unique_id = f"{location_slug}_{description.key}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_warnings")},
-            # "name": f"{location_name} - Binary Warning Sensors",
+            "name": f"{location_name} Warnings",
             "manufacturer": "Google",
             "model": "Weather API - Warnings",
             "sw_version": "v1",

@@ -266,8 +266,6 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
     """Representation of a Google Weather sensor."""
 
     entity_description: GoogleWeatherSensorDescription
-    _attr_has_entity_name = True
-    _attr_translation_key = "observational_sensors"
 
     def __init__(
         self,
@@ -286,11 +284,11 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        self._attr_name = f"{location_name} {description.name}"
+        # Don't set name - let Home Assistant infer from entity_id
         self._attr_unique_id = f"{location_slug}_{description.key}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_sensors")},
-            "name": f"{location_name} - Observational Sensors",
+            "name": f"{location_name} Observational Sensors",
             "manufacturer": "Google",
             "model": "Weather API - Sensors",
             "sw_version": "v1",
