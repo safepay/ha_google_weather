@@ -230,7 +230,7 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
                 daily_response.raise_for_status()
                 forecast_data = daily_response.json()
-                updated_data["daily_forecast"] = forecast_data.get("dailyForecasts", [])
+                updated_data["daily_forecast"] = forecast_data.get("forecastDays", [])
 
             # Fetch hourly forecast if needed
             if endpoints_to_update.get(ENDPOINT_HOURLY):
@@ -246,7 +246,7 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
                 hourly_response.raise_for_status()
                 forecast_data = hourly_response.json()
-                updated_data["hourly_forecast"] = forecast_data.get("hourlyForecasts", [])
+                updated_data["hourly_forecast"] = forecast_data.get("forecastHours", [])
 
             # Fetch weather alerts if needed
             if endpoints_to_update.get(ENDPOINT_ALERTS):
@@ -259,7 +259,7 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     )
                     alerts_response.raise_for_status()
                     alerts_data = alerts_response.json()
-                    updated_data["alerts"] = alerts_data.get("alerts", [])
+                    updated_data["alerts"] = alerts_data.get("weatherAlerts", [])
                 except requests.HTTPError as err:
                     # Handle 400 errors gracefully - may indicate region doesn't support alerts
                     if err.response.status_code == 404:
