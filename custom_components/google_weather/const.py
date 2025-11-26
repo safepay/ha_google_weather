@@ -4,6 +4,7 @@ from datetime import timedelta, time
 DOMAIN = "google_weather"
 
 # Configuration
+CONF_API_KEY = "api_key"
 CONF_LOCATION = "location"
 CONF_LATITUDE = "latitude"
 CONF_LONGITUDE = "longitude"
@@ -57,11 +58,6 @@ DEFAULT_NIGHT_END = "06:00"  # 6 AM
 UNIT_SYSTEM_METRIC = "METRIC"
 UNIT_SYSTEM_IMPERIAL = "IMPERIAL"
 UNIT_SYSTEMS = [UNIT_SYSTEM_METRIC, UNIT_SYSTEM_IMPERIAL]
-
-# OAuth2 scopes
-OAUTH2_SCOPES = [
-    "https://www.googleapis.com/auth/cloud-platform",
-]
 
 # API
 API_BASE_URL = "https://weather.googleapis.com/v1"
