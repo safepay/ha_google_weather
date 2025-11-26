@@ -76,6 +76,8 @@ async def async_setup_entry(
 class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEntity):
     """Representation of a Google Weather entity."""
 
+    _attr_has_entity_name = True
+    _attr_name = None  # Main feature of device - friendly_name will be device name
     _attr_supported_features = (
         WeatherEntityFeature.FORECAST_DAILY | WeatherEntityFeature.FORECAST_HOURLY
     )
@@ -119,11 +121,6 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
             self._attr_native_wind_speed_unit = UnitOfSpeed.KILOMETERS_PER_HOUR
             self._attr_native_precipitation_unit = UnitOfPrecipitationDepth.MILLIMETERS
             self._attr_native_visibility_unit = UnitOfLength.KILOMETERS
-
-    @property
-    def name(self) -> None:
-        """Return None to let Home Assistant infer name from entity_id."""
-        return None
 
     def _get_current_data(self) -> dict[str, Any] | None:
         """Get current weather data."""
