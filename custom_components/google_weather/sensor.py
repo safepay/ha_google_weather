@@ -266,7 +266,6 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
     """Representation of a Google Weather sensor."""
 
     entity_description: GoogleWeatherSensorDescription
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -285,12 +284,12 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        # Set entity name to just the sensor type (device name will be prefixed)
-        self._attr_name = description.name
+        # Set unique_id for entity_id generation, and full name for friendly name
         self._attr_unique_id = f"{location_slug}_{description.key}"
+        self._attr_name = f"{location_name} {description.name}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_sensors")},
-            "name": location_name,  # Just the location, not "Location Observational Sensors"
+            "name": location_name,
             "manufacturer": "Google",
             "model": "Weather API - Sensors",
             "sw_version": "v1",
