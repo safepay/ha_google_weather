@@ -96,8 +96,9 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        # Set unique_id and device info
+        # Set unique_id and name
         self._attr_unique_id = location_slug
+        self._attr_name = location_name  # Full friendly name (has_entity_name = False)
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": location_name,

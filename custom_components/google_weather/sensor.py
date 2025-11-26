@@ -285,8 +285,9 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        # Set unique_id for entity_id generation
+        # Set unique_id and name
         self._attr_unique_id = f"{location_slug}_{description.key}"
+        self._attr_name = f"{location_name} {description.name}"  # Full friendly name (has_entity_name = False)
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_sensors")},
             "name": location_name,
