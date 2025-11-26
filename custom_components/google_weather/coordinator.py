@@ -211,7 +211,7 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 current_response = requests.get(
                     f"{API_BASE_URL}/currentConditions:lookup",
                     params=params,
-                    timeout=30,
+                    # timeout=30,
                 )
                 current_response.raise_for_status()
                 updated_data["current"] = current_response.json()
@@ -226,7 +226,7 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 daily_response = requests.get(
                     f"{API_BASE_URL}/forecast/days:lookup",
                     params=daily_params,
-                    timeout=30,
+                    # timeout=30,
                 )
                 daily_response.raise_for_status()
                 forecast_data = daily_response.json()
@@ -242,7 +242,7 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 hourly_response = requests.get(
                     f"{API_BASE_URL}/forecast/hours:lookup",
                     params=hourly_params,
-                    timeout=30,
+                    # timeout=30,
                 )
                 hourly_response.raise_for_status()
                 forecast_data = hourly_response.json()
@@ -255,7 +255,7 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     alerts_response = requests.get(
                         f"{API_BASE_URL}/publicAlerts:lookup",
                         params=params,
-                        timeout=30,
+                        # timeout=30,
                     )
                     alerts_response.raise_for_status()
                     alerts_data = alerts_response.json()
