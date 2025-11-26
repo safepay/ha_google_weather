@@ -251,14 +251,26 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Fetch weather alerts if needed
             if endpoints_to_update.get(ENDPOINT_ALERTS):
                 _LOGGER.debug("Fetching weather alerts")
-                alerts_response = requests.get(
-                    f"{API_BASE_URL}/publicAlerts:lookup",
-                    params=params,
-                    timeout=30,
-                )
-                alerts_response.raise_for_status()
-                alerts_data = alerts_response.json()
-                updated_data["alerts"] = alerts_data.get("alerts", [])
+                try:
+                    alerts_response = requests.get(
+                        f"{API_BASE_URL}/publicAlerts:lookup",
+                        params=params,
+                        timeout=30,
+                    )
+                    alerts_response.raise_for_status()
+                    alerts_data = alerts_response.json()
+                    updated_data["alerts"] = alerts_data.get("alerts", [])
+                except requests.HTTPError as err:
+                    # Handle 400 errors gracefully - may indicate region doesn't support alerts
+                    if err.response.status_code == 400:
+                        _LOGGER.info(
+                            "Weather alerts not available for this location (HTTP 400). "
+                            "This is normal for regions without alert coverage."
+                        )
+                        updated_data["alerts"] = []
+                    else:
+                        # Re-raise other HTTP errors
+                        raise
 
             return updated_data
 
