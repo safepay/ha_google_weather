@@ -57,6 +57,8 @@ A comprehensive Home Assistant integration that provides weather data from the G
 
 All alert sensors include detailed attributes with alert descriptions, instructions, severity levels, and more.
 
+**Note**: Weather alert coverage varies by region. Some areas may not have alert support through Google's API (see [Supported Regions](#supported-regions) for details).
+
 ## Prerequisites
 
 1. **Google Cloud Project**: Create a project at [Google Cloud Console](https://console.cloud.google.com/)
@@ -427,19 +429,40 @@ The coordinator checks every minute to see if any endpoint needs updating, but o
 ### No weather alerts
 - Weather alerts depend on your location and whether there are active alerts
 - Check the `regionCode` in the integration logs to verify coverage
-- Not all regions have weather alert support
+- Not all regions have weather alert support through Google's API
+- **Australia**: Only ACT, NSW, QLD, SA, and TAS are supported. Victoria and Western Australia are **not supported** by Google's publicAlerts endpoint (despite having their own emergency alert systems like VIC's CFA RSS feeds)
+- If you receive HTTP 400 errors for weather alerts, this is normal for unsupported regions - the integration will continue to work with all other weather data
 
 ## Supported Regions
 
-Weather alerts are available in many countries including:
+### Weather Data (Current Conditions, Forecasts)
+Available **worldwide** for any latitude/longitude coordinates.
+
+### Weather Alerts Coverage
+
+Weather alerts are available in many countries, but coverage varies by region:
+
+**Full Coverage:**
 - United States (NOAA/NWS)
-- Australia (multiple agencies)
 - Most European countries (MeteoAlarm)
 - Japan, South Korea, Singapore
 - New Zealand, Brazil, Mexico
 - And many more
 
-See the [Google Weather API documentation](https://developers.google.com/maps/documentation/weather/weather-alerts#data_sources) for a complete list.
+**Limited Coverage:**
+- **Australia**: Only the following states/territories are supported by Google's publicAlerts endpoint:
+  - ✅ **ACT** - ACT Emergency Services Agency (ACT ESA)
+  - ✅ **NSW** - New South Wales Rural Fire Service (NSW RFS)
+  - ✅ **QLD** - Queensland Fire and Emergency Services (QFES)
+  - ✅ **SA** - South Australian Country Fire Service (SA CFS)
+  - ✅ **TAS** - Tasmania Fire Service (TFS)
+  - ❌ **VIC** - Not supported (Victoria has its own [CFA RSS feeds](https://www.cfa.vic.gov.au/articlenav/news-and-media/incident-information/rss-feeds) which are not integrated with Google's API)
+  - ❌ **WA** - Not supported
+  - ❌ **NT** - Not supported
+
+**Note**: If you're in an unsupported alert region (like Victoria or Western Australia), you'll receive HTTP 400 errors when the integration attempts to fetch alerts. This is normal and expected - the integration will gracefully handle this and continue providing all weather data and forecasts. The alert binary sensors will remain in the "off" state.
+
+See the [Google Weather API documentation](https://developers.google.com/maps/documentation/weather/weather-alerts#data_sources) for a complete list of supported alert regions worldwide.
 
 ## API Limitations & Pricing
 
