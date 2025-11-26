@@ -101,6 +101,9 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Cache data for each endpoint
         self.endpoint_data: dict[str, Any] = {}
 
+        # Track whether alerts are supported for this location
+        self.alerts_supported: bool | None = None  # None = not checked yet
+
         # Use 1 minute update interval - checks frequently but only fetches when needed
         super().__init__(
             hass,
@@ -267,13 +270,21 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     alerts_response.raise_for_status()
                     alerts_data = alerts_response.json()
                     updated_data["alerts"] = alerts_data.get("weatherAlerts", [])
+                    # Mark alerts as supported for this location
+                    if self.alerts_supported is None:
+                        self.alerts_supported = True
+                        _LOGGER.info("Weather alerts are supported for this location")
                 except requests.HTTPError as err:
                     # Handle 404 errors gracefully - region doesn't support alerts
                     if err.response.status_code == 404:
-                        _LOGGER.info(
-                            "Weather alerts not available for this location (HTTP 404). "
-                            "This is normal for regions without alert coverage."
-                        )
+                        # Mark alerts as not supported for this location
+                        if self.alerts_supported is None:
+                            self.alerts_supported = False
+                            _LOGGER.info(
+                                "Weather alerts not available for this location (HTTP 404). "
+                                "This is normal for regions without alert coverage. "
+                                "Warning sensors will not be created."
+                            )
                         updated_data["alerts"] = []
                     else:
                         # Re-raise other HTTP errors

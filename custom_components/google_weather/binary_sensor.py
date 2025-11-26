@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+import logging
 from typing import Any
 
 from homeassistant.components.binary_sensor import (
@@ -17,6 +18,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_LOCATION, DOMAIN
 from .coordinator import GoogleWeatherCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -168,6 +171,14 @@ async def async_setup_entry(
 ) -> None:
     """Set up Google Weather binary sensor entities."""
     coordinator: GoogleWeatherCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    # Check if alerts are supported for this location
+    # The coordinator has already done its first refresh by this point
+    if coordinator.alerts_supported is False:
+        _LOGGER.info(
+            "Skipping binary sensor setup - weather alerts not supported for this location"
+        )
+        return
 
     location = entry.data.get(CONF_LOCATION, "home")
 
