@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 from typing import Any
 
 from homeassistant.components.weather import (
@@ -24,6 +25,8 @@ from homeassistant.util import dt as dt_util
 
 from .const import CONF_LOCATION, CONF_UNIT_SYSTEM, DOMAIN, UNIT_SYSTEM_IMPERIAL
 from .coordinator import GoogleWeatherCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 # Map Google Weather API condition types to Home Assistant condition types
 CONDITION_MAP = {
@@ -249,73 +252,97 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
     async def async_forecast_daily(self) -> list[Forecast] | None:
         """Return the daily forecast."""
-        if not self.coordinator.data:
+        try:
+            if not self.coordinator.data:
+                _LOGGER.debug("No coordinator data available for daily forecast")
+                return None
+
+            daily_forecast = self.coordinator.data.get("daily_forecast", [])
+            _LOGGER.debug("Daily forecast data: %d days available", len(daily_forecast))
+
+            if not daily_forecast:
+                _LOGGER.warning("Daily forecast data is empty")
+                return None
+
+            forecasts: list[Forecast] = []
+
+            for day in daily_forecast:
+                display_date = day.get("displayDate", {})
+                datetime_str = f"{display_date.get('year')}-{display_date.get('month'):02d}-{display_date.get('day'):02d}"
+
+                daytime = day.get("daytimeForecast", {})
+                weather_condition = daytime.get("weatherCondition", {})
+
+                forecast = Forecast(
+                    datetime=datetime_str,
+                    condition=self._map_condition(weather_condition.get("type")),
+                    native_temperature=day.get("maxTemperature", {}).get("degrees"),
+                    native_templow=day.get("minTemperature", {}).get("degrees"),
+                    native_precipitation=daytime.get("precipitation", {}).get("qpf", {}).get("quantity"),
+                    precipitation_probability=daytime.get("precipitation", {}).get("probability", {}).get("percent"),
+                    native_wind_speed=daytime.get("wind", {}).get("speed", {}).get("value"),
+                    wind_bearing=daytime.get("wind", {}).get("direction", {}).get("degrees"),
+                    humidity=daytime.get("relativeHumidity"),
+                    uv_index=daytime.get("uvIndex"),
+                    cloud_coverage=daytime.get("cloudCover"),
+                )
+                forecasts.append(forecast)
+
+            _LOGGER.debug("Successfully created %d daily forecasts", len(forecasts))
+            return forecasts
+        except Exception as err:
+            _LOGGER.error("Error creating daily forecast: %s", err, exc_info=True)
             return None
-
-        daily_forecast = self.coordinator.data.get("daily_forecast", [])
-        forecasts: list[Forecast] = []
-
-        for day in daily_forecast:
-            display_date = day.get("displayDate", {})
-            datetime_str = f"{display_date.get('year')}-{display_date.get('month'):02d}-{display_date.get('day'):02d}"
-
-            daytime = day.get("daytimeForecast", {})
-            weather_condition = daytime.get("weatherCondition", {})
-
-            forecast = Forecast(
-                datetime=datetime_str,
-                condition=self._map_condition(weather_condition.get("type")),
-                native_temperature=day.get("maxTemperature", {}).get("degrees"),
-                native_templow=day.get("minTemperature", {}).get("degrees"),
-                native_precipitation=daytime.get("precipitation", {}).get("qpf", {}).get("quantity"),
-                precipitation_probability=daytime.get("precipitation", {}).get("probability", {}).get("percent"),
-                native_wind_speed=daytime.get("wind", {}).get("speed", {}).get("value"),
-                wind_bearing=daytime.get("wind", {}).get("direction", {}).get("degrees"),
-                humidity=daytime.get("relativeHumidity"),
-                uv_index=daytime.get("uvIndex"),
-                cloud_coverage=daytime.get("cloudCover"),
-            )
-            forecasts.append(forecast)
-
-        return forecasts
 
     async def async_forecast_hourly(self) -> list[Forecast] | None:
         """Return the hourly forecast."""
-        if not self.coordinator.data:
+        try:
+            if not self.coordinator.data:
+                _LOGGER.debug("No coordinator data available for hourly forecast")
+                return None
+
+            hourly_forecast = self.coordinator.data.get("hourly_forecast", [])
+            _LOGGER.debug("Hourly forecast data: %d hours available", len(hourly_forecast))
+
+            if not hourly_forecast:
+                _LOGGER.warning("Hourly forecast data is empty")
+                return None
+
+            forecasts: list[Forecast] = []
+
+            for hour in hourly_forecast:
+                interval = hour.get("interval", {})
+                start_time = interval.get("startTime")
+
+                if not start_time:
+                    continue
+
+                # Parse ISO 8601 datetime
+                dt = dt_util.parse_datetime(start_time)
+                if not dt:
+                    continue
+
+                weather_condition = hour.get("weatherCondition", {})
+
+                forecast = Forecast(
+                    datetime=dt.isoformat(),
+                    condition=self._map_condition(weather_condition.get("type")),
+                    native_temperature=hour.get("temperature", {}).get("degrees"),
+                    native_apparent_temperature=hour.get("feelsLikeTemperature", {}).get("degrees"),
+                    native_precipitation=hour.get("precipitation", {}).get("qpf", {}).get("quantity"),
+                    precipitation_probability=hour.get("precipitation", {}).get("probability", {}).get("percent"),
+                    native_wind_speed=hour.get("wind", {}).get("speed", {}).get("value"),
+                    wind_bearing=hour.get("wind", {}).get("direction", {}).get("degrees"),
+                    native_wind_gust_speed=hour.get("wind", {}).get("gust", {}).get("value"),
+                    humidity=hour.get("relativeHumidity"),
+                    native_pressure=hour.get("airPressure", {}).get("meanSeaLevelMillibars"),
+                    uv_index=hour.get("uvIndex"),
+                    cloud_coverage=hour.get("cloudCover"),
+                )
+                forecasts.append(forecast)
+
+            _LOGGER.debug("Successfully created %d hourly forecasts", len(forecasts))
+            return forecasts
+        except Exception as err:
+            _LOGGER.error("Error creating hourly forecast: %s", err, exc_info=True)
             return None
-
-        hourly_forecast = self.coordinator.data.get("hourly_forecast", [])
-        forecasts: list[Forecast] = []
-
-        for hour in hourly_forecast:
-            interval = hour.get("interval", {})
-            start_time = interval.get("startTime")
-
-            if not start_time:
-                continue
-
-            # Parse ISO 8601 datetime
-            dt = dt_util.parse_datetime(start_time)
-            if not dt:
-                continue
-
-            weather_condition = hour.get("weatherCondition", {})
-
-            forecast = Forecast(
-                datetime=dt.isoformat(),
-                condition=self._map_condition(weather_condition.get("type")),
-                native_temperature=hour.get("temperature", {}).get("degrees"),
-                native_apparent_temperature=hour.get("feelsLikeTemperature", {}).get("degrees"),
-                native_precipitation=hour.get("precipitation", {}).get("qpf", {}).get("quantity"),
-                precipitation_probability=hour.get("precipitation", {}).get("probability", {}).get("percent"),
-                native_wind_speed=hour.get("wind", {}).get("speed", {}).get("value"),
-                wind_bearing=hour.get("wind", {}).get("direction", {}).get("degrees"),
-                native_wind_gust_speed=hour.get("wind", {}).get("gust", {}).get("value"),
-                humidity=hour.get("relativeHumidity"),
-                native_pressure=hour.get("airPressure", {}).get("meanSeaLevelMillibars"),
-                uv_index=hour.get("uvIndex"),
-                cloud_coverage=hour.get("cloudCover"),
-            )
-            forecasts.append(forecast)
-
-        return forecasts
