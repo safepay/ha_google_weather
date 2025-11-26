@@ -265,6 +265,7 @@ async def async_setup_entry(
 class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEntity):
     """Representation of a Google Weather sensor."""
 
+    _attr_has_entity_name = False
     entity_description: GoogleWeatherSensorDescription
 
     def __init__(
@@ -294,11 +295,6 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
             "sw_version": "v1",
             "via_device": (DOMAIN, entry.entry_id),
         }
-
-    @property
-    def name(self) -> None:
-        """Return None to let Home Assistant infer name from entity_id."""
-        return None
 
     @property
     def native_value(self) -> float | int | str | None:

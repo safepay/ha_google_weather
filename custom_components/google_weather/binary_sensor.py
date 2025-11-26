@@ -193,6 +193,7 @@ class GoogleWeatherBinarySensor(
 ):
     """Representation of a Google Weather binary sensor."""
 
+    _attr_has_entity_name = False
     entity_description: GoogleWeatherBinarySensorDescription
 
     def __init__(
@@ -222,11 +223,6 @@ class GoogleWeatherBinarySensor(
             "sw_version": "v1",
             "via_device": (DOMAIN, entry.entry_id),
         }
-
-    @property
-    def name(self) -> None:
-        """Return None to let Home Assistant infer name from entity_id."""
-        return None
 
     @property
     def is_on(self) -> bool:
