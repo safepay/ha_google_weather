@@ -76,7 +76,8 @@ async def async_setup_entry(
 class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEntity):
     """Representation of a Google Weather entity."""
 
-    _attr_has_entity_name = False
+    _attr_has_entity_name = True
+    _attr_name = None  # Main feature of device - friendly_name will be device name
     _attr_supported_features = (
         WeatherEntityFeature.FORECAST_DAILY | WeatherEntityFeature.FORECAST_HOURLY
     )
@@ -96,9 +97,8 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        # Set unique_id and name
+        # Set unique_id and device info
         self._attr_unique_id = location_slug
-        self._attr_name = location_name  # Full friendly name (has_entity_name = False)
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": location_name,

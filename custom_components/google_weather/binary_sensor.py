@@ -193,7 +193,7 @@ class GoogleWeatherBinarySensor(
 ):
     """Representation of a Google Weather binary sensor."""
 
-    _attr_has_entity_name = False
+    _attr_has_entity_name = True
     entity_description: GoogleWeatherBinarySensorDescription
 
     def __init__(
@@ -213,9 +213,9 @@ class GoogleWeatherBinarySensor(
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        # Set unique_id and name
+        # Set unique_id and name (just the alert type, device name will be prepended)
         self._attr_unique_id = f"{location_slug}_{description.key}"
-        self._attr_name = f"{location_name} {description.name}"  # Full friendly name (has_entity_name = False)
+        self._attr_name = description.name  # Just the alert type (e.g., "Weather Alert")
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_warnings")},
             "name": location_name,
