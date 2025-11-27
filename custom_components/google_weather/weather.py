@@ -269,9 +269,9 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
     async def async_forecast_daily(self) -> list[Forecast] | None:
         """Return the daily forecast."""
-        # Return None if daily forecasts are disabled
+        # Raise NotImplementedError if daily forecasts are disabled
         if not (self._attr_supported_features & WeatherEntityFeature.FORECAST_DAILY):
-            return None
+            raise NotImplementedError("Daily forecasts are disabled for this weather entity")
 
         try:
             if not self.coordinator.data:
@@ -317,9 +317,9 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
     async def async_forecast_hourly(self) -> list[Forecast] | None:
         """Return the hourly forecast."""
-        # Return None if hourly forecasts are disabled
+        # Raise NotImplementedError if hourly forecasts are disabled
         if not (self._attr_supported_features & WeatherEntityFeature.FORECAST_HOURLY):
-            return None
+            raise NotImplementedError("Hourly forecasts are disabled for this weather entity")
 
         try:
             if not self.coordinator.data:
