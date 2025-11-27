@@ -128,6 +128,12 @@ def get_severe_alert_attributes(data: dict) -> dict[str, Any]:
 
 BINARY_SENSOR_TYPES: tuple[GoogleWeatherBinarySensorDescription, ...] = (
     GoogleWeatherBinarySensorDescription(
+        key="is_daytime",
+        name="Daytime",
+        icon="mdi:weather-sunny",
+        value_fn=lambda data: data.get("current", {}).get("isDaytime", False),
+    ),
+    GoogleWeatherBinarySensorDescription(
         key="weather_alert",
         name="Weather Alert",
         device_class=BinarySensorDeviceClass.SAFETY,
@@ -171,21 +177,33 @@ async def async_setup_entry(
 ) -> None:
     """Set up Google Weather binary sensor entities."""
     coordinator: GoogleWeatherCoordinator = hass.data[DOMAIN][entry.entry_id]
-
-    # Check if alerts are supported for this location
-    # The coordinator has already done its first refresh by this point
-    if coordinator.alerts_supported is False:
-        _LOGGER.info(
-            "Skipping binary sensor setup - weather alerts not supported for this location"
-        )
-        return
-
     location = entry.data.get(CONF_LOCATION, "home")
 
-    async_add_entities(
-        GoogleWeatherBinarySensor(coordinator, entry, description, location)
-        for description in BINARY_SENSOR_TYPES
-    )
+    # Filter sensors based on alert support
+    # Always include non-alert sensors (like isDaytime)
+    # Only include alert sensors if alerts are supported
+    sensors_to_add = []
+    alert_sensor_keys = {"weather_alert", "severe_weather_alert", "urgent_weather_alert"}
+
+    for description in BINARY_SENSOR_TYPES:
+        if description.key in alert_sensor_keys:
+            # Only add alert sensors if alerts are supported
+            if coordinator.alerts_supported:
+                sensors_to_add.append(
+                    GoogleWeatherBinarySensor(coordinator, entry, description, location)
+                )
+        else:
+            # Always add non-alert sensors
+            sensors_to_add.append(
+                GoogleWeatherBinarySensor(coordinator, entry, description, location)
+            )
+
+    if coordinator.alerts_supported is False:
+        _LOGGER.info(
+            "Weather alerts not supported for this location - only creating non-alert binary sensors"
+        )
+
+    async_add_entities(sensors_to_add)
 
 
 class GoogleWeatherBinarySensor(
@@ -213,14 +231,14 @@ class GoogleWeatherBinarySensor(
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        # Set unique_id and name (just the alert type, device name will be prepended)
+        # Set unique_id and name (just the sensor type, device name will be prepended)
         self._attr_unique_id = f"{location_slug}_{description.key}"
-        self._attr_name = description.name  # Just the alert type (e.g., "Weather Alert")
+        self._attr_name = description.name  # Just the sensor type (e.g., "Daytime", "Weather Alert")
         self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{entry.entry_id}_warnings")},
-            "name": location_name,
+            "identifiers": {(DOMAIN, f"{entry.entry_id}_binary_sensors")},
+            "name": f"{location_name} Binary Sensors",
             "manufacturer": "Google",
-            "model": "Weather API - Warnings",
+            "model": "Weather API - Binary Sensors",
             "sw_version": "v1",
             "via_device": (DOMAIN, entry.entry_id),
         }

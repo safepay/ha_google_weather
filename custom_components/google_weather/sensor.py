@@ -48,6 +48,19 @@ def get_current_value(data: dict, *keys: str) -> Any:
     return current if not isinstance(current, dict) else None
 
 
+# Mapping of full cardinal directions to abbreviations
+CARDINAL_DIRECTION_MAP = {
+    "NORTH": "N",
+    "NORTH_EAST": "NE",
+    "EAST": "E",
+    "SOUTH_EAST": "SE",
+    "SOUTH": "S",
+    "SOUTH_WEST": "SW",
+    "WEST": "W",
+    "NORTH_WEST": "NW",
+}
+
+
 # Observational Sensors
 SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
     # Temperature sensors
@@ -141,6 +154,22 @@ SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
             "degrees": get_current_value(data, "wind", "direction", "degrees"),
         },
     ),
+    GoogleWeatherSensorDescription(
+        key="wind_cardinal",
+        name="Wind Cardinal",
+        icon="mdi:compass-rose",
+        value_fn=lambda data: CARDINAL_DIRECTION_MAP.get(
+            get_current_value(data, "wind", "direction", "cardinal")
+        ),
+    ),
+    GoogleWeatherSensorDescription(
+        key="wind_degrees",
+        name="Wind Degrees",
+        native_unit_of_measurement="°",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:compass",
+        value_fn=lambda data: get_current_value(data, "wind", "direction", "degrees"),
+    ),
     # Visibility
     GoogleWeatherSensorDescription(
         key="visibility",
@@ -191,6 +220,15 @@ SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
         value_fn=lambda data: get_current_value(data, "precipitation", "qpf", "quantity"),
     ),
     GoogleWeatherSensorDescription(
+        key="snow_amount",
+        name="Snow Amount",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:weather-snowy",
+        value_fn=lambda data: get_current_value(data, "precipitation", "snowQpf", "quantity"),
+    ),
+    GoogleWeatherSensorDescription(
         key="thunderstorm_probability",
         name="Thunderstorm Probability",
         native_unit_of_measurement=PERCENTAGE,
@@ -230,6 +268,14 @@ SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
         device_class=SensorDeviceClass.PRECIPITATION,
         icon="mdi:weather-pouring",
         value_fn=lambda data: get_current_value(data, "currentConditionsHistory", "qpf", "quantity"),
+    ),
+    GoogleWeatherSensorDescription(
+        key="snow_24h",
+        name="Snow (24h)",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        icon="mdi:weather-snowy-heavy",
+        value_fn=lambda data: get_current_value(data, "currentConditionsHistory", "snowQpf", "quantity"),
     ),
     # Weather condition
     GoogleWeatherSensorDescription(
@@ -290,7 +336,7 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
         self._attr_name = description.name  # Just the sensor type (e.g., "Temperature")
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_sensors")},
-            "name": location_name,
+            "name": f"{location_name} Observational Sensors",
             "manufacturer": "Google",
             "model": "Weather API - Sensors",
             "sw_version": "v1",
