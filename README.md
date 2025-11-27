@@ -143,8 +143,14 @@ All alert sensors include detailed attributes with alert descriptions, instructi
    - **Latitude**: Location latitude (defaults to Home Assistant location)
    - **Longitude**: Location longitude (defaults to Home Assistant location)
    - **Unit System**: Choose METRIC or IMPERIAL
-6. Configure update intervals (optional):
-   - Set how often each endpoint updates during day/night
+6. Choose forecast and alert options:
+   - **Include Daily Forecasts**: Enable automatic fetching of daily forecasts (enabled by default)
+   - **Include Hourly Forecasts**: Enable automatic fetching of hourly forecasts (enabled by default)
+   - **Include Weather Alerts**: Enable automatic fetching of weather alerts (enabled by default)
+   - **Tip**: Disable forecasts you don't need to save API calls. You can still access them manually via the `weather.get_forecasts` action.
+7. Configure update intervals:
+   - Set how often each enabled endpoint updates during day/night
+   - Only enabled forecasts/alerts will show interval configuration
    - Defaults are optimized for the free tier (10,000 calls/month)
 
 That's it! Your weather data will start flowing immediately.
@@ -195,16 +201,35 @@ Linked to parent device via `via_device`.
 
 The integration uses **smart polling** to optimize API usage and stay within Google's free tier limits. Google provides **10,000 free API calls per month**, and this integration is designed to make efficient use of this limit.
 
+### Forecast & Alert Options
+
+You can choose which forecasts and alerts to include during setup:
+
+- **Daily Forecasts**: Enable/disable automatic fetching of 10-day forecasts
+- **Hourly Forecasts**: Enable/disable automatic fetching of 240-hour forecasts
+- **Weather Alerts**: Enable/disable automatic fetching of weather alerts
+
+**Benefits of disabling forecasts:**
+- **Reduces API calls**: Disabled endpoints are never fetched, saving API calls
+- **Manual access available**: You can still access disabled forecasts via the `weather.get_forecasts` action when needed
+- **Flexible API management**: Only fetch what you actually use regularly
+
+**Example API savings** (with defaults):
+- Disabling daily forecasts: Saves ~1,200 calls/month
+- Disabling hourly forecasts: Saves ~1,680 calls/month
+- Disabling weather alerts: Saves ~2,400 calls/month
+- Disabling all three: Saves ~5,280 calls/month (leaves only current conditions at ~3,360 calls/month)
+
 ### How It Works
 
-Instead of fetching all weather data at once, the integration checks each API endpoint individually and only fetches when needed:
+Instead of fetching all weather data at once, the integration checks each enabled API endpoint individually and only fetches when needed:
 
-- **Current Conditions**: Updates frequently (default: every 10 min during day, 30 min at night)
-- **Daily Forecast**: Updates less frequently as it changes slowly (default: every 30 min during day, 60 min at night)
-- **Hourly Forecast**: Moderate update frequency (default: every 20 min during day, 60 min at night)
-- **Weather Alerts**: Important but checked moderately (default: every 15 min during day, 30 min at night)
+- **Current Conditions**: Always enabled - updates frequently (default: every 10 min during day, 30 min at night)
+- **Daily Forecast**: Optional - updates less frequently as it changes slowly (default: every 30 min during day, 60 min at night)
+- **Hourly Forecast**: Optional - moderate update frequency (default: every 20 min during day, 60 min at night)
+- **Weather Alerts**: Optional - important but checked moderately (default: every 15 min during day, 30 min at night)
 
-The coordinator runs every minute to check which endpoints need updating, but **only calls the Google API when an endpoint's interval has elapsed**.
+The coordinator runs every minute to check which enabled endpoints need updating, but **only calls the Google API when an endpoint's interval has elapsed**.
 
 ### Default Configuration
 
@@ -285,7 +310,7 @@ Examples:
 
 ## Updating Configuration
 
-You can update location coordinates, unit system, and update intervals at any time:
+You can update location coordinates, unit system, forecast options, and update intervals at any time:
 
 1. Go to Settings → Devices & Services
 2. Find the Google Weather integration
@@ -293,11 +318,14 @@ You can update location coordinates, unit system, and update intervals at any ti
 4. Update any of the following:
    - Location coordinates (latitude/longitude)
    - Unit system (Metric/Imperial)
-   - Update intervals for each endpoint (daytime and nighttime)
+   - Forecast and alert inclusion (enable/disable daily forecasts, hourly forecasts, weather alerts)
+   - Update intervals for enabled endpoints (daytime and nighttime)
    - Nighttime schedule (start and end times)
 5. Click "Submit"
 
-The integration will automatically reload with the new settings. Changes to update intervals take effect immediately.
+The integration will automatically reload with the new settings. Changes to forecast options and update intervals take effect immediately.
+
+**Note**: When you disable a forecast or alert option, the corresponding binary sensors will not be created on reload. Re-enabling them will restore the sensors.
 
 ## Unit Systems
 

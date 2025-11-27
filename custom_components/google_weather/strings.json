@@ -27,6 +27,20 @@
           "unit_system": "Choose metric (Celsius, km/h, mm) or imperial (Fahrenheit, mph, inches)"
         }
       },
+      "forecasts": {
+        "title": "Configure Forecast Options",
+        "description": "Choose which forecasts and alerts to include. Disabling forecasts reduces API usage and saves API calls for the free tier. You can still access disabled forecasts via the weather.get_forecasts action.",
+        "data": {
+          "include_daily_forecast": "Include Daily Forecasts",
+          "include_hourly_forecast": "Include Hourly Forecasts",
+          "include_alerts": "Include Weather Alerts"
+        },
+        "data_description": {
+          "include_daily_forecast": "Enable automatic fetching of daily forecasts (disable to save API calls)",
+          "include_hourly_forecast": "Enable automatic fetching of hourly forecasts (disable to save API calls)",
+          "include_alerts": "Enable automatic fetching of weather alerts (disable to save API calls)"
+        }
+      },
       "intervals": {
         "title": "Configure Update Intervals",
         "description": "Set how often to update each endpoint during day and night. Google provides 10,000 free API calls/month total. The defaults use approximately 8,640 calls/month (13.6% under limit). All intervals are in minutes.",
@@ -74,11 +88,14 @@
     "step": {
       "init": {
         "title": "Update Google Weather Settings",
-        "description": "Update location coordinates, unit system, and update intervals. Changes will take effect after reloading the integration.",
+        "description": "Update location coordinates, unit system, forecast options, and update intervals. Changes will take effect after reloading the integration.",
         "data": {
           "latitude": "Latitude",
           "longitude": "Longitude",
           "unit_system": "Unit System",
+          "include_daily_forecast": "Include Daily Forecasts",
+          "include_hourly_forecast": "Include Hourly Forecasts",
+          "include_alerts": "Include Weather Alerts",
           "current_day_interval": "Current Conditions - Daytime (minutes)",
           "current_night_interval": "Current Conditions - Nighttime (minutes)",
           "daily_day_interval": "Daily Forecast - Daytime (minutes)",
@@ -94,6 +111,9 @@
           "latitude": "Latitude coordinate for weather data",
           "longitude": "Longitude coordinate for weather data",
           "unit_system": "Choose metric (Celsius, km/h, mm) or imperial (Fahrenheit, mph, inches)",
+          "include_daily_forecast": "Enable automatic fetching of daily forecasts (disable to save API calls)",
+          "include_hourly_forecast": "Enable automatic fetching of hourly forecasts (disable to save API calls)",
+          "include_alerts": "Enable automatic fetching of weather alerts (disable to save API calls)",
           "current_day_interval": "How often to update current conditions during daytime (1-1440 minutes)",
           "current_night_interval": "How often to update current conditions at night (1-1440 minutes)",
           "daily_day_interval": "How often to update daily forecast during daytime (1-1440 minutes)",

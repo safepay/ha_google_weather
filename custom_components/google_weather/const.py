@@ -21,6 +21,9 @@ CONF_ALERTS_DAY_INTERVAL = "alerts_day_interval"
 CONF_ALERTS_NIGHT_INTERVAL = "alerts_night_interval"
 CONF_NIGHT_START = "night_start"
 CONF_NIGHT_END = "night_end"
+CONF_INCLUDE_DAILY_FORECAST = "include_daily_forecast"
+CONF_INCLUDE_HOURLY_FORECAST = "include_hourly_forecast"
+CONF_INCLUDE_ALERTS = "include_alerts"
 
 # Defaults
 DEFAULT_UPDATE_INTERVAL = timedelta(minutes=15)
@@ -54,6 +57,11 @@ DEFAULT_ALERTS_NIGHT_INTERVAL = 30  # Every 30 minutes at night
 # Night time period (when to use night intervals)
 DEFAULT_NIGHT_START = "22:00"  # 10 PM
 DEFAULT_NIGHT_END = "06:00"  # 6 AM
+
+# Forecast inclusion (defaults to enabled)
+DEFAULT_INCLUDE_DAILY_FORECAST = True
+DEFAULT_INCLUDE_HOURLY_FORECAST = True
+DEFAULT_INCLUDE_ALERTS = True
 
 # Unit systems
 UNIT_SYSTEM_METRIC = "METRIC"
