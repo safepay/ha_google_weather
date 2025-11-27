@@ -220,6 +220,21 @@ SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
         value_fn=lambda data: get_current_value(data, "precipitation", "qpf", "quantity"),
     ),
     GoogleWeatherSensorDescription(
+        key="precipitation_type",
+        name="Precipitation Type",
+        icon="mdi:weather-partly-rainy",
+        value_fn=lambda data: get_current_value(data, "precipitation", "probability", "type"),
+    ),
+    GoogleWeatherSensorDescription(
+        key="snow_amount",
+        name="Snow Amount",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:weather-snowy",
+        value_fn=lambda data: get_current_value(data, "precipitation", "snowQpf", "quantity"),
+    ),
+    GoogleWeatherSensorDescription(
         key="thunderstorm_probability",
         name="Thunderstorm Probability",
         native_unit_of_measurement=PERCENTAGE,
@@ -259,6 +274,14 @@ SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
         device_class=SensorDeviceClass.PRECIPITATION,
         icon="mdi:weather-pouring",
         value_fn=lambda data: get_current_value(data, "currentConditionsHistory", "qpf", "quantity"),
+    ),
+    GoogleWeatherSensorDescription(
+        key="snow_24h",
+        name="Snow (24h)",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        icon="mdi:weather-snowy-heavy",
+        value_fn=lambda data: get_current_value(data, "currentConditionsHistory", "snowQpf", "quantity"),
     ),
     # Weather condition
     GoogleWeatherSensorDescription(
