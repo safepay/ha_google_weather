@@ -97,11 +97,12 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        # Set unique_id and device info
+        # Set unique_id, suggested entity_id, and device info
         self._attr_unique_id = location_slug
+        self._attr_suggested_object_id = location_slug  # Suggests simple entity_id
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": location_name,  # Just "Home" not "Home Weather"
+            "name": f"{location_name} Weather",  # Descriptive device name
             "manufacturer": "Google",
             "model": "Weather API",
             "sw_version": "v1",
