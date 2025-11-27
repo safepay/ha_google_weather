@@ -22,6 +22,9 @@ from .const import (
     CONF_DAILY_NIGHT_INTERVAL,
     CONF_HOURLY_DAY_INTERVAL,
     CONF_HOURLY_NIGHT_INTERVAL,
+    CONF_INCLUDE_ALERTS,
+    CONF_INCLUDE_DAILY_FORECAST,
+    CONF_INCLUDE_HOURLY_FORECAST,
     CONF_LOCATION,
     CONF_NIGHT_END,
     CONF_NIGHT_START,
@@ -34,6 +37,9 @@ from .const import (
     DEFAULT_DAILY_NIGHT_INTERVAL,
     DEFAULT_HOURLY_DAY_INTERVAL,
     DEFAULT_HOURLY_NIGHT_INTERVAL,
+    DEFAULT_INCLUDE_ALERTS,
+    DEFAULT_INCLUDE_DAILY_FORECAST,
+    DEFAULT_INCLUDE_HOURLY_FORECAST,
     DEFAULT_NIGHT_END,
     DEFAULT_NIGHT_START,
     DEFAULT_UNIT_SYSTEM,
@@ -54,6 +60,7 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize config flow."""
         self.api_key: str | None = None
         self.user_data: dict[str, Any] = {}
+        self.forecast_data: dict[str, Any] = {}
         self.interval_data: dict[str, Any] = {}
 
     async def async_step_user(
@@ -136,7 +143,7 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_LONGITUDE: longitude,
                     CONF_UNIT_SYSTEM: user_input[CONF_UNIT_SYSTEM],
                 }
-                return await self.async_step_intervals()
+                return await self.async_step_forecasts()
 
         # Default to Home Assistant's configured location
         default_latitude = self.hass.config.latitude
@@ -155,6 +162,39 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    async def async_step_forecasts(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure which forecasts and alerts to include."""
+        if user_input is not None:
+            # Store forecast selection data
+            self.forecast_data = {
+                CONF_INCLUDE_DAILY_FORECAST: user_input.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST),
+                CONF_INCLUDE_HOURLY_FORECAST: user_input.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
+                CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
+            }
+            return await self.async_step_intervals()
+
+        return self.async_show_form(
+            step_id="forecasts",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_INCLUDE_DAILY_FORECAST,
+                        default=DEFAULT_INCLUDE_DAILY_FORECAST,
+                    ): bool,
+                    vol.Optional(
+                        CONF_INCLUDE_HOURLY_FORECAST,
+                        default=DEFAULT_INCLUDE_HOURLY_FORECAST,
+                    ): bool,
+                    vol.Optional(
+                        CONF_INCLUDE_ALERTS,
+                        default=DEFAULT_INCLUDE_ALERTS,
+                    ): bool,
+                }
+            ),
+        )
+
     async def async_step_intervals(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -164,57 +204,73 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.interval_data = user_input
             return await self.async_step_confirm()
 
+        # Build schema based on selected forecasts
+        schema_dict = {
+            # Current conditions intervals (always shown)
+            vol.Optional(
+                CONF_CURRENT_DAY_INTERVAL,
+                default=DEFAULT_CURRENT_DAY_INTERVAL,
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            vol.Optional(
+                CONF_CURRENT_NIGHT_INTERVAL,
+                default=DEFAULT_CURRENT_NIGHT_INTERVAL,
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+        }
+
+        # Add daily forecast intervals if enabled
+        if self.forecast_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
+            schema_dict.update({
+                vol.Optional(
+                    CONF_DAILY_DAY_INTERVAL,
+                    default=DEFAULT_DAILY_DAY_INTERVAL,
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                vol.Optional(
+                    CONF_DAILY_NIGHT_INTERVAL,
+                    default=DEFAULT_DAILY_NIGHT_INTERVAL,
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            })
+
+        # Add hourly forecast intervals if enabled
+        if self.forecast_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
+            schema_dict.update({
+                vol.Optional(
+                    CONF_HOURLY_DAY_INTERVAL,
+                    default=DEFAULT_HOURLY_DAY_INTERVAL,
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                vol.Optional(
+                    CONF_HOURLY_NIGHT_INTERVAL,
+                    default=DEFAULT_HOURLY_NIGHT_INTERVAL,
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            })
+
+        # Add weather alerts intervals if enabled
+        if self.forecast_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
+            schema_dict.update({
+                vol.Optional(
+                    CONF_ALERTS_DAY_INTERVAL,
+                    default=DEFAULT_ALERTS_DAY_INTERVAL,
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                vol.Optional(
+                    CONF_ALERTS_NIGHT_INTERVAL,
+                    default=DEFAULT_ALERTS_NIGHT_INTERVAL,
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            })
+
+        # Night time period (always shown)
+        schema_dict.update({
+            vol.Optional(
+                CONF_NIGHT_START,
+                default=DEFAULT_NIGHT_START,
+            ): str,
+            vol.Optional(
+                CONF_NIGHT_END,
+                default=DEFAULT_NIGHT_END,
+            ): str,
+        })
+
         return self.async_show_form(
             step_id="intervals",
-            data_schema=vol.Schema(
-                {
-                    # Current conditions intervals
-                    vol.Optional(
-                        CONF_CURRENT_DAY_INTERVAL,
-                        default=DEFAULT_CURRENT_DAY_INTERVAL,
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    vol.Optional(
-                        CONF_CURRENT_NIGHT_INTERVAL,
-                        default=DEFAULT_CURRENT_NIGHT_INTERVAL,
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    # Daily forecast intervals
-                    vol.Optional(
-                        CONF_DAILY_DAY_INTERVAL,
-                        default=DEFAULT_DAILY_DAY_INTERVAL,
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    vol.Optional(
-                        CONF_DAILY_NIGHT_INTERVAL,
-                        default=DEFAULT_DAILY_NIGHT_INTERVAL,
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    # Hourly forecast intervals
-                    vol.Optional(
-                        CONF_HOURLY_DAY_INTERVAL,
-                        default=DEFAULT_HOURLY_DAY_INTERVAL,
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    vol.Optional(
-                        CONF_HOURLY_NIGHT_INTERVAL,
-                        default=DEFAULT_HOURLY_NIGHT_INTERVAL,
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    # Weather alerts intervals
-                    vol.Optional(
-                        CONF_ALERTS_DAY_INTERVAL,
-                        default=DEFAULT_ALERTS_DAY_INTERVAL,
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    vol.Optional(
-                        CONF_ALERTS_NIGHT_INTERVAL,
-                        default=DEFAULT_ALERTS_NIGHT_INTERVAL,
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    # Night time period
-                    vol.Optional(
-                        CONF_NIGHT_START,
-                        default=DEFAULT_NIGHT_START,
-                    ): str,
-                    vol.Optional(
-                        CONF_NIGHT_END,
-                        default=DEFAULT_NIGHT_END,
-                    ): str,
-                }
-            ),
+            data_schema=vol.Schema(schema_dict),
         )
 
     def _calculate_monthly_calls(
@@ -239,6 +295,7 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             final_data = {
                 CONF_API_KEY: self.api_key,
                 **self.user_data,
+                **self.forecast_data,
                 **self.interval_data,
             }
 
@@ -253,18 +310,30 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.interval_data[CONF_CURRENT_DAY_INTERVAL],
             self.interval_data[CONF_CURRENT_NIGHT_INTERVAL],
         )
-        daily_calls = self._calculate_monthly_calls(
-            self.interval_data[CONF_DAILY_DAY_INTERVAL],
-            self.interval_data[CONF_DAILY_NIGHT_INTERVAL],
-        )
-        hourly_calls = self._calculate_monthly_calls(
-            self.interval_data[CONF_HOURLY_DAY_INTERVAL],
-            self.interval_data[CONF_HOURLY_NIGHT_INTERVAL],
-        )
-        alerts_calls = self._calculate_monthly_calls(
-            self.interval_data[CONF_ALERTS_DAY_INTERVAL],
-            self.interval_data[CONF_ALERTS_NIGHT_INTERVAL],
-        )
+
+        # Only calculate daily forecast calls if enabled
+        daily_calls = 0
+        if self.forecast_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
+            daily_calls = self._calculate_monthly_calls(
+                self.interval_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
+                self.interval_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
+            )
+
+        # Only calculate hourly forecast calls if enabled
+        hourly_calls = 0
+        if self.forecast_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
+            hourly_calls = self._calculate_monthly_calls(
+                self.interval_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
+                self.interval_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
+            )
+
+        # Only calculate alerts calls if enabled
+        alerts_calls = 0
+        if self.forecast_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
+            alerts_calls = self._calculate_monthly_calls(
+                self.interval_data.get(CONF_ALERTS_DAY_INTERVAL, DEFAULT_ALERTS_DAY_INTERVAL),
+                self.interval_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
+            )
 
         total_calls = current_calls + daily_calls + hourly_calls + alerts_calls
         headroom = 10000 - total_calls
@@ -272,12 +341,31 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         # Build description with calculation results
         status = "✅" if total_calls <= 10000 else "❌"
+
+        # Format daily forecast line
+        if self.forecast_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
+            daily_line = f"• Daily Forecast: ~{daily_calls:,} calls/month\n"
+        else:
+            daily_line = "• Daily Forecast: 0 calls/month (disabled)\n"
+
+        # Format hourly forecast line
+        if self.forecast_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
+            hourly_line = f"• Hourly Forecast: ~{hourly_calls:,} calls/month\n"
+        else:
+            hourly_line = "• Hourly Forecast: 0 calls/month (disabled)\n"
+
+        # Format alerts line
+        if self.forecast_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
+            alerts_line = f"• Weather Alerts: ~{alerts_calls:,} calls/month\n"
+        else:
+            alerts_line = "• Weather Alerts: 0 calls/month (disabled)\n"
+
         description = (
             f"**Estimated Monthly API Usage:**\n\n"
             f"• Current Conditions: ~{current_calls:,} calls/month\n"
-            f"• Daily Forecast: ~{daily_calls:,} calls/month\n"
-            f"• Hourly Forecast: ~{hourly_calls:,} calls/month\n"
-            f"• Weather Alerts: ~{alerts_calls:,} calls/month\n\n"
+            f"{daily_line}"
+            f"{hourly_line}"
+            f"{alerts_line}\n"
             f"**Total: ~{total_calls:,} calls/month** {status}\n"
             f"Free tier limit: 10,000 calls/month\n"
         )
@@ -314,6 +402,7 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
         """Initialize options flow."""
         self.config_entry = config_entry
         self.options_data: dict[str, Any] = {}
+        self.forecast_options: dict[str, Any] = {}
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -332,72 +421,110 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 errors[CONF_LONGITUDE] = "invalid_longitude"
 
             if not errors:
-                # Store options data and show confirmation
+                # Store options data and forecast options separately
                 self.options_data = user_input
+                self.forecast_options = {
+                    CONF_INCLUDE_DAILY_FORECAST: user_input.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST),
+                    CONF_INCLUDE_HOURLY_FORECAST: user_input.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
+                    CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
+                }
                 return await self.async_step_confirm()
 
         # Get current values from config_entry (data or options)
         current_data = {**self.config_entry.data, **self.config_entry.options}
 
+        # Build schema based on current forecast settings
+        schema_dict = {
+            vol.Required(
+                CONF_LATITUDE,
+                default=current_data.get(CONF_LATITUDE),
+            ): vol.Coerce(float),
+            vol.Required(
+                CONF_LONGITUDE,
+                default=current_data.get(CONF_LONGITUDE),
+            ): vol.Coerce(float),
+            vol.Required(
+                CONF_UNIT_SYSTEM,
+                default=current_data.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM),
+            ): vol.In(UNIT_SYSTEMS),
+            # Forecast inclusion options
+            vol.Optional(
+                CONF_INCLUDE_DAILY_FORECAST,
+                default=current_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST),
+            ): bool,
+            vol.Optional(
+                CONF_INCLUDE_HOURLY_FORECAST,
+                default=current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
+            ): bool,
+            vol.Optional(
+                CONF_INCLUDE_ALERTS,
+                default=current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
+            ): bool,
+            # Current conditions intervals (always shown)
+            vol.Optional(
+                CONF_CURRENT_DAY_INTERVAL,
+                default=current_data.get(CONF_CURRENT_DAY_INTERVAL, DEFAULT_CURRENT_DAY_INTERVAL),
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            vol.Optional(
+                CONF_CURRENT_NIGHT_INTERVAL,
+                default=current_data.get(CONF_CURRENT_NIGHT_INTERVAL, DEFAULT_CURRENT_NIGHT_INTERVAL),
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+        }
+
+        # Add daily forecast intervals if currently enabled
+        if current_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
+            schema_dict.update({
+                vol.Optional(
+                    CONF_DAILY_DAY_INTERVAL,
+                    default=current_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                vol.Optional(
+                    CONF_DAILY_NIGHT_INTERVAL,
+                    default=current_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            })
+
+        # Add hourly forecast intervals if currently enabled
+        if current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
+            schema_dict.update({
+                vol.Optional(
+                    CONF_HOURLY_DAY_INTERVAL,
+                    default=current_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                vol.Optional(
+                    CONF_HOURLY_NIGHT_INTERVAL,
+                    default=current_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            })
+
+        # Add weather alerts intervals if currently enabled
+        if current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
+            schema_dict.update({
+                vol.Optional(
+                    CONF_ALERTS_DAY_INTERVAL,
+                    default=current_data.get(CONF_ALERTS_DAY_INTERVAL, DEFAULT_ALERTS_DAY_INTERVAL),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                vol.Optional(
+                    CONF_ALERTS_NIGHT_INTERVAL,
+                    default=current_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            })
+
+        # Night time period (always shown)
+        schema_dict.update({
+            vol.Optional(
+                CONF_NIGHT_START,
+                default=current_data.get(CONF_NIGHT_START, DEFAULT_NIGHT_START),
+            ): str,
+            vol.Optional(
+                CONF_NIGHT_END,
+                default=current_data.get(CONF_NIGHT_END, DEFAULT_NIGHT_END),
+            ): str,
+        })
+
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_LATITUDE,
-                        default=current_data.get(CONF_LATITUDE),
-                    ): vol.Coerce(float),
-                    vol.Required(
-                        CONF_LONGITUDE,
-                        default=current_data.get(CONF_LONGITUDE),
-                    ): vol.Coerce(float),
-                    vol.Required(
-                        CONF_UNIT_SYSTEM,
-                        default=current_data.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM),
-                    ): vol.In(UNIT_SYSTEMS),
-                    # Update intervals
-                    vol.Optional(
-                        CONF_CURRENT_DAY_INTERVAL,
-                        default=current_data.get(CONF_CURRENT_DAY_INTERVAL, DEFAULT_CURRENT_DAY_INTERVAL),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    vol.Optional(
-                        CONF_CURRENT_NIGHT_INTERVAL,
-                        default=current_data.get(CONF_CURRENT_NIGHT_INTERVAL, DEFAULT_CURRENT_NIGHT_INTERVAL),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    vol.Optional(
-                        CONF_DAILY_DAY_INTERVAL,
-                        default=current_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    vol.Optional(
-                        CONF_DAILY_NIGHT_INTERVAL,
-                        default=current_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    vol.Optional(
-                        CONF_HOURLY_DAY_INTERVAL,
-                        default=current_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    vol.Optional(
-                        CONF_HOURLY_NIGHT_INTERVAL,
-                        default=current_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    vol.Optional(
-                        CONF_ALERTS_DAY_INTERVAL,
-                        default=current_data.get(CONF_ALERTS_DAY_INTERVAL, DEFAULT_ALERTS_DAY_INTERVAL),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    vol.Optional(
-                        CONF_ALERTS_NIGHT_INTERVAL,
-                        default=current_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                    vol.Optional(
-                        CONF_NIGHT_START,
-                        default=current_data.get(CONF_NIGHT_START, DEFAULT_NIGHT_START),
-                    ): str,
-                    vol.Optional(
-                        CONF_NIGHT_END,
-                        default=current_data.get(CONF_NIGHT_END, DEFAULT_NIGHT_END),
-                    ): str,
-                }
-            ),
+            data_schema=vol.Schema(schema_dict),
             errors=errors,
         )
 
@@ -427,18 +554,30 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             self.options_data[CONF_CURRENT_DAY_INTERVAL],
             self.options_data[CONF_CURRENT_NIGHT_INTERVAL],
         )
-        daily_calls = self._calculate_monthly_calls(
-            self.options_data[CONF_DAILY_DAY_INTERVAL],
-            self.options_data[CONF_DAILY_NIGHT_INTERVAL],
-        )
-        hourly_calls = self._calculate_monthly_calls(
-            self.options_data[CONF_HOURLY_DAY_INTERVAL],
-            self.options_data[CONF_HOURLY_NIGHT_INTERVAL],
-        )
-        alerts_calls = self._calculate_monthly_calls(
-            self.options_data[CONF_ALERTS_DAY_INTERVAL],
-            self.options_data[CONF_ALERTS_NIGHT_INTERVAL],
-        )
+
+        # Only calculate daily forecast calls if enabled
+        daily_calls = 0
+        if self.forecast_options.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
+            daily_calls = self._calculate_monthly_calls(
+                self.options_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
+                self.options_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
+            )
+
+        # Only calculate hourly forecast calls if enabled
+        hourly_calls = 0
+        if self.forecast_options.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
+            hourly_calls = self._calculate_monthly_calls(
+                self.options_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
+                self.options_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
+            )
+
+        # Only calculate alerts calls if enabled
+        alerts_calls = 0
+        if self.forecast_options.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
+            alerts_calls = self._calculate_monthly_calls(
+                self.options_data.get(CONF_ALERTS_DAY_INTERVAL, DEFAULT_ALERTS_DAY_INTERVAL),
+                self.options_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
+            )
 
         total_calls = current_calls + daily_calls + hourly_calls + alerts_calls
         headroom = 10000 - total_calls
@@ -446,12 +585,31 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
 
         # Build description with calculation results
         status = "✅" if total_calls <= 10000 else "❌"
+
+        # Format daily forecast line
+        if self.forecast_options.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
+            daily_line = f"• Daily Forecast: ~{daily_calls:,} calls/month\n"
+        else:
+            daily_line = "• Daily Forecast: 0 calls/month (disabled)\n"
+
+        # Format hourly forecast line
+        if self.forecast_options.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
+            hourly_line = f"• Hourly Forecast: ~{hourly_calls:,} calls/month\n"
+        else:
+            hourly_line = "• Hourly Forecast: 0 calls/month (disabled)\n"
+
+        # Format alerts line
+        if self.forecast_options.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
+            alerts_line = f"• Weather Alerts: ~{alerts_calls:,} calls/month\n"
+        else:
+            alerts_line = "• Weather Alerts: 0 calls/month (disabled)\n"
+
         description = (
             f"**Estimated Monthly API Usage:**\n\n"
             f"• Current Conditions: ~{current_calls:,} calls/month\n"
-            f"• Daily Forecast: ~{daily_calls:,} calls/month\n"
-            f"• Hourly Forecast: ~{hourly_calls:,} calls/month\n"
-            f"• Weather Alerts: ~{alerts_calls:,} calls/month\n\n"
+            f"{daily_line}"
+            f"{hourly_line}"
+            f"{alerts_line}\n"
             f"**Total: ~{total_calls:,} calls/month** {status}\n"
             f"Free tier limit: 10,000 calls/month\n"
         )

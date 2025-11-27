@@ -23,7 +23,16 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_LOCATION, CONF_UNIT_SYSTEM, DOMAIN, UNIT_SYSTEM_IMPERIAL
+from .const import (
+    CONF_INCLUDE_DAILY_FORECAST,
+    CONF_INCLUDE_HOURLY_FORECAST,
+    CONF_LOCATION,
+    CONF_UNIT_SYSTEM,
+    DEFAULT_INCLUDE_DAILY_FORECAST,
+    DEFAULT_INCLUDE_HOURLY_FORECAST,
+    DOMAIN,
+    UNIT_SYSTEM_IMPERIAL,
+)
 from .coordinator import GoogleWeatherCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -77,9 +86,6 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
     """Representation of a Google Weather entity."""
 
     _attr_has_entity_name = False
-    _attr_supported_features = (
-        WeatherEntityFeature.FORECAST_DAILY | WeatherEntityFeature.FORECAST_HOURLY
-    )
 
     def __init__(
         self,
@@ -89,6 +95,15 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
     ) -> None:
         """Initialize the weather entity."""
         super().__init__(coordinator)
+
+        # Set supported features based on configuration
+        current_data = {**entry.data, **entry.options}
+        supported_features = 0
+        if current_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
+            supported_features |= WeatherEntityFeature.FORECAST_DAILY
+        if current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
+            supported_features |= WeatherEntityFeature.FORECAST_HOURLY
+        self._attr_supported_features = supported_features
 
         # Use location directly for entity ID (slugified)
         location_slug = location.lower().replace(" ", "_")

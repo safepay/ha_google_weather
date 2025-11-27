@@ -23,6 +23,9 @@ from .const import (
     CONF_DAILY_NIGHT_INTERVAL,
     CONF_HOURLY_DAY_INTERVAL,
     CONF_HOURLY_NIGHT_INTERVAL,
+    CONF_INCLUDE_ALERTS,
+    CONF_INCLUDE_DAILY_FORECAST,
+    CONF_INCLUDE_HOURLY_FORECAST,
     CONF_NIGHT_END,
     CONF_NIGHT_START,
     CONF_UNIT_SYSTEM,
@@ -34,6 +37,9 @@ from .const import (
     DEFAULT_DAILY_NIGHT_INTERVAL,
     DEFAULT_HOURLY_DAY_INTERVAL,
     DEFAULT_HOURLY_NIGHT_INTERVAL,
+    DEFAULT_INCLUDE_ALERTS,
+    DEFAULT_INCLUDE_DAILY_FORECAST,
+    DEFAULT_INCLUDE_HOURLY_FORECAST,
     DEFAULT_NIGHT_END,
     DEFAULT_NIGHT_START,
     DEFAULT_UNIT_SYSTEM,
@@ -65,6 +71,11 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.latitude = current_data.get(CONF_LATITUDE)
         self.longitude = current_data.get(CONF_LONGITUDE)
         self.unit_system = current_data.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM)
+
+        # Get forecast/alerts inclusion settings
+        self.include_daily_forecast = current_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST)
+        self.include_hourly_forecast = current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST)
+        self.include_alerts = current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS)
 
         # Get update intervals
         self.intervals = {
@@ -150,10 +161,19 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Google Weather API using smart polling."""
         try:
-            # Check which endpoints need updating
+            # Build list of enabled endpoints
+            enabled_endpoints = [ENDPOINT_CURRENT]  # Current conditions always enabled
+            if self.include_daily_forecast:
+                enabled_endpoints.append(ENDPOINT_DAILY)
+            if self.include_hourly_forecast:
+                enabled_endpoints.append(ENDPOINT_HOURLY)
+            if self.include_alerts:
+                enabled_endpoints.append(ENDPOINT_ALERTS)
+
+            # Check which enabled endpoints need updating
             endpoints_to_update = {
                 endpoint: self._should_update_endpoint(endpoint)
-                for endpoint in [ENDPOINT_CURRENT, ENDPOINT_DAILY, ENDPOINT_HOURLY, ENDPOINT_ALERTS]
+                for endpoint in enabled_endpoints
             }
 
             # If nothing needs updating, return cached data

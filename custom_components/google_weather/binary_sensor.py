@@ -16,7 +16,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_LOCATION, DOMAIN
+from .const import CONF_INCLUDE_ALERTS, CONF_LOCATION, DEFAULT_INCLUDE_ALERTS, DOMAIN
 from .coordinator import GoogleWeatherCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -179,16 +179,20 @@ async def async_setup_entry(
     coordinator: GoogleWeatherCoordinator = hass.data[DOMAIN][entry.entry_id]
     location = entry.data.get(CONF_LOCATION, "home")
 
-    # Filter sensors based on alert support
+    # Get current configuration (data + options)
+    current_data = {**entry.data, **entry.options}
+    include_alerts = current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS)
+
+    # Filter sensors based on alert configuration
     # Always include non-alert sensors (like isDaytime)
-    # Only include alert sensors if alerts are supported
+    # Only include alert sensors if alerts are enabled AND supported
     sensors_to_add = []
     alert_sensor_keys = {"weather_alert", "severe_weather_alert", "urgent_weather_alert"}
 
     for description in BINARY_SENSOR_TYPES:
         if description.key in alert_sensor_keys:
-            # Only add alert sensors if alerts are supported
-            if coordinator.alerts_supported:
+            # Only add alert sensors if alerts are enabled and supported
+            if include_alerts and coordinator.alerts_supported:
                 sensors_to_add.append(
                     GoogleWeatherBinarySensor(coordinator, entry, description, location)
                 )
@@ -198,7 +202,11 @@ async def async_setup_entry(
                 GoogleWeatherBinarySensor(coordinator, entry, description, location)
             )
 
-    if coordinator.alerts_supported is False:
+    if not include_alerts:
+        _LOGGER.info(
+            "Weather alerts disabled in configuration - only creating non-alert binary sensors"
+        )
+    elif coordinator.alerts_supported is False:
         _LOGGER.info(
             "Weather alerts not supported for this location - only creating non-alert binary sensors"
         )
