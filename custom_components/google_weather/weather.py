@@ -269,18 +269,16 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
     async def async_forecast_daily(self) -> list[Forecast] | None:
         """Return the daily forecast."""
+        # Return empty list if daily forecasts are disabled
+        if not (self._attr_supported_features & WeatherEntityFeature.FORECAST_DAILY):
+            return []
+
         try:
-            # If daily forecasts are disabled, fetch on demand (for manual service calls)
-            if not (self._attr_supported_features & WeatherEntityFeature.FORECAST_DAILY):
-                _LOGGER.debug("Daily forecast disabled, fetching on demand")
-                from .const import ENDPOINT_DAILY
-                daily_forecast = await self.coordinator.async_fetch_forecast_on_demand(ENDPOINT_DAILY)
-            else:
-                # Use cached data from regular polling
-                if not self.coordinator.data:
-                    _LOGGER.debug("No coordinator data available for daily forecast")
-                    return None
-                daily_forecast = self.coordinator.data.get("daily_forecast", [])
+            if not self.coordinator.data:
+                _LOGGER.debug("No coordinator data available for daily forecast")
+                return None
+
+            daily_forecast = self.coordinator.data.get("daily_forecast", [])
             _LOGGER.debug("Daily forecast data: %d days available", len(daily_forecast))
 
             if not daily_forecast:
@@ -319,18 +317,16 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
     async def async_forecast_hourly(self) -> list[Forecast] | None:
         """Return the hourly forecast."""
+        # Return empty list if hourly forecasts are disabled
+        if not (self._attr_supported_features & WeatherEntityFeature.FORECAST_HOURLY):
+            return []
+
         try:
-            # If hourly forecasts are disabled, fetch on demand (for manual service calls)
-            if not (self._attr_supported_features & WeatherEntityFeature.FORECAST_HOURLY):
-                _LOGGER.debug("Hourly forecast disabled, fetching on demand")
-                from .const import ENDPOINT_HOURLY
-                hourly_forecast = await self.coordinator.async_fetch_forecast_on_demand(ENDPOINT_HOURLY)
-            else:
-                # Use cached data from regular polling
-                if not self.coordinator.data:
-                    _LOGGER.debug("No coordinator data available for hourly forecast")
-                    return None
-                hourly_forecast = self.coordinator.data.get("hourly_forecast", [])
+            if not self.coordinator.data:
+                _LOGGER.debug("No coordinator data available for hourly forecast")
+                return None
+
+            hourly_forecast = self.coordinator.data.get("hourly_forecast", [])
             _LOGGER.debug("Hourly forecast data: %d hours available", len(hourly_forecast))
 
             if not hourly_forecast:

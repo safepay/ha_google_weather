@@ -320,30 +320,3 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except requests.RequestException as err:
             _LOGGER.error("Request error fetching weather data: %s", err)
             raise UpdateFailed(f"Connection error: {err}") from err
-
-    async def async_fetch_forecast_on_demand(self, endpoint: str) -> list[dict[str, Any]]:
-        """Fetch a specific forecast endpoint on demand (for manual service calls)."""
-        _LOGGER.debug("Fetching %s on demand", endpoint)
-        try:
-            # Fetch the specific endpoint
-            endpoints_to_update = {endpoint: True}
-            updated_data = await self.hass.async_add_executor_job(
-                self._fetch_weather_data,
-                endpoints_to_update,
-            )
-
-            # Cache the data
-            self.endpoint_data.update(updated_data)
-            self.last_update[endpoint] = dt_util.now()
-
-            # Return the appropriate forecast data
-            if endpoint == ENDPOINT_DAILY:
-                return updated_data.get("daily_forecast", [])
-            elif endpoint == ENDPOINT_HOURLY:
-                return updated_data.get("hourly_forecast", [])
-            else:
-                return []
-
-        except Exception as err:
-            _LOGGER.error("Error fetching %s on demand: %s", endpoint, err)
-            return []
