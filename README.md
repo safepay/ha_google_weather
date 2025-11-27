@@ -193,31 +193,31 @@ Linked to parent device via `via_device`.
 
 ### Overview
 
-The integration uses **smart polling** to optimize API usage and stay within Google's free tier limits. Google provides **10,000 free API calls per month** (2,500 per endpoint), and this integration is designed to make efficient use of these limits.
+The integration uses **smart polling** to optimize API usage and stay within Google's free tier limits. Google provides **10,000 free API calls per month**, and this integration is designed to make efficient use of this limit.
 
 ### How It Works
 
 Instead of fetching all weather data at once, the integration checks each API endpoint individually and only fetches when needed:
 
-- **Current Conditions**: Updates frequently (default: every 5 min during day, 15 min at night)
+- **Current Conditions**: Updates frequently (default: every 10 min during day, 30 min at night)
 - **Daily Forecast**: Updates less frequently as it changes slowly (default: every 30 min during day, 60 min at night)
-- **Hourly Forecast**: Moderate update frequency (default: every 15 min during day, 60 min at night)
+- **Hourly Forecast**: Moderate update frequency (default: every 20 min during day, 60 min at night)
 - **Weather Alerts**: Important but checked moderately (default: every 15 min during day, 30 min at night)
 
 The coordinator runs every minute to check which endpoints need updating, but **only calls the Google API when an endpoint's interval has elapsed**.
 
 ### Default Configuration
 
-The default settings are optimized to use approximately 2,500 calls/month per endpoint:
+The default settings are optimized to stay within the 10,000 free calls/month limit with a healthy buffer:
 
 | Endpoint | Daytime Interval | Nighttime Interval | Approx. Calls/Month |
 |----------|-----------------|-------------------|---------------------|
-| Current Conditions | 5 minutes | 15 minutes | ~10,440 |
-| Daily Forecast | 30 minutes | 60 minutes | ~3,060 |
-| Hourly Forecast | 15 minutes | 60 minutes | ~5,220 |
-| Weather Alerts | 15 minutes | 30 minutes | ~6,120 |
+| Current Conditions | 10 minutes | 30 minutes | ~3,360 |
+| Daily Forecast | 30 minutes | 60 minutes | ~1,200 |
+| Hourly Forecast | 20 minutes | 60 minutes | ~1,680 |
+| Weather Alerts | 15 minutes | 30 minutes | ~2,400 |
 
-**Note**: These are distributed across 4 endpoints, each staying well within the 2,500 free calls/endpoint/month.
+**Total: ~8,640 calls/month** (13.6% under the 10,000/month free tier limit, providing a comfortable buffer)
 
 ### Configuring Update Intervals
 
@@ -243,25 +243,25 @@ This automatically reduces API calls during nighttime hours when weather changes
 ### Example Configurations
 
 **Power User (Maximum Updates)**
-- Current: 5 min day / 10 min night = ~11,520 calls/month
-- Daily: 15 min day / 30 min night = ~6,480 calls/month
-- Hourly: 10 min day / 20 min night = ~8,640 calls/month
-- Alerts: 10 min day / 20 min night = ~8,640 calls/month
-- **Total**: ~35,280 calls/month (requires paid plan)
+- Current: 5 min day / 10 min night = ~7,200 calls/month
+- Daily: 15 min day / 30 min night = ~2,400 calls/month
+- Hourly: 10 min day / 20 min night = ~3,600 calls/month
+- Alerts: 10 min day / 20 min night = ~3,600 calls/month
+- **Total**: ~16,800 calls/month (requires paid plan)
 
 **Conservative (Minimal Updates)**
-- Current: 15 min day / 30 min night = ~6,120 calls/month
-- Daily: 60 min day / 120 min night = ~2,160 calls/month
-- Hourly: 30 min day / 60 min night = ~4,320 calls/month
-- Alerts: 30 min day / 60 min night = ~4,320 calls/month
-- **Total**: ~16,920 calls/month (well within free tier)
+- Current: 30 min day / 60 min night = ~1,200 calls/month
+- Daily: 60 min day / 120 min night = ~600 calls/month
+- Hourly: 30 min day / 90 min night = ~1,120 calls/month
+- Alerts: 30 min day / 60 min night = ~1,200 calls/month
+- **Total**: ~4,120 calls/month (well within free tier)
 
-**Alerts Only (Emergency Notifications)**
-- Current: 30 min day / 60 min night = ~4,320 calls/month
-- Daily: 120 min day / 240 min night = ~1,440 calls/month
-- Hourly: 60 min day / 120 min night = ~2,880 calls/month
-- Alerts: 5 min day / 10 min night = ~11,520 calls/month
-- **Total**: ~20,160 calls/month (prioritizes alerts)
+**Alerts Priority (Emergency Notifications)**
+- Current: 30 min day / 60 min night = ~1,200 calls/month
+- Daily: 60 min day / 120 min night = ~600 calls/month
+- Hourly: 30 min day / 90 min night = ~1,120 calls/month
+- Alerts: 10 min day / 15 min night = ~3,840 calls/month
+- **Total**: ~6,760 calls/month (prioritizes alerts, within free tier)
 
 ### Tips for Staying Within Free Tier
 
@@ -417,9 +417,9 @@ alerts:
 
 The integration uses **smart polling** with configurable intervals for each endpoint:
 
-- **Current Conditions**: Default 5 min (day) / 15 min (night) - real-time weather updates
+- **Current Conditions**: Default 10 min (day) / 30 min (night) - real-time weather updates
 - **Daily Forecast**: Default 30 min (day) / 60 min (night) - 10-day forecast
-- **Hourly Forecast**: Default 15 min (day) / 60 min (night) - 240-hour forecast
+- **Hourly Forecast**: Default 20 min (day) / 60 min (night) - 240-hour forecast
 - **Weather Alerts**: Default 15 min (day) / 30 min (night) - real-time alerts
 
 The coordinator checks every minute to see if any endpoint needs updating, but only makes API calls when necessary. This provides responsive updates while staying within API limits.
@@ -491,10 +491,9 @@ If alerts are not available for your location:
 ## API Limitations & Pricing
 
 ### Free Tier
-- **10,000 free API calls per month** (total across all endpoints)
-- **2,500 free calls per endpoint per month** (current, daily, hourly, alerts)
+- **10,000 free API calls per month** (total across all endpoints combined)
 - No credit card required for free tier
-- Default configuration uses ~24,000 calls/month (distributed across 4 endpoints)
+- Default configuration uses ~8,640 calls/month (13.6% under the limit)
 
 ### Smart Polling Benefits
 - Each endpoint is polled independently at different intervals
@@ -509,7 +508,7 @@ If alerts are not available for your location:
 - Current pricing: $6.00 per 1,000 calls after free tier
 
 ### Recommendations
-1. **Start with defaults**: Optimized for ~2,500 calls/endpoint/month
+1. **Start with defaults**: Optimized for ~8,640 calls/month (13.6% under the 10,000 limit)
 2. **Monitor usage**: Check Google Cloud Console → APIs & Services → Dashboard
 3. **Adjust as needed**: Reduce intervals if approaching limits
 4. **Use nighttime mode**: Significant savings with minimal impact
