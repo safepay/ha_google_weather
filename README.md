@@ -160,32 +160,14 @@ The integration uses the modern Home Assistant naming pattern (`has_entity_name 
 - `weather.home` → Friendly name: "Home Weather"
 
 ### Device: "Home Observational Sensors"
-**Sensor Entities:**
-- `sensor.home_temperature` → Friendly name: "Home Observational Sensors Temperature"
-- `sensor.home_feels_like` → Friendly name: "Home Observational Sensors Feels Like Temperature"
-- `sensor.home_dew_point` → Friendly name: "Home Observational Sensors Dew Point"
-- `sensor.home_heat_index` → Friendly name: "Home Observational Sensors Heat Index"
-- `sensor.home_wind_chill` → Friendly name: "Home Observational Sensors Wind Chill"
-- `sensor.home_humidity` → Friendly name: "Home Observational Sensors Humidity"
-- `sensor.home_pressure` → Friendly name: "Home Observational Sensors Pressure"
-- `sensor.home_wind_speed` → Friendly name: "Home Observational Sensors Wind Speed"
-- `sensor.home_wind_gust` → Friendly name: "Home Observational Sensors Wind Gust"
-- `sensor.home_wind_direction` → Friendly name: "Home Observational Sensors Wind Direction"
-- `sensor.home_wind_cardinal` → Friendly name: "Home Observational Sensors Wind Cardinal"
-- `sensor.home_wind_degrees` → Friendly name: "Home Observational Sensors Wind Degrees"
-- `sensor.home_visibility` → Friendly name: "Home Observational Sensors Visibility"
-- `sensor.home_cloud_cover` → Friendly name: "Home Observational Sensors Cloud Cover"
-- `sensor.home_uv_index` → Friendly name: "Home Observational Sensors UV Index"
-- `sensor.home_precipitation_probability` → Friendly name: "Home Observational Sensors Precipitation Probability"
-- `sensor.home_precipitation_amount` → Friendly name: "Home Observational Sensors Precipitation Amount"
-- `sensor.home_snow_amount` → Friendly name: "Home Observational Sensors Snow Amount"
-- `sensor.home_thunderstorm_probability` → Friendly name: "Home Observational Sensors Thunderstorm Probability"
-- `sensor.home_temp_change_24h` → Friendly name: "Home Observational Sensors Temperature Change (24h)"
-- `sensor.home_max_temp_24h` → Friendly name: "Home Observational Sensors Max Temperature (24h)"
-- `sensor.home_min_temp_24h` → Friendly name: "Home Observational Sensors Min Temperature (24h)"
-- `sensor.home_precipitation_24h` → Friendly name: "Home Observational Sensors Precipitation (24h)"
-- `sensor.home_snow_24h` → Friendly name: "Home Observational Sensors Snow (24h)"
-- `sensor.home_weather_condition` → Friendly name: "Home Observational Sensors Weather Condition"
+**Example Sensor Entities:**
+- `sensor.home_temperature` → "Home Observational Sensors Temperature"
+- `sensor.home_wind_speed` → "Home Observational Sensors Wind Speed"
+- `sensor.home_wind_cardinal` → "Home Observational Sensors Wind Cardinal"
+- `sensor.home_wind_degrees` → "Home Observational Sensors Wind Degrees"
+- `sensor.home_snow_amount` → "Home Observational Sensors Snow Amount"
+- `sensor.home_snow_24h` → "Home Observational Sensors Snow (24h)"
+- ...and 19+ more sensors
 
 ### Device: "Home Binary Sensors" (Always created)
 **Binary Sensor Entities:**
