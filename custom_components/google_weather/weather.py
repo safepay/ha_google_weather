@@ -271,7 +271,7 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
         """Return the daily forecast."""
         # Check if daily forecasts are enabled
         if not (self._attr_supported_features & WeatherEntityFeature.FORECAST_DAILY):
-            return None
+            return []
 
         try:
             if not self.coordinator.data:
@@ -319,7 +319,7 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
         """Return the hourly forecast."""
         # Check if hourly forecasts are enabled
         if not (self._attr_supported_features & WeatherEntityFeature.FORECAST_HOURLY):
-            return None
+            return []
 
         try:
             if not self.coordinator.data:
