@@ -311,7 +311,7 @@ async def async_setup_entry(
 class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEntity):
     """Representation of a Google Weather sensor."""
 
-    _attr_has_entity_name = True
+    _attr_has_entity_name = False
     entity_description: GoogleWeatherSensorDescription
 
     def __init__(
@@ -331,13 +331,12 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        # Set unique_id, suggested entity_id, and name
+        # Set unique_id and explicit friendly name (has_entity_name = False)
         self._attr_unique_id = f"{location_slug}_{description.key}"
-        self._attr_suggested_object_id = f"{location_slug}_{description.key}"  # Suggests simple entity_id
-        self._attr_name = description.name  # Just sensor type (e.g., "Temperature")
+        self._attr_name = f"{location_name} {description.name}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_sensors")},
-            "name": f"{location_name} Observational Sensors",  # Descriptive device name
+            "name": f"{location_name} Observational Sensors",
             "manufacturer": "Google",
             "model": "Weather API - Sensors",
             "sw_version": "v1",
