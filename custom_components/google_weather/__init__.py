@@ -8,7 +8,7 @@ import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, ENDPOINT_DAILY, ENDPOINT_HOURLY
@@ -46,7 +46,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(async_update_options))
 
     # Register service for on-demand forecast fetching
-    async def async_get_forecast(call: ServiceCall) -> dict[str, Any]:
+    async def async_get_forecast(call: ServiceCall) -> ServiceResponse:
         """Handle the get_forecast service call."""
         entity_id = call.data[ATTR_ENTITY_ID]
         forecast_type = call.data[ATTR_FORECAST_TYPE]
@@ -75,6 +75,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         SERVICE_GET_FORECAST,
         async_get_forecast,
         schema=SERVICE_GET_FORECAST_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
     )
 
     return True
