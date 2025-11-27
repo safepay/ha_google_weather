@@ -10,7 +10,7 @@ A comprehensive Home Assistant integration that provides weather data from the G
 - **Binary Sensors**: Day/night detection and weather alerts (when supported)
 - **Region-Friendly**: Support for both Metric and Imperial unit systems
 - **Configurable Location**: Set custom coordinates via config and options flow
-- **OAuth Integration**: Secure authentication using Google OAuth 2.0
+- **API Key Authentication**: Simple setup using Google Maps API key
 - **HACS Compatible**: Easy installation and updates
 
 ## What You'll Get
@@ -77,7 +77,7 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 
 1. **Google Cloud Project**: Create a project at [Google Cloud Console](https://console.cloud.google.com/)
 2. **Google Weather API**: Enable the Weather API in your project
-3. **OAuth 2.0 Credentials**: Configure OAuth credentials in Google Cloud
+3. **API Key**: Create a Google Maps API key in Google Cloud
 4. **Home Assistant**: Version 2023.1 or later
 
 ## Installation
@@ -430,8 +430,8 @@ The coordinator checks every minute to see if any endpoint needs updating, but o
 
 ### "Missing credentials" error
 - Ensure you've added Google Application Credentials in Settings → Application Credentials
-- Verify your OAuth Client ID and Secret are correct
-- Make sure the redirect URI in Google Cloud matches Home Assistant's OAuth redirect
+- Verify your API key is correct and has the Weather API enabled
+- Check that API key restrictions allow access from your Home Assistant instance
 
 ### API errors
 - Check that the Google Weather API is enabled in your Google Cloud Console
