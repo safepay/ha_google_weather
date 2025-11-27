@@ -269,8 +269,19 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
     async def async_forecast_daily(self) -> list[Forecast] | None:
         """Return the daily forecast."""
+        _LOGGER.debug(
+            "async_forecast_daily called - supported_features: %s, FORECAST_DAILY enabled: %s",
+            self._attr_supported_features,
+            bool(self._attr_supported_features & WeatherEntityFeature.FORECAST_DAILY)
+        )
+
         # Raise NotImplementedError if daily forecasts are disabled
         if not (self._attr_supported_features & WeatherEntityFeature.FORECAST_DAILY):
+            _LOGGER.warning(
+                "async_forecast_daily called but FORECAST_DAILY is not enabled (supported_features=%s). "
+                "Raising NotImplementedError. This should not happen - the frontend should check supported_features first.",
+                self._attr_supported_features
+            )
             raise NotImplementedError("Daily forecasts are disabled for this weather entity")
 
         try:
@@ -317,8 +328,19 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
     async def async_forecast_hourly(self) -> list[Forecast] | None:
         """Return the hourly forecast."""
+        _LOGGER.debug(
+            "async_forecast_hourly called - supported_features: %s, FORECAST_HOURLY enabled: %s",
+            self._attr_supported_features,
+            bool(self._attr_supported_features & WeatherEntityFeature.FORECAST_HOURLY)
+        )
+
         # Raise NotImplementedError if hourly forecasts are disabled
         if not (self._attr_supported_features & WeatherEntityFeature.FORECAST_HOURLY):
+            _LOGGER.warning(
+                "async_forecast_hourly called but FORECAST_HOURLY is not enabled (supported_features=%s). "
+                "Raising NotImplementedError. This should not happen - the frontend should check supported_features first.",
+                self._attr_supported_features
+            )
             raise NotImplementedError("Hourly forecasts are disabled for this weather entity")
 
         try:
