@@ -46,6 +46,8 @@ from .const import (
     DOMAIN,
     API_BASE_URL,
     UNIT_SYSTEMS,
+    UNIT_SYSTEM_METRIC,
+    UNIT_SYSTEM_IMPERIAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -148,15 +150,20 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Default to Home Assistant's configured location
         default_latitude = self.hass.config.latitude
         default_longitude = self.hass.config.longitude
+        default_location_name = self.hass.config.location_name or "home"
+
+        # Determine default unit system from Home Assistant configuration
+        # is_metric is True for metric system, False for imperial
+        default_unit_system = UNIT_SYSTEM_METRIC if self.hass.config.units.is_metric else UNIT_SYSTEM_IMPERIAL
 
         return self.async_show_form(
             step_id="location",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_LOCATION, default="home"): str,
+                    vol.Required(CONF_LOCATION, default=default_location_name): str,
                     vol.Required(CONF_LATITUDE, default=default_latitude): vol.Coerce(float),
                     vol.Required(CONF_LONGITUDE, default=default_longitude): vol.Coerce(float),
-                    vol.Required(CONF_UNIT_SYSTEM, default=DEFAULT_UNIT_SYSTEM): vol.In(UNIT_SYSTEMS),
+                    vol.Required(CONF_UNIT_SYSTEM, default=default_unit_system): vol.In(UNIT_SYSTEMS),
                 }
             ),
             errors=errors,
