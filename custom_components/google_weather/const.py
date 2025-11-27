@@ -27,26 +27,27 @@ DEFAULT_UPDATE_INTERVAL = timedelta(minutes=15)
 DEFAULT_UNIT_SYSTEM = "METRIC"
 
 # Default update intervals (in minutes) - optimized for 10,000 free API calls/month
+# Nighttime is 8 hours (22:00-06:00), daytime is 16 hours (06:00-22:00)
 # This configuration uses approximately:
-# - Current: ~8,640 calls/month (daytime) + 1,800 calls/month (nighttime) = 10,440 calls/month
-# - Daily: ~2,160 calls/month (daytime) + 900 calls/month (nighttime) = 3,060 calls/month
-# - Hourly: ~4,320 calls/month (daytime) + 900 calls/month (nighttime) = 5,220 calls/month
-# - Alerts: ~4,320 calls/month (daytime) + 1,800 calls/month (nighttime) = 6,120 calls/month
-# Total: ~24,840 calls/month across all endpoints (well distributed)
+# - Current: 1,920 calls/month (daytime) + 480 calls/month (nighttime) = 2,400 calls/month
+# - Daily: 960 calls/month (daytime) + 240 calls/month (nighttime) = 1,200 calls/month
+# - Hourly: 1,440 calls/month (daytime) + 240 calls/month (nighttime) = 1,680 calls/month
+# - Alerts: 1,920 calls/month (daytime) + 480 calls/month (nighttime) = 2,400 calls/month
+# Total: ~7,680 calls/month across all endpoints (23% under the 10,000/month limit)
 
 # Current conditions (most important - frequent updates)
-DEFAULT_CURRENT_DAY_INTERVAL = 5  # Every 5 minutes during day
-DEFAULT_CURRENT_NIGHT_INTERVAL = 15  # Every 15 minutes at night
+DEFAULT_CURRENT_DAY_INTERVAL = 15  # Every 15 minutes during day
+DEFAULT_CURRENT_NIGHT_INTERVAL = 30  # Every 30 minutes at night
 
 # Daily forecast (changes slowly - less frequent)
 DEFAULT_DAILY_DAY_INTERVAL = 30  # Every 30 minutes during day
 DEFAULT_DAILY_NIGHT_INTERVAL = 60  # Every hour at night
 
 # Hourly forecast (moderate importance)
-DEFAULT_HOURLY_DAY_INTERVAL = 15  # Every 15 minutes during day
+DEFAULT_HOURLY_DAY_INTERVAL = 20  # Every 20 minutes during day
 DEFAULT_HOURLY_NIGHT_INTERVAL = 60  # Every hour at night
 
-# Weather alerts (important but rare - moderate frequency)
+# Weather alerts (safety critical - frequent checks)
 DEFAULT_ALERTS_DAY_INTERVAL = 15  # Every 15 minutes during day
 DEFAULT_ALERTS_NIGHT_INTERVAL = 30  # Every 30 minutes at night
 
