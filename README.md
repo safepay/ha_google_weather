@@ -151,41 +151,41 @@ That's it! Your weather data will start flowing immediately.
 
 ## Entity Naming
 
-The integration uses the modern Home Assistant naming pattern (`has_entity_name = True`), combining device names with entity names to create friendly names. Entities are organized into three separate devices linked via device hierarchy:
+The integration creates simple, clean entity IDs and friendly names. Entities are organized into three separate devices linked via device hierarchy (`via_device`):
 
 **Example: Location = "home"**
 
 ### Device: "Home Weather" (Parent Device)
 **Weather Entity:**
-- `weather.home_weather` → Friendly name: "Home Weather"
+- `weather.home_weather` → Friendly name: "Home"
 
 ### Device: "Home Observational Sensors" (Child Device)
 Linked to parent device via `via_device`. Contains 25+ sensor entities:
 
-- `sensor.home_temperature` → "Home Observational Sensors Temperature"
-- `sensor.home_feels_like` → "Home Observational Sensors Feels Like Temperature"
-- `sensor.home_dew_point` → "Home Observational Sensors Dew Point"
-- `sensor.home_wind_speed` → "Home Observational Sensors Wind Speed"
-- `sensor.home_wind_cardinal` → "Home Observational Sensors Wind Cardinal"
-- `sensor.home_wind_degrees` → "Home Observational Sensors Wind Degrees"
-- `sensor.home_humidity` → "Home Observational Sensors Humidity"
-- `sensor.home_pressure` → "Home Observational Sensors Pressure"
-- `sensor.home_visibility` → "Home Observational Sensors Visibility"
-- `sensor.home_uv_index` → "Home Observational Sensors UV Index"
-- `sensor.home_snow_amount` → "Home Observational Sensors Snow Amount"
-- `sensor.home_snow_24h` → "Home Observational Sensors Snow (24h)"
+- `sensor.home_temperature` → "Home Temperature"
+- `sensor.home_feels_like` → "Home Feels Like Temperature"
+- `sensor.home_dew_point` → "Home Dew Point"
+- `sensor.home_wind_speed` → "Home Wind Speed"
+- `sensor.home_wind_cardinal` → "Home Wind Cardinal"
+- `sensor.home_wind_degrees` → "Home Wind Degrees"
+- `sensor.home_humidity` → "Home Humidity"
+- `sensor.home_pressure` → "Home Pressure"
+- `sensor.home_visibility` → "Home Visibility"
+- `sensor.home_uv_index` → "Home UV Index"
+- `sensor.home_snow_amount` → "Home Snow Amount"
+- `sensor.home_snow_24h` → "Home Snow (24h)"
 - ...and 13+ more sensors
 
 ### Device: "Home Binary Sensors" (Child Device)
 Linked to parent device via `via_device`.
 
 **Always available:**
-- `binary_sensor.home_is_daytime` → "Home Binary Sensors Daytime"
+- `binary_sensor.home_is_daytime` → "Home Daytime"
 
 **If region supports alerts:**
-- `binary_sensor.home_weather_alert` → "Home Binary Sensors Weather Alert"
-- `binary_sensor.home_severe_weather_alert` → "Home Binary Sensors Severe Weather Alert"
-- `binary_sensor.home_urgent_weather_alert` → "Home Binary Sensors Urgent Weather Alert"
+- `binary_sensor.home_weather_alert` → "Home Weather Alert"
+- `binary_sensor.home_severe_weather_alert` → "Home Severe Weather Alert"
+- `binary_sensor.home_urgent_weather_alert` → "Home Urgent Weather Alert"
 
 **Note**: The "Binary Sensors" device is always created with at least the Daytime sensor. Weather alert sensors are only added if your location supports alerts (see [Supported Regions](#supported-regions)).
 
