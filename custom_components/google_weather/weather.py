@@ -101,7 +101,7 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
         self._attr_unique_id = location_slug
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": f"{location_name} Weather",
+            "name": location_name,  # Just "Home" not "Home Weather"
             "manufacturer": "Google",
             "model": "Weather API",
             "sw_version": "v1",
