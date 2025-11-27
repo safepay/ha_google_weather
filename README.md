@@ -210,8 +210,8 @@ You can choose which forecasts and alerts to include during setup:
 - **Weather Alerts**: Enable/disable automatic fetching of weather alerts
 
 **Benefits of disabling forecasts:**
-- **Reduces API calls**: Disabled endpoints are never fetched, saving API calls
-- **Manual access available**: You can still access disabled forecasts via the `weather.get_forecasts` action when needed
+- **Reduces API calls**: Disabled endpoints are never fetched automatically, saving API calls
+- **Manual access available**: You can still fetch forecasts manually using the `google_weather.get_forecast` service (see below)
 - **Flexible API management**: Only fetch what you actually use regularly
 
 **Example API savings** (with defaults):
@@ -219,6 +219,31 @@ You can choose which forecasts and alerts to include during setup:
 - Disabling hourly forecasts: Saves ~1,680 calls/month
 - Disabling weather alerts: Saves ~2,400 calls/month
 - Disabling all three: Saves ~5,280 calls/month (leaves only current conditions at ~3,360 calls/month)
+
+### Manual Forecast Fetching
+
+When you disable automatic forecast polling, you can still fetch forecasts manually on-demand using the custom service:
+
+**Service**: `google_weather.get_forecast`
+
+**Parameters**:
+- `entity_id`: Your weather entity (e.g., `weather.home`)
+- `forecast_type`: Either `daily` or `hourly`
+
+**Example service call**:
+```yaml
+service: google_weather.get_forecast
+data:
+  entity_id: weather.home
+  forecast_type: daily
+```
+
+This makes a single API call to fetch the requested forecast and returns the data. The forecast is also cached in the coordinator for use by the weather entity.
+
+**Use cases**:
+- You have forecasts disabled to save API calls
+- You want to fetch a forecast only when you explicitly need it (e.g., via an automation or dashboard button)
+- You're using the free tier and want maximum control over API usage
 
 ### How It Works
 
