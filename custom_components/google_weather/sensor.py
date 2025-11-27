@@ -220,12 +220,6 @@ SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
         value_fn=lambda data: get_current_value(data, "precipitation", "qpf", "quantity"),
     ),
     GoogleWeatherSensorDescription(
-        key="precipitation_type",
-        name="Precipitation Type",
-        icon="mdi:weather-partly-rainy",
-        value_fn=lambda data: get_current_value(data, "precipitation", "probability", "type"),
-    ),
-    GoogleWeatherSensorDescription(
         key="snow_amount",
         name="Snow Amount",
         native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
