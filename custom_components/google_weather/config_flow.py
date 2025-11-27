@@ -54,6 +54,7 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize config flow."""
         self.api_key: str | None = None
         self.user_data: dict[str, Any] = {}
+        self.interval_data: dict[str, Any] = {}
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -159,18 +160,9 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Configure update intervals for API endpoints."""
         if user_input is not None:
-            # Merge all data and create entry
-            final_data = {
-                CONF_API_KEY: self.api_key,
-                **self.user_data,
-                **user_input,
-            }
-
-            location_name = self.user_data[CONF_LOCATION]
-            return self.async_create_entry(
-                title=f"Google Weather - {location_name}",
-                data=final_data,
-            )
+            # Store interval data and show confirmation
+            self.interval_data = user_input
+            return await self.async_step_confirm()
 
         return self.async_show_form(
             step_id="intervals",
@@ -225,6 +217,87 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
         )
 
+    def _calculate_monthly_calls(
+        self, day_interval: int, night_interval: int, day_hours: int = 16, night_hours: int = 8
+    ) -> int:
+        """Calculate monthly API calls for an endpoint."""
+        days_per_month = 30
+        calls_per_hour_day = 60 / day_interval
+        calls_per_hour_night = 60 / night_interval
+
+        day_calls = calls_per_hour_day * day_hours * days_per_month
+        night_calls = calls_per_hour_night * night_hours * days_per_month
+
+        return int(day_calls + night_calls)
+
+    async def async_step_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Show confirmation with API usage calculation."""
+        if user_input is not None:
+            # User confirmed, create the entry
+            final_data = {
+                CONF_API_KEY: self.api_key,
+                **self.user_data,
+                **self.interval_data,
+            }
+
+            location_name = self.user_data[CONF_LOCATION]
+            return self.async_create_entry(
+                title=f"Google Weather - {location_name}",
+                data=final_data,
+            )
+
+        # Calculate API usage for each endpoint
+        current_calls = self._calculate_monthly_calls(
+            self.interval_data[CONF_CURRENT_DAY_INTERVAL],
+            self.interval_data[CONF_CURRENT_NIGHT_INTERVAL],
+        )
+        daily_calls = self._calculate_monthly_calls(
+            self.interval_data[CONF_DAILY_DAY_INTERVAL],
+            self.interval_data[CONF_DAILY_NIGHT_INTERVAL],
+        )
+        hourly_calls = self._calculate_monthly_calls(
+            self.interval_data[CONF_HOURLY_DAY_INTERVAL],
+            self.interval_data[CONF_HOURLY_NIGHT_INTERVAL],
+        )
+        alerts_calls = self._calculate_monthly_calls(
+            self.interval_data[CONF_ALERTS_DAY_INTERVAL],
+            self.interval_data[CONF_ALERTS_NIGHT_INTERVAL],
+        )
+
+        total_calls = current_calls + daily_calls + hourly_calls + alerts_calls
+        headroom = 10000 - total_calls
+        headroom_pct = (headroom / 10000) * 100
+
+        # Build description with calculation results
+        status = "✅" if total_calls <= 10000 else "❌"
+        description = (
+            f"**Estimated Monthly API Usage:**\n\n"
+            f"• Current Conditions: ~{current_calls:,} calls/month\n"
+            f"• Daily Forecast: ~{daily_calls:,} calls/month\n"
+            f"• Hourly Forecast: ~{hourly_calls:,} calls/month\n"
+            f"• Weather Alerts: ~{alerts_calls:,} calls/month\n\n"
+            f"**Total: ~{total_calls:,} calls/month** {status}\n"
+            f"Free tier limit: 10,000 calls/month\n"
+        )
+
+        if total_calls <= 10000:
+            description += f"Headroom: {headroom:,} calls ({headroom_pct:.1f}% buffer)\n\n✅ Within free tier limits"
+        else:
+            excess = total_calls - 10000
+            description += f"\n⚠️ **Warning:** Exceeds free tier by {excess:,} calls/month\n"
+            description += "Consider reducing update intervals or expect charges."
+
+        description += "\n\n---\n**Next Steps:**\n• Click **Submit** to confirm these settings\n• Use your browser's back button to adjust intervals"
+
+        return self.async_show_form(
+            step_id="confirm",
+            description_placeholders={"usage_summary": description},
+            data_schema=vol.Schema({}),
+            last_step=False,
+        )
+
     @staticmethod
     @callback
     def async_get_options_flow(
@@ -240,6 +313,7 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
+        self.options_data: dict[str, Any] = {}
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -258,8 +332,9 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 errors[CONF_LONGITUDE] = "invalid_longitude"
 
             if not errors:
-                # Update options
-                return self.async_create_entry(title="", data=user_input)
+                # Store options data and show confirmation
+                self.options_data = user_input
+                return await self.async_step_confirm()
 
         # Get current values from config_entry (data or options)
         current_data = {**self.config_entry.data, **self.config_entry.options}
@@ -324,4 +399,75 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 }
             ),
             errors=errors,
+        )
+
+    def _calculate_monthly_calls(
+        self, day_interval: int, night_interval: int, day_hours: int = 16, night_hours: int = 8
+    ) -> int:
+        """Calculate monthly API calls for an endpoint."""
+        days_per_month = 30
+        calls_per_hour_day = 60 / day_interval
+        calls_per_hour_night = 60 / night_interval
+
+        day_calls = calls_per_hour_day * day_hours * days_per_month
+        night_calls = calls_per_hour_night * night_hours * days_per_month
+
+        return int(day_calls + night_calls)
+
+    async def async_step_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Show confirmation with API usage calculation."""
+        if user_input is not None:
+            # User confirmed, update the options
+            return self.async_create_entry(title="", data=self.options_data)
+
+        # Calculate API usage for each endpoint
+        current_calls = self._calculate_monthly_calls(
+            self.options_data[CONF_CURRENT_DAY_INTERVAL],
+            self.options_data[CONF_CURRENT_NIGHT_INTERVAL],
+        )
+        daily_calls = self._calculate_monthly_calls(
+            self.options_data[CONF_DAILY_DAY_INTERVAL],
+            self.options_data[CONF_DAILY_NIGHT_INTERVAL],
+        )
+        hourly_calls = self._calculate_monthly_calls(
+            self.options_data[CONF_HOURLY_DAY_INTERVAL],
+            self.options_data[CONF_HOURLY_NIGHT_INTERVAL],
+        )
+        alerts_calls = self._calculate_monthly_calls(
+            self.options_data[CONF_ALERTS_DAY_INTERVAL],
+            self.options_data[CONF_ALERTS_NIGHT_INTERVAL],
+        )
+
+        total_calls = current_calls + daily_calls + hourly_calls + alerts_calls
+        headroom = 10000 - total_calls
+        headroom_pct = (headroom / 10000) * 100
+
+        # Build description with calculation results
+        status = "✅" if total_calls <= 10000 else "❌"
+        description = (
+            f"**Estimated Monthly API Usage:**\n\n"
+            f"• Current Conditions: ~{current_calls:,} calls/month\n"
+            f"• Daily Forecast: ~{daily_calls:,} calls/month\n"
+            f"• Hourly Forecast: ~{hourly_calls:,} calls/month\n"
+            f"• Weather Alerts: ~{alerts_calls:,} calls/month\n\n"
+            f"**Total: ~{total_calls:,} calls/month** {status}\n"
+            f"Free tier limit: 10,000 calls/month\n"
+        )
+
+        if total_calls <= 10000:
+            description += f"Headroom: {headroom:,} calls ({headroom_pct:.1f}% buffer)\n\n✅ Within free tier limits"
+        else:
+            excess = total_calls - 10000
+            description += f"\n⚠️ **Warning:** Exceeds free tier by {excess:,} calls/month\n"
+            description += "Consider reducing update intervals or expect charges."
+
+        description += "\n\n---\n**Next Steps:**\n• Click **Submit** to confirm these settings\n• Use your browser's back button to adjust intervals"
+
+        return self.async_show_form(
+            step_id="confirm",
+            description_placeholders={"usage_summary": description},
+            data_schema=vol.Schema({}),
+            last_step=False,
         )

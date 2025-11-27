@@ -54,6 +54,10 @@
           "night_start": "When nighttime update schedule begins (e.g., 22:00 for 10 PM)",
           "night_end": "When nighttime update schedule ends (e.g., 06:00 for 6 AM)"
         }
+      },
+      "confirm": {
+        "title": "Confirm API Usage",
+        "description": "{usage_summary}"
       }
     },
     "error": {
@@ -101,6 +105,10 @@
           "night_start": "When nighttime update schedule begins (e.g., 22:00)",
           "night_end": "When nighttime update schedule ends (e.g., 06:00)"
         }
+      },
+      "confirm": {
+        "title": "Confirm API Usage",
+        "description": "{usage_summary}"
       }
     },
     "error": {
