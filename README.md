@@ -199,7 +199,7 @@ The integration uses **smart polling** to optimize API usage and stay within Goo
 
 Instead of fetching all weather data at once, the integration checks each API endpoint individually and only fetches when needed:
 
-- **Current Conditions**: Updates frequently (default: every 15 min during day, 30 min at night)
+- **Current Conditions**: Updates frequently (default: every 10 min during day, 30 min at night)
 - **Daily Forecast**: Updates less frequently as it changes slowly (default: every 30 min during day, 60 min at night)
 - **Hourly Forecast**: Moderate update frequency (default: every 20 min during day, 60 min at night)
 - **Weather Alerts**: Important but checked moderately (default: every 15 min during day, 30 min at night)
@@ -212,12 +212,12 @@ The default settings are optimized to stay within the 10,000 free calls/month li
 
 | Endpoint | Daytime Interval | Nighttime Interval | Approx. Calls/Month |
 |----------|-----------------|-------------------|---------------------|
-| Current Conditions | 15 minutes | 30 minutes | ~2,400 |
+| Current Conditions | 10 minutes | 30 minutes | ~3,360 |
 | Daily Forecast | 30 minutes | 60 minutes | ~1,200 |
 | Hourly Forecast | 20 minutes | 60 minutes | ~1,680 |
 | Weather Alerts | 15 minutes | 30 minutes | ~2,400 |
 
-**Total: ~7,680 calls/month** (23% under the 10,000/month free tier limit, providing a comfortable buffer)
+**Total: ~8,640 calls/month** (13.6% under the 10,000/month free tier limit, providing a comfortable buffer)
 
 ### Configuring Update Intervals
 
@@ -417,7 +417,7 @@ alerts:
 
 The integration uses **smart polling** with configurable intervals for each endpoint:
 
-- **Current Conditions**: Default 15 min (day) / 30 min (night) - real-time weather updates
+- **Current Conditions**: Default 10 min (day) / 30 min (night) - real-time weather updates
 - **Daily Forecast**: Default 30 min (day) / 60 min (night) - 10-day forecast
 - **Hourly Forecast**: Default 20 min (day) / 60 min (night) - 240-hour forecast
 - **Weather Alerts**: Default 15 min (day) / 30 min (night) - real-time alerts
@@ -493,7 +493,7 @@ If alerts are not available for your location:
 ### Free Tier
 - **10,000 free API calls per month** (total across all endpoints combined)
 - No credit card required for free tier
-- Default configuration uses ~7,680 calls/month (23% under the limit)
+- Default configuration uses ~8,640 calls/month (13.6% under the limit)
 
 ### Smart Polling Benefits
 - Each endpoint is polled independently at different intervals
@@ -508,7 +508,7 @@ If alerts are not available for your location:
 - Current pricing: $6.00 per 1,000 calls after free tier
 
 ### Recommendations
-1. **Start with defaults**: Optimized for ~7,680 calls/month (23% under the 10,000 limit)
+1. **Start with defaults**: Optimized for ~8,640 calls/month (13.6% under the 10,000 limit)
 2. **Monitor usage**: Check Google Cloud Console → APIs & Services → Dashboard
 3. **Adjust as needed**: Reduce intervals if approaching limits
 4. **Use nighttime mode**: Significant savings with minimal impact

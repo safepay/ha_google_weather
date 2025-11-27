@@ -29,7 +29,7 @@
       },
       "intervals": {
         "title": "Configure Update Intervals",
-        "description": "Set how often to update each endpoint during day and night. Google provides 10,000 free API calls/month total. The defaults use approximately 7,680 calls/month (23% under limit). All intervals are in minutes.",
+        "description": "Set how often to update each endpoint during day and night. Google provides 10,000 free API calls/month total. The defaults use approximately 8,640 calls/month (13.6% under limit). All intervals are in minutes.",
         "data": {
           "current_day_interval": "Current Conditions - Daytime (minutes)",
           "current_night_interval": "Current Conditions - Nighttime (minutes)",
@@ -43,7 +43,7 @@
           "night_end": "Night Time End (HH:MM)"
         },
         "data_description": {
-          "current_day_interval": "How often to update current conditions during daytime (default: 15 min)",
+          "current_day_interval": "How often to update current conditions during daytime (default: 10 min)",
           "current_night_interval": "How often to update current conditions at night (default: 30 min)",
           "daily_day_interval": "How often to update daily forecast during daytime (default: 30 min)",
           "daily_night_interval": "How often to update daily forecast at night (default: 60 min)",

@@ -29,14 +29,14 @@ DEFAULT_UNIT_SYSTEM = "METRIC"
 # Default update intervals (in minutes) - optimized for 10,000 free API calls/month
 # Nighttime is 8 hours (22:00-06:00), daytime is 16 hours (06:00-22:00)
 # This configuration uses approximately:
-# - Current: 1,920 calls/month (daytime) + 480 calls/month (nighttime) = 2,400 calls/month
+# - Current: 2,880 calls/month (daytime) + 480 calls/month (nighttime) = 3,360 calls/month
 # - Daily: 960 calls/month (daytime) + 240 calls/month (nighttime) = 1,200 calls/month
 # - Hourly: 1,440 calls/month (daytime) + 240 calls/month (nighttime) = 1,680 calls/month
 # - Alerts: 1,920 calls/month (daytime) + 480 calls/month (nighttime) = 2,400 calls/month
-# Total: ~7,680 calls/month across all endpoints (23% under the 10,000/month limit)
+# Total: ~8,640 calls/month across all endpoints (13.6% under the 10,000/month limit)
 
 # Current conditions (most important - frequent updates)
-DEFAULT_CURRENT_DAY_INTERVAL = 15  # Every 15 minutes during day
+DEFAULT_CURRENT_DAY_INTERVAL = 10  # Every 10 minutes during day
 DEFAULT_CURRENT_NIGHT_INTERVAL = 30  # Every 30 minutes at night
 
 # Daily forecast (changes slowly - less frequent)
