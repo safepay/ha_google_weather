@@ -218,7 +218,7 @@ class GoogleWeatherBinarySensor(
         self._attr_name = description.name  # Just the alert type (e.g., "Weather Alert")
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_warnings")},
-            "name": location_name,
+            "name": f"{location_name} Warning Sensors",
             "manufacturer": "Google",
             "model": "Weather API - Warnings",
             "sw_version": "v1",

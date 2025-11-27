@@ -290,7 +290,7 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
         self._attr_name = description.name  # Just the sensor type (e.g., "Temperature")
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_sensors")},
-            "name": location_name,
+            "name": f"{location_name} Observational Sensors",
             "manufacturer": "Google",
             "model": "Weather API - Sensors",
             "sw_version": "v1",
