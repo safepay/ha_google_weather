@@ -30,7 +30,7 @@ A comprehensive Home Assistant integration for Google Weather API with smart pol
 ## Quick Start
 
 1. **Enable Google Weather API** in Google Cloud Console
-2. **Create an API key** in Google Cloud
+2. **Create a Google Maps API key** in Google Cloud
 3. **Add integration** via UI and enter your API key
 4. **Configure** location and update intervals
 

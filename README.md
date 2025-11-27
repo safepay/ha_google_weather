@@ -119,7 +119,7 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 
 ## Configuration
 
-### Step 1: Get Your API Key
+### Step 1: Get Your Google Maps API Key
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Select your project (or create a new one)
@@ -127,7 +127,7 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 4. Search for "Weather API" and click "Enable"
 5. Go to "APIs & Services" → "Credentials"
 6. Click "Create Credentials" → "API key"
-7. Copy your API key (you can add restrictions for better security)
+7. Copy your Google Maps API key (you can add restrictions for better security)
 
 💡 **Tip**: If you already have a Google Maps Platform API key, you can reuse it! Just make sure the Weather API is enabled for your project.
 
@@ -136,7 +136,7 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 1. Go to Settings → Devices & Services
 2. Click "+ Add Integration"
 3. Search for "Google Weather"
-4. Enter your API key from Step 1
+4. Enter your Google Maps API key from Step 1
 5. Configure your location:
    - **Location**: Entity ID prefix (default: "home")
      Examples: "home", "office", "weather_station"
