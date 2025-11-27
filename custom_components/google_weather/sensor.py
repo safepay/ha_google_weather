@@ -162,6 +162,14 @@ SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
             get_current_value(data, "wind", "direction", "cardinal")
         ),
     ),
+    GoogleWeatherSensorDescription(
+        key="wind_degrees",
+        name="Wind Degrees",
+        native_unit_of_measurement="°",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:compass",
+        value_fn=lambda data: get_current_value(data, "wind", "direction", "degrees"),
+    ),
     # Visibility
     GoogleWeatherSensorDescription(
         key="visibility",
