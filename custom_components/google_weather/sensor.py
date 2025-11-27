@@ -48,6 +48,19 @@ def get_current_value(data: dict, *keys: str) -> Any:
     return current if not isinstance(current, dict) else None
 
 
+# Mapping of full cardinal directions to abbreviations
+CARDINAL_DIRECTION_MAP = {
+    "NORTH": "N",
+    "NORTH_EAST": "NE",
+    "EAST": "E",
+    "SOUTH_EAST": "SE",
+    "SOUTH": "S",
+    "SOUTH_WEST": "SW",
+    "WEST": "W",
+    "NORTH_WEST": "NW",
+}
+
+
 # Observational Sensors
 SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
     # Temperature sensors
@@ -140,6 +153,14 @@ SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
         attributes_fn=lambda data: {
             "degrees": get_current_value(data, "wind", "direction", "degrees"),
         },
+    ),
+    GoogleWeatherSensorDescription(
+        key="wind_cardinal",
+        name="Wind Cardinal",
+        icon="mdi:compass-rose",
+        value_fn=lambda data: CARDINAL_DIRECTION_MAP.get(
+            get_current_value(data, "wind", "direction", "cardinal")
+        ),
     ),
     # Visibility
     GoogleWeatherSensorDescription(
