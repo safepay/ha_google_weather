@@ -231,12 +231,13 @@ class GoogleWeatherBinarySensor(
         # Create friendly name from location (title case)
         location_name = location.replace("_", " ").title()
 
-        # Set unique_id and name (just the sensor type, device name will be prepended)
+        # Set unique_id, suggested entity_id, and name
         self._attr_unique_id = f"{location_slug}_{description.key}"
-        self._attr_name = description.name  # Just the sensor type (e.g., "Daytime", "Weather Alert")
+        self._attr_suggested_object_id = f"{location_slug}_{description.key}"  # Suggests simple entity_id
+        self._attr_name = description.name  # Just sensor type (e.g., "Daytime", "Weather Alert")
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_binary_sensors")},
-            "name": f"{location_name} Binary Sensors",
+            "name": f"{location_name} Binary Sensors",  # Descriptive device name
             "manufacturer": "Google",
             "model": "Weather API - Binary Sensors",
             "sw_version": "v1",
