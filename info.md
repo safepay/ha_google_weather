@@ -8,8 +8,8 @@ A comprehensive Home Assistant integration for Google Weather API with smart pol
 - Current conditions with 25+ sensors
 - 10-day daily forecast
 - 240-hour hourly forecast
-- Real-time weather alerts from 50+ countries
-- Day/night detection binary sensor
+- Real-time weather alerts
+- Day/night detection
 
 ⚡ **Smart Polling**
 - Independent endpoint polling
@@ -19,14 +19,13 @@ A comprehensive Home Assistant integration for Google Weather API with smart pol
 
 🌍 **Region-Friendly**
 - Metric and Imperial unit systems
-- Configurable location (defaults to Home Assistant)
+- Configurable location
 - Customizable entity prefixes
 
 🔧 **User-Friendly**
 - Full config and options flow
 - No YAML configuration required
 - Simple API key setup
-- Comprehensive documentation
 
 ## Quick Start
 
@@ -45,33 +44,6 @@ Optimized for Google's free tier (10,000 calls/month):
 - **Weather Alerts**: 15min (day) / 30min (night)
 
 **Night mode** (22:00-06:00) automatically reduces API usage by 40-60%.
-
-## What You Get
-
-### Weather Entity
-- Full weather forecast with daily/hourly support
-- Current conditions
-- Integrated with Home Assistant weather cards
-
-### Observational Sensors (25+ sensors)
-- Temperature (current, feels-like, dew point, heat index, wind chill)
-- Wind (speed, gust, direction, cardinal abbreviation, degrees)
-- Atmospheric (humidity, pressure, visibility, cloud cover, UV index)
-- Precipitation & Snow (probability, amount, snow amount, thunderstorm probability)
-- 24-hour history (temperature change, max/min, precipitation, snow)
-- Weather condition (text description)
-
-### Binary Sensors (Always Created)
-**Standard Sensors:**
-- Daytime indicator (shows if it's currently daytime)
-
-**Weather Alerts** (only if supported in your region):
-- General weather alerts
-- Severe weather alerts (extreme/severe only)
-- Urgent weather alerts (immediate/expected)
-- Detailed alert attributes with instructions
-
-**Note**: The Binary Sensors device is always created with the Daytime sensor. Weather alert sensors are only added if your region supports them. If alerts aren't supported, you'll still have all weather data and the Daytime sensor.
 
 ## Requirements
 
