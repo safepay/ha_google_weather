@@ -269,6 +269,10 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
     async def async_forecast_daily(self) -> list[Forecast] | None:
         """Return the daily forecast."""
+        # Check if daily forecasts are enabled
+        if not (self._attr_supported_features & WeatherEntityFeature.FORECAST_DAILY):
+            return None
+
         try:
             if not self.coordinator.data:
                 _LOGGER.debug("No coordinator data available for daily forecast")
@@ -313,6 +317,10 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
     async def async_forecast_hourly(self) -> list[Forecast] | None:
         """Return the hourly forecast."""
+        # Check if hourly forecasts are enabled
+        if not (self._attr_supported_features & WeatherEntityFeature.FORECAST_HOURLY):
+            return None
+
         try:
             if not self.coordinator.data:
                 _LOGGER.debug("No coordinator data available for hourly forecast")

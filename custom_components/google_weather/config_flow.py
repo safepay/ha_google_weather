@@ -400,7 +400,7 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
+        super().__init__()
         self.options_data: dict[str, Any] = {}
         self.forecast_options: dict[str, Any] = {}
 
