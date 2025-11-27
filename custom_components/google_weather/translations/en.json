@@ -29,7 +29,7 @@
       },
       "forecasts": {
         "title": "Configure Forecast Options",
-        "description": "Choose which forecasts and alerts to include. Disabling forecasts reduces API usage and saves API calls for the free tier. You can still access disabled forecasts via the weather.get_forecasts action.",
+        "description": "Choose which forecasts and alerts to include. Disabling forecasts reduces API usage and saves API calls for the free tier. You can still fetch forecasts manually using the google_weather.get_forecast service.",
         "data": {
           "include_daily_forecast": "Include Daily Forecasts",
           "include_hourly_forecast": "Include Hourly Forecasts",
@@ -211,6 +211,22 @@
       },
       "urgent_weather_alert": {
         "name": "Urgent Weather Alert"
+      }
+    }
+  },
+  "services": {
+    "get_forecast": {
+      "name": "Get forecast on demand",
+      "description": "Fetch weather forecast on demand, even when automatic polling is disabled. This service makes a single API call to fetch the requested forecast type.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "The weather entity ID to fetch forecasts for."
+        },
+        "forecast_type": {
+          "name": "Forecast type",
+          "description": "Type of forecast to fetch (daily or hourly)."
+        }
       }
     }
   }

@@ -1,0 +1,24 @@
+# Services for Google Weather integration
+get_forecast:
+  name: Get forecast on demand
+  description: Fetch weather forecast on demand, even when automatic polling is disabled.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: The weather entity ID to fetch forecasts for.
+      required: true
+      example: "weather.home"
+      selector:
+        entity:
+          domain: weather
+          integration: google_weather
+    forecast_type:
+      name: Forecast type
+      description: Type of forecast to fetch (daily or hourly).
+      required: true
+      example: "daily"
+      selector:
+        select:
+          options:
+            - "daily"
+            - "hourly"
