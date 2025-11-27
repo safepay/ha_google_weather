@@ -5,10 +5,11 @@ A comprehensive Home Assistant integration for Google Weather API with smart pol
 ## Features
 
 ✨ **Complete Weather Data**
-- Current conditions with 20+ sensors
+- Current conditions with 25+ sensors
 - 10-day daily forecast
 - 240-hour hourly forecast
 - Real-time weather alerts from 50+ countries
+- Day/night detection binary sensor
 
 ⚡ **Smart Polling**
 - Independent endpoint polling
@@ -52,20 +53,25 @@ Optimized for Google's free tier (10,000 calls/month):
 - Current conditions
 - Integrated with Home Assistant weather cards
 
-### Observational Sensors (20+ sensors)
+### Observational Sensors (25+ sensors)
 - Temperature (current, feels-like, dew point, heat index, wind chill)
-- Wind (speed, gust, direction with cardinal)
+- Wind (speed, gust, direction, cardinal abbreviation, degrees)
 - Atmospheric (humidity, pressure, visibility, cloud cover, UV index)
-- Precipitation (probability, amount, thunderstorm probability)
-- 24-hour history (temperature change, max/min, precipitation)
+- Precipitation & Snow (probability, amount, snow amount, thunderstorm probability)
+- 24-hour history (temperature change, max/min, precipitation, snow)
+- Weather condition (text description)
 
-### Weather Alert Binary Sensors
+### Binary Sensors (Always Created)
+**Standard Sensors:**
+- Daytime indicator (shows if it's currently daytime)
+
+**Weather Alerts** (only if supported in your region):
 - General weather alerts
 - Severe weather alerts (extreme/severe only)
 - Urgent weather alerts (immediate/expected)
 - Detailed alert attributes with instructions
 
-**Note**: Alert coverage varies by region. Some areas (e.g., Victoria/WA in Australia) may not be supported.
+**Note**: The Binary Sensors device is always created with the Daytime sensor. Weather alert sensors are only added if your region supports them. If alerts aren't supported, you'll still have all weather data and the Daytime sensor.
 
 ## Requirements
 

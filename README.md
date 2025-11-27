@@ -6,7 +6,8 @@ A comprehensive Home Assistant integration that provides weather data from the G
 
 - **Complete Weather Data**: Current conditions, daily forecast (10 days), hourly forecast (240 hours)
 - **Weather Alerts**: Real-time weather warnings and alerts from authoritative agencies worldwide
-- **Comprehensive Sensors**: 20+ observational sensors including temperature, wind, precipitation, UV index, and more
+- **Comprehensive Sensors**: 25+ observational sensors including temperature, wind, precipitation, snow, UV index, and more
+- **Binary Sensors**: Day/night detection and weather alerts (when supported)
 - **Region-Friendly**: Support for both Metric and Imperial unit systems
 - **Configurable Location**: Set custom coordinates via config and options flow
 - **OAuth Integration**: Secure authentication using Google OAuth 2.0
@@ -19,7 +20,7 @@ A comprehensive Home Assistant integration that provides weather data from the G
 - **Daily Forecast**: Up to 10 days with high/low temperatures, conditions, precipitation probability, and more
 - **Hourly Forecast**: Up to 240 hours (10 days) of detailed hourly forecasts
 
-### Observational Sensors (20+ sensors)
+### Observational Sensors (25+ sensors)
 **Temperature:**
 - Current Temperature
 - Feels Like Temperature
@@ -30,7 +31,9 @@ A comprehensive Home Assistant integration that provides weather data from the G
 **Wind:**
 - Wind Speed
 - Wind Gust
-- Wind Direction (degrees and cardinal)
+- Wind Direction (full cardinal)
+- Wind Cardinal (abbreviated: N, NE, E, etc.)
+- Wind Degrees (0-360°)
 
 **Atmospheric:**
 - Humidity
@@ -39,9 +42,10 @@ A comprehensive Home Assistant integration that provides weather data from the G
 - Cloud Cover
 - UV Index
 
-**Precipitation:**
+**Precipitation & Snow:**
 - Precipitation Probability
 - Precipitation Amount
+- Snow Amount
 - Thunderstorm Probability
 
 **24-Hour Historical:**
@@ -49,18 +53,25 @@ A comprehensive Home Assistant integration that provides weather data from the G
 - Max Temperature
 - Min Temperature
 - Total Precipitation
+- Total Snow
 
-### Weather Alert Binary Sensors
-**Note**: These sensors are **only created if your region supports weather alerts**. The integration automatically detects alert support during initial setup.
+**Other:**
+- Weather Condition (text description)
 
-When available, you get three binary sensors:
+### Binary Sensors
+The integration creates a "Binary Sensors" device with the following sensors:
+
+**Always Available:**
+- **Daytime**: Indicates if it's currently daytime (based on sunrise/sunset)
+
+**Weather Alerts** (only if your region supports alerts):
 - **Weather Alert**: Any active weather alerts
 - **Severe Weather Alert**: Extreme or severe alerts only
 - **Urgent Weather Alert**: Immediate or expected urgency alerts
 
 All alert sensors include detailed attributes with alert descriptions, instructions, severity levels, and more.
 
-**Alert Availability**: Weather alert coverage varies by region. If the Google Weather API returns a 404 error for your location, the warning sensors and "Warnings" device will not be created. This is normal and the integration will continue to provide all weather data and forecasts. See [Supported Regions](#supported-regions) for coverage details.
+**Alert Availability**: The integration automatically detects if your location supports weather alerts during setup. If the API returns a 404 error, only the Daytime sensor is created. All weather data and forecasts continue to work normally. See [Supported Regions](#supported-regions) for alert coverage details.
 
 ## Prerequisites
 
@@ -140,45 +151,52 @@ That's it! Your weather data will start flowing immediately.
 
 ## Entity Naming
 
-The integration creates clean, simple entity IDs using your configured location prefix. Friendly names are automatically inferred by Home Assistant from the entity IDs.
+The integration uses the modern Home Assistant naming pattern (`has_entity_name = True`), combining device names with entity names to create friendly names.
 
 **Example: Location = "home"**
 
-### Main Device: "Home"
+### Device: "Home Weather"
 **Weather Entity:**
-- `weather.home` → Friendly name: "Home"
+- `weather.home` → Friendly name: "Home Weather"
 
 ### Device: "Home Observational Sensors"
 **Sensor Entities:**
-- `sensor.home_temperature` → Friendly name: "Home Temperature"
-- `sensor.home_feels_like` → Friendly name: "Home Feels Like"
-- `sensor.home_humidity` → Friendly name: "Home Humidity"
-- `sensor.home_pressure` → Friendly name: "Home Pressure"
-- `sensor.home_wind_speed` → Friendly name: "Home Wind Speed"
-- `sensor.home_wind_gust` → Friendly name: "Home Wind Gust"
-- `sensor.home_wind_direction` → Friendly name: "Home Wind Direction"
-- `sensor.home_visibility` → Friendly name: "Home Visibility"
-- `sensor.home_cloud_cover` → Friendly name: "Home Cloud Cover"
-- `sensor.home_uv_index` → Friendly name: "Home UV Index"
-- `sensor.home_precipitation_probability` → Friendly name: "Home Precipitation Probability"
-- `sensor.home_precipitation_amount` → Friendly name: "Home Precipitation Amount"
-- `sensor.home_thunderstorm_probability` → Friendly name: "Home Thunderstorm Probability"
-- `sensor.home_dew_point` → Friendly name: "Home Dew Point"
-- `sensor.home_heat_index` → Friendly name: "Home Heat Index"
-- `sensor.home_wind_chill` → Friendly name: "Home Wind Chill"
-- `sensor.home_temp_change_24h` → Friendly name: "Home Temp Change 24h"
-- `sensor.home_max_temp_24h` → Friendly name: "Home Max Temp 24h"
-- `sensor.home_min_temp_24h` → Friendly name: "Home Min Temp 24h"
-- `sensor.home_precipitation_24h` → Friendly name: "Home Precipitation 24h"
-- `sensor.home_weather_condition` → Friendly name: "Home Weather Condition"
+- `sensor.home_temperature` → Friendly name: "Home Observational Sensors Temperature"
+- `sensor.home_feels_like` → Friendly name: "Home Observational Sensors Feels Like Temperature"
+- `sensor.home_dew_point` → Friendly name: "Home Observational Sensors Dew Point"
+- `sensor.home_heat_index` → Friendly name: "Home Observational Sensors Heat Index"
+- `sensor.home_wind_chill` → Friendly name: "Home Observational Sensors Wind Chill"
+- `sensor.home_humidity` → Friendly name: "Home Observational Sensors Humidity"
+- `sensor.home_pressure` → Friendly name: "Home Observational Sensors Pressure"
+- `sensor.home_wind_speed` → Friendly name: "Home Observational Sensors Wind Speed"
+- `sensor.home_wind_gust` → Friendly name: "Home Observational Sensors Wind Gust"
+- `sensor.home_wind_direction` → Friendly name: "Home Observational Sensors Wind Direction"
+- `sensor.home_wind_cardinal` → Friendly name: "Home Observational Sensors Wind Cardinal"
+- `sensor.home_wind_degrees` → Friendly name: "Home Observational Sensors Wind Degrees"
+- `sensor.home_visibility` → Friendly name: "Home Observational Sensors Visibility"
+- `sensor.home_cloud_cover` → Friendly name: "Home Observational Sensors Cloud Cover"
+- `sensor.home_uv_index` → Friendly name: "Home Observational Sensors UV Index"
+- `sensor.home_precipitation_probability` → Friendly name: "Home Observational Sensors Precipitation Probability"
+- `sensor.home_precipitation_amount` → Friendly name: "Home Observational Sensors Precipitation Amount"
+- `sensor.home_snow_amount` → Friendly name: "Home Observational Sensors Snow Amount"
+- `sensor.home_thunderstorm_probability` → Friendly name: "Home Observational Sensors Thunderstorm Probability"
+- `sensor.home_temp_change_24h` → Friendly name: "Home Observational Sensors Temperature Change (24h)"
+- `sensor.home_max_temp_24h` → Friendly name: "Home Observational Sensors Max Temperature (24h)"
+- `sensor.home_min_temp_24h` → Friendly name: "Home Observational Sensors Min Temperature (24h)"
+- `sensor.home_precipitation_24h` → Friendly name: "Home Observational Sensors Precipitation (24h)"
+- `sensor.home_snow_24h` → Friendly name: "Home Observational Sensors Snow (24h)"
+- `sensor.home_weather_condition` → Friendly name: "Home Observational Sensors Weather Condition"
 
-### Device: "Home Warnings" (Only if region supports alerts)
+### Device: "Home Binary Sensors" (Always created)
 **Binary Sensor Entities:**
-- `binary_sensor.home_weather_alert` → Friendly name: "Home Weather Alert"
-- `binary_sensor.home_severe_weather_alert` → Friendly name: "Home Severe Weather Alert"
-- `binary_sensor.home_urgent_weather_alert` → Friendly name: "Home Urgent Weather Alert"
+- `binary_sensor.home_is_daytime` → Friendly name: "Home Binary Sensors Daytime"
 
-**Note**: The "Home Warnings" device and its binary sensors are only created if the Google Weather API supports alerts for your location. If you receive a 404 error during initial setup, these entities will not be created.
+**If region supports alerts:**
+- `binary_sensor.home_weather_alert` → Friendly name: "Home Binary Sensors Weather Alert"
+- `binary_sensor.home_severe_weather_alert` → Friendly name: "Home Binary Sensors Severe Weather Alert"
+- `binary_sensor.home_urgent_weather_alert` → Friendly name: "Home Binary Sensors Urgent Weather Alert"
+
+**Note**: The "Binary Sensors" device is always created with at least the Daytime sensor. Weather alert sensors are only added if your location supports alerts.
 
 ## Smart Polling & API Optimization
 
@@ -438,10 +456,10 @@ The coordinator checks every minute to see if any endpoint needs updating, but o
 - Check the unit system setting in the integration options
 - Reload the integration after changing the unit system
 
-### No weather alert sensors
-- **If you don't see any binary sensor entities** for alerts, your region does not support weather alerts through the Google Weather API
-- The integration automatically detects alert support on first setup - if the API returns a 404 error, warning sensors are not created
-- Check the integration logs for the message: "Weather alerts not available for this location (HTTP 404)"
+### No weather alert sensors (only Daytime sensor)
+- **If you only see the Daytime binary sensor**, your region does not support weather alerts through the Google Weather API
+- The integration automatically detects alert support on first setup - if the API returns a 404 error, only the Daytime sensor is created
+- Check the integration logs for the message: "Weather alerts not supported for this location - only creating non-alert binary sensors"
 - This is normal and expected for unsupported regions - the integration will continue to work perfectly with all weather data and forecasts
 - Not all regions have weather alert support through Google's API (see [Supported Regions](#supported-regions) for details)
 
@@ -461,8 +479,8 @@ Weather alerts are available in many countries, but coverage varies by region. *
 
 **How Alert Detection Works:**
 - On first setup, the integration checks if the Google Weather API supports alerts for your location
-- If supported (HTTP 200): Warning sensors are created and will show alerts when active
-- If not supported (HTTP 404): Warning sensors are NOT created - this prevents misleading empty sensors
+- If supported (HTTP 200): All binary sensors are created (Daytime + 3 alert sensors)
+- If not supported (HTTP 404): Only the Daytime sensor is created - this prevents misleading empty alert sensors
 - This detection happens once during initial setup and the result is cached
 
 **Alert Availability:**
@@ -473,8 +491,9 @@ Weather alerts are available in many countries, but coverage varies by region. *
 
 **What Happens in Unsupported Regions:**
 If alerts are not available for your location:
-- You'll see a log message: "Weather alerts not available for this location (HTTP 404). Warning sensors will not be created."
-- The "Warnings" device and its three binary sensors will NOT be created
+- You'll see a log message: "Weather alerts not supported for this location - only creating non-alert binary sensors"
+- The "Binary Sensors" device is still created with the Daytime sensor
+- The three weather alert binary sensors will NOT be created
 - All other weather data and forecasts will work perfectly
 - This is the expected behavior and prevents cluttering your UI with sensors that can never have data
 
