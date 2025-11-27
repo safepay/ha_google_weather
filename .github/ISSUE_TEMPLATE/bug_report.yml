@@ -1,1 +1,68 @@
+name: Bug Report
+description: Report a bug or issue with the integration
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the sections below to help us fix the issue.
 
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear description of what the bug is
+      placeholder: When I try to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Integration version
+      description: Which version of the integration are you using?
+      placeholder: e.g., 1.5.0
+    validations:
+      required: true
+
+  - type: input
+    id: ha-version
+    attributes:
+      label: Home Assistant version
+      description: Which version of Home Assistant are you running?
+      placeholder: e.g., 2024.1.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other context about the problem
