@@ -8,7 +8,7 @@ import requests
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
+from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, METRIC_SYSTEM
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
@@ -153,8 +153,8 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         default_location_name = self.hass.config.location_name or "home"
 
         # Determine default unit system from Home Assistant configuration
-        # is_metric is True for metric system, False for imperial
-        default_unit_system = UNIT_SYSTEM_METRIC if self.hass.config.units.is_metric else UNIT_SYSTEM_IMPERIAL
+        # Use instance check (is_metric is deprecated since HA 2022.11)
+        default_unit_system = UNIT_SYSTEM_METRIC if self.hass.config.units is METRIC_SYSTEM else UNIT_SYSTEM_IMPERIAL
 
         return self.async_show_form(
             step_id="location",
