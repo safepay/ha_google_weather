@@ -443,10 +443,11 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                     CONF_UNIT_SYSTEM: user_input[CONF_UNIT_SYSTEM],
                 }
                 # Daily forecasts are always enabled (not configurable)
+                # Only include alerts if supported for this location
                 self.forecast_options = {
                     CONF_INCLUDE_DAILY_FORECAST: True,  # Always enabled
                     CONF_INCLUDE_HOURLY_FORECAST: user_input.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
-                    CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
+                    CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS) if self.alerts_supported else False,
                 }
                 return await self.async_step_intervals()
 
