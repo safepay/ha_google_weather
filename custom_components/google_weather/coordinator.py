@@ -162,9 +162,8 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Fetch data from Google Weather API using smart polling."""
         try:
             # Build list of enabled endpoints
-            enabled_endpoints = [ENDPOINT_CURRENT]  # Current conditions always enabled
-            if self.include_daily_forecast:
-                enabled_endpoints.append(ENDPOINT_DAILY)
+            # Current conditions and daily forecasts are always enabled
+            enabled_endpoints = [ENDPOINT_CURRENT, ENDPOINT_DAILY]
             if self.include_hourly_forecast:
                 enabled_endpoints.append(ENDPOINT_HOURLY)
             if self.include_alerts:

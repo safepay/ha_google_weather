@@ -203,26 +203,26 @@ The integration uses **smart polling** to optimize API usage and stay within Goo
 
 ### Forecast & Alert Options
 
-You can choose which forecasts and alerts to include during setup:
+You can choose which optional forecasts and alerts to include during setup:
 
-- **Daily Forecasts**: Enable/disable automatic fetching of 10-day forecasts
-- **Hourly Forecasts**: Enable/disable automatic fetching of 240-hour forecasts
-- **Weather Alerts**: Enable/disable automatic fetching of weather alerts
+- **Daily Forecasts**: Always enabled - 10-day forecasts (not configurable, always fetched)
+- **Hourly Forecasts**: Optional - Enable/disable automatic fetching of 240-hour forecasts
+- **Weather Alerts**: Optional - Enable/disable automatic fetching of weather alerts (only shown if supported for your location)
 
-**Benefits of disabling forecasts:**
+**Benefits of disabling optional forecasts:**
 - **Reduces API calls**: Disabled endpoints are never fetched automatically, saving API calls
-- **Manual access available**: You can still fetch forecasts manually using the `google_weather.get_forecast` service (see below)
 - **Flexible API management**: Only fetch what you actually use regularly
 
 **Example API savings** (with defaults):
-- Disabling daily forecasts: Saves ~1,200 calls/month
 - Disabling hourly forecasts: Saves ~1,680 calls/month
 - Disabling weather alerts: Saves ~2,400 calls/month
-- Disabling all three: Saves ~5,280 calls/month (leaves only current conditions at ~3,360 calls/month)
+- Disabling both: Saves ~4,080 calls/month
+
+**Note:** Daily forecasts are always enabled because they're the most commonly used forecast type and update less frequently than hourly forecasts, making them efficient in terms of API usage.
 
 ### Manual Forecast Fetching
 
-When you disable automatic forecast polling, you can still fetch forecasts manually on-demand using the custom service:
+The integration includes a custom service for fetching forecasts on demand:
 
 **Service**: `google_weather.get_forecast`
 
@@ -235,14 +235,14 @@ When you disable automatic forecast polling, you can still fetch forecasts manua
 service: google_weather.get_forecast
 data:
   entity_id: weather.home
-  forecast_type: daily
+  forecast_type: hourly
 ```
 
-This makes a single API call to fetch the requested forecast and returns the data. The forecast is also cached in the coordinator for use by the weather entity.
+This makes a single API call to fetch the requested forecast and returns the raw data from the Google Weather API.
 
 **Use cases**:
-- You have forecasts disabled to save API calls
-- You want to fetch a forecast only when you explicitly need it (e.g., via an automation or dashboard button)
+- You have hourly forecasts disabled but want to fetch them on-demand via an automation
+- You want to fetch a forecast only when you explicitly need it (e.g., via a dashboard button)
 - You're using the free tier and want maximum control over API usage
 
 ### How It Works
@@ -250,7 +250,7 @@ This makes a single API call to fetch the requested forecast and returns the dat
 Instead of fetching all weather data at once, the integration checks each enabled API endpoint individually and only fetches when needed:
 
 - **Current Conditions**: Always enabled - updates frequently (default: every 10 min during day, 30 min at night)
-- **Daily Forecast**: Optional - updates less frequently as it changes slowly (default: every 30 min during day, 60 min at night)
+- **Daily Forecast**: Always enabled - updates less frequently as it changes slowly (default: every 30 min during day, 60 min at night)
 - **Hourly Forecast**: Optional - moderate update frequency (default: every 20 min during day, 60 min at night)
 - **Weather Alerts**: Optional - important but checked moderately (default: every 15 min during day, 30 min at night)
 
