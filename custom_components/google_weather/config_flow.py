@@ -394,13 +394,15 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         super().__init__()
-        self.options_data: dict[str, Any] = {}
+        self.location_data: dict[str, Any] = {}
         self.forecast_options: dict[str, Any] = {}
+        self.interval_data: dict[str, Any] = {}
+        self.alerts_supported: bool = True
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Manage the options."""
+        """Manage location and forecast options."""
         errors = {}
 
         if user_input is not None:
@@ -414,31 +416,34 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 errors[CONF_LONGITUDE] = "invalid_longitude"
 
             if not errors:
-                # Store options data and forecast options separately
+                # Store location and forecast options
+                self.location_data = {
+                    CONF_LATITUDE: latitude,
+                    CONF_LONGITUDE: longitude,
+                    CONF_UNIT_SYSTEM: user_input[CONF_UNIT_SYSTEM],
+                }
                 # Daily forecasts are always enabled (not configurable)
-                self.options_data = user_input
                 self.forecast_options = {
                     CONF_INCLUDE_DAILY_FORECAST: True,  # Always enabled
                     CONF_INCLUDE_HOURLY_FORECAST: user_input.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
                     CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
                 }
-                return await self.async_step_confirm()
+                return await self.async_step_intervals()
 
         # Get current values from config_entry (data or options)
         current_data = {**self.config_entry.data, **self.config_entry.options}
 
         # Check if coordinator has been created and if alerts are supported
-        coordinator = None
-        alerts_supported = True  # Default to True (show option) if we can't determine
+        self.alerts_supported = True  # Default to True (show option) if we can't determine
         try:
             coordinator = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
             if coordinator and hasattr(coordinator, 'alerts_supported'):
                 # If alerts_supported is False, don't show the option
-                alerts_supported = coordinator.alerts_supported is not False
+                self.alerts_supported = coordinator.alerts_supported is not False
         except Exception:
             pass  # If we can't get coordinator, default to showing alerts option
 
-        # Build schema based on current forecast settings
+        # Build schema for location and forecast checkboxes
         schema_dict = {
             vol.Required(
                 CONF_LATITUDE,
@@ -454,7 +459,7 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             ): vol.In(UNIT_SYSTEMS),
         }
 
-        # Add forecast inclusion checkboxes (grouped together)
+        # Add forecast inclusion checkboxes
         # Hourly forecast checkbox (always shown)
         schema_dict[vol.Optional(
             CONF_INCLUDE_HOURLY_FORECAST,
@@ -462,14 +467,33 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
         )] = bool
 
         # Weather alerts checkbox only if alerts are supported for this location
-        if alerts_supported:
+        if self.alerts_supported:
             schema_dict[vol.Optional(
                 CONF_INCLUDE_ALERTS,
                 default=current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
             )] = bool
 
-        # Current conditions intervals (always shown)
-        schema_dict.update({
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(schema_dict),
+            errors=errors,
+        )
+
+    async def async_step_intervals(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure update intervals for API endpoints."""
+        if user_input is not None:
+            # Store interval data and show confirmation
+            self.interval_data = user_input
+            return await self.async_step_confirm()
+
+        # Get current values from config_entry (data or options)
+        current_data = {**self.config_entry.data, **self.config_entry.options}
+
+        # Build schema based on selected forecasts
+        schema_dict = {
+            # Current conditions intervals (always shown)
             vol.Optional(
                 CONF_CURRENT_DAY_INTERVAL,
                 default=current_data.get(CONF_CURRENT_DAY_INTERVAL, DEFAULT_CURRENT_DAY_INTERVAL),
@@ -487,22 +511,23 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 CONF_DAILY_NIGHT_INTERVAL,
                 default=current_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
             ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-        })
+        }
 
-        # Add hourly forecast intervals (always shown - users can configure before enabling)
-        schema_dict.update({
-            vol.Optional(
-                CONF_HOURLY_DAY_INTERVAL,
-                default=current_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
-            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-            vol.Optional(
-                CONF_HOURLY_NIGHT_INTERVAL,
-                default=current_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
-            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-        })
+        # Add hourly forecast intervals if enabled
+        if self.forecast_options.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
+            schema_dict.update({
+                vol.Optional(
+                    CONF_HOURLY_DAY_INTERVAL,
+                    default=current_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+                vol.Optional(
+                    CONF_HOURLY_NIGHT_INTERVAL,
+                    default=current_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            })
 
-        # Add weather alerts intervals if supported (always shown when available - users can configure before enabling)
-        if alerts_supported:
+        # Add weather alerts intervals if enabled AND supported
+        if self.alerts_supported and self.forecast_options.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
             schema_dict.update({
                 vol.Optional(
                     CONF_ALERTS_DAY_INTERVAL,
@@ -527,9 +552,8 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
         })
 
         return self.async_show_form(
-            step_id="init",
+            step_id="intervals",
             data_schema=vol.Schema(schema_dict),
-            errors=errors,
         )
 
     def _calculate_monthly_calls(
@@ -550,35 +574,40 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Show confirmation with API usage calculation."""
         if user_input is not None:
-            # User confirmed, update the options
-            return self.async_create_entry(title="", data=self.options_data)
+            # User confirmed, merge all data and update the options
+            final_data = {
+                **self.location_data,
+                **self.forecast_options,
+                **self.interval_data,
+            }
+            return self.async_create_entry(title="", data=final_data)
 
         # Calculate API usage for each endpoint
         current_calls = self._calculate_monthly_calls(
-            self.options_data[CONF_CURRENT_DAY_INTERVAL],
-            self.options_data[CONF_CURRENT_NIGHT_INTERVAL],
+            self.interval_data[CONF_CURRENT_DAY_INTERVAL],
+            self.interval_data[CONF_CURRENT_NIGHT_INTERVAL],
         )
 
         # Daily forecast calls (always enabled)
         daily_calls = self._calculate_monthly_calls(
-            self.options_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
-            self.options_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
+            self.interval_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
+            self.interval_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
         )
 
         # Only calculate hourly forecast calls if enabled
         hourly_calls = 0
         if self.forecast_options.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
             hourly_calls = self._calculate_monthly_calls(
-                self.options_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
-                self.options_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
+                self.interval_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
+                self.interval_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
             )
 
         # Only calculate alerts calls if enabled
         alerts_calls = 0
         if self.forecast_options.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
             alerts_calls = self._calculate_monthly_calls(
-                self.options_data.get(CONF_ALERTS_DAY_INTERVAL, DEFAULT_ALERTS_DAY_INTERVAL),
-                self.options_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
+                self.interval_data.get(CONF_ALERTS_DAY_INTERVAL, DEFAULT_ALERTS_DAY_INTERVAL),
+                self.interval_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
             )
 
         total_calls = current_calls + daily_calls + hourly_calls + alerts_calls
