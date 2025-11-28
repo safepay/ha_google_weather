@@ -28,11 +28,10 @@
         }
       },
       "forecasts": {
-        "title": "Configure Forecast Options",
-        "description": "Choose which optional forecasts and alerts to include. Daily forecasts are always enabled. Disabling hourly forecasts or alerts reduces API usage.",
+        "title": "Configure Hourly Forecasts",
+        "description": "Choose whether to include hourly forecasts. Daily forecasts are always enabled. Weather alerts are enabled by default and can be configured in settings after setup if supported for your location.",
         "data": {
           "include_hourly_forecast": "Include Hourly Forecasts",
-          "include_alerts": "Include Weather Alerts"
         },
         "data_description": {
           "include_hourly_forecast": "Enable automatic fetching of hourly forecasts (disable to save API calls)",
