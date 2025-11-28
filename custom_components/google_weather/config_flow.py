@@ -177,11 +177,10 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             # Store forecast selection data
             # Daily forecasts are always enabled (not configurable)
-            # Alerts default to enabled (can configure in options flow if supported)
             self.forecast_data = {
                 CONF_INCLUDE_DAILY_FORECAST: True,  # Always enabled
                 CONF_INCLUDE_HOURLY_FORECAST: user_input.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
-                CONF_INCLUDE_ALERTS: DEFAULT_INCLUDE_ALERTS,  # Default to enabled, configure in options flow
+                CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
             }
             return await self.async_step_intervals()
 
@@ -192,6 +191,10 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(
                         CONF_INCLUDE_HOURLY_FORECAST,
                         default=DEFAULT_INCLUDE_HOURLY_FORECAST,
+                    ): bool,
+                    vol.Optional(
+                        CONF_INCLUDE_ALERTS,
+                        default=DEFAULT_INCLUDE_ALERTS,
                     ): bool,
                 }
             ),
@@ -405,6 +408,23 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
         """Manage location and forecast options."""
         errors = {}
 
+        # Get current values from config_entry (data or options)
+        current_data = {**self.config_entry.data, **self.config_entry.options}
+
+        # Check if coordinator has been created and if alerts are supported
+        # This needs to happen before processing user_input to ensure self.alerts_supported is set
+        if self.alerts_supported is True:  # Only check on first load (default is True from __init__)
+            try:
+                coordinator = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+                if coordinator and hasattr(coordinator, 'alerts_supported'):
+                    # Set based on coordinator's alerts_supported value
+                    # If coordinator says False, hide the option
+                    # Otherwise (True or None), show it
+                    self.alerts_supported = coordinator.alerts_supported is not False
+                # If coordinator exists but no alerts_supported attribute, default to True (show)
+            except Exception:
+                pass  # If we can't get coordinator, default to showing alerts option (True)
+
         if user_input is not None:
             # Validate latitude and longitude
             latitude = user_input.get(CONF_LATITUDE)
@@ -429,19 +449,6 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                     CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
                 }
                 return await self.async_step_intervals()
-
-        # Get current values from config_entry (data or options)
-        current_data = {**self.config_entry.data, **self.config_entry.options}
-
-        # Check if coordinator has been created and if alerts are supported
-        self.alerts_supported = True  # Default to True (show option) if we can't determine
-        try:
-            coordinator = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
-            if coordinator and hasattr(coordinator, 'alerts_supported'):
-                # If alerts_supported is False, don't show the option
-                self.alerts_supported = coordinator.alerts_supported is not False
-        except Exception:
-            pass  # If we can't get coordinator, default to showing alerts option
 
         # Build schema for location and forecast checkboxes
         schema_dict = {
