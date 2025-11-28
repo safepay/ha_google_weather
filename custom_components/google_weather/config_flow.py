@@ -312,13 +312,11 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.interval_data[CONF_CURRENT_NIGHT_INTERVAL],
         )
 
-        # Only calculate daily forecast calls if enabled
-        daily_calls = 0
-        if self.forecast_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
-            daily_calls = self._calculate_monthly_calls(
-                self.interval_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
-                self.interval_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
-            )
+        # Daily forecast calls (always enabled)
+        daily_calls = self._calculate_monthly_calls(
+            self.interval_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
+            self.interval_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
+        )
 
         # Only calculate hourly forecast calls if enabled
         hourly_calls = 0
@@ -343,11 +341,8 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Build description with calculation results
         status = "✅" if total_calls <= 10000 else "❌"
 
-        # Format daily forecast line
-        if self.forecast_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
-            daily_line = f"• Daily Forecast: ~{daily_calls:,} calls/month\n"
-        else:
-            daily_line = "• Daily Forecast: 0 calls/month (disabled)\n"
+        # Daily forecast is always enabled
+        daily_line = f"• Daily Forecast: ~{daily_calls:,} calls/month\n"
 
         # Format hourly forecast line
         if self.forecast_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
@@ -378,7 +373,7 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             description += f"\n⚠️ **Warning:** Exceeds free tier by {excess:,} calls/month\n"
             description += "Consider reducing update intervals or expect charges."
 
-        description += "\n\n---\n**Next Steps:**\n• Click **Submit** to confirm these settings\n• Use your browser's back button to adjust intervals"
+        description += "\n\n---\n**Ready to proceed?** Click **Next** to complete setup."
 
         return self.async_show_form(
             step_id="confirm",
@@ -563,13 +558,11 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             self.options_data[CONF_CURRENT_NIGHT_INTERVAL],
         )
 
-        # Only calculate daily forecast calls if enabled
-        daily_calls = 0
-        if self.forecast_options.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
-            daily_calls = self._calculate_monthly_calls(
-                self.options_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
-                self.options_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
-            )
+        # Daily forecast calls (always enabled)
+        daily_calls = self._calculate_monthly_calls(
+            self.options_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
+            self.options_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
+        )
 
         # Only calculate hourly forecast calls if enabled
         hourly_calls = 0
@@ -594,11 +587,8 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
         # Build description with calculation results
         status = "✅" if total_calls <= 10000 else "❌"
 
-        # Format daily forecast line
-        if self.forecast_options.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
-            daily_line = f"• Daily Forecast: ~{daily_calls:,} calls/month\n"
-        else:
-            daily_line = "• Daily Forecast: 0 calls/month (disabled)\n"
+        # Daily forecast is always enabled
+        daily_line = f"• Daily Forecast: ~{daily_calls:,} calls/month\n"
 
         # Format hourly forecast line
         if self.forecast_options.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
@@ -629,7 +619,7 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             description += f"\n⚠️ **Warning:** Exceeds free tier by {excess:,} calls/month\n"
             description += "Consider reducing update intervals or expect charges."
 
-        description += "\n\n---\n**Next Steps:**\n• Click **Submit** to confirm these settings\n• Use your browser's back button to adjust intervals"
+        description += "\n\n---\n**Ready to proceed?** Click **Next** to complete setup."
 
         return self.async_show_form(
             step_id="confirm",
