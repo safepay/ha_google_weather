@@ -6,19 +6,22 @@ A comprehensive Home Assistant integration for Google Weather API with smart pol
 
 ✨ **Complete Weather Data**
 - Current conditions with 25+ sensors
-- 10-day daily forecast
-- 240-hour hourly forecast
-- Real-time weather alerts
+- 10-day daily forecast (always enabled)
+- 240-hour hourly forecast (optional)
+- Real-time weather alerts (optional, if supported)
 - Day/night detection
 
 ⚡ **Smart Polling**
 - Independent endpoint polling
+- Optional hourly forecasts and alerts to save API calls
 - Configurable day/night intervals
 - Automatic API usage optimization
 - Stays within Google's free tier (10,000 calls/month)
+- On-demand forecast service for manual fetching
 
 🌍 **Region-Friendly**
 - Metric and Imperial unit systems
+- Auto-detects Home Assistant location and units
 - Configurable location
 - Customizable entity prefixes
 
@@ -26,6 +29,7 @@ A comprehensive Home Assistant integration for Google Weather API with smart pol
 - Full config and options flow
 - No YAML configuration required
 - Simple API key setup
+- Conditional options (alerts only shown if supported)
 
 ## Quick Start
 
@@ -38,12 +42,14 @@ A comprehensive Home Assistant integration for Google Weather API with smart pol
 
 Optimized for Google's free tier (10,000 calls/month):
 
-- **Current Conditions**: 5min (day) / 15min (night)
-- **Daily Forecast**: 30min (day) / 60min (night)
-- **Hourly Forecast**: 15min (day) / 60min (night)
-- **Weather Alerts**: 15min (day) / 30min (night)
+- **Current Conditions**: 10min (day) / 30min (night) - Always enabled
+- **Daily Forecast**: 30min (day) / 60min (night) - Always enabled
+- **Hourly Forecast**: 20min (day) / 60min (night) - Optional (can disable to save ~1,680 calls/month)
+- **Weather Alerts**: 15min (day) / 30min (night) - Optional (can disable to save ~2,400 calls/month)
 
 **Night mode** (22:00-06:00) automatically reduces API usage by 40-60%.
+
+**Total with all enabled**: ~8,640 calls/month (13.6% under the 10,000/month limit)
 
 ## Requirements
 

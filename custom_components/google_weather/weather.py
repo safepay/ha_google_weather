@@ -97,10 +97,9 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
         super().__init__(coordinator)
 
         # Set supported features based on configuration
+        # Daily forecasts are always enabled
         current_data = {**entry.data, **entry.options}
-        supported_features = 0
-        if current_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
-            supported_features |= WeatherEntityFeature.FORECAST_DAILY
+        supported_features = WeatherEntityFeature.FORECAST_DAILY
         if current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
             supported_features |= WeatherEntityFeature.FORECAST_HOURLY
         self._attr_supported_features = supported_features

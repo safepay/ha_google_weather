@@ -176,8 +176,9 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Configure which forecasts and alerts to include."""
         if user_input is not None:
             # Store forecast selection data
+            # Daily forecasts are always enabled (not configurable)
             self.forecast_data = {
-                CONF_INCLUDE_DAILY_FORECAST: user_input.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST),
+                CONF_INCLUDE_DAILY_FORECAST: True,  # Always enabled
                 CONF_INCLUDE_HOURLY_FORECAST: user_input.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
                 CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
             }
@@ -187,10 +188,6 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="forecasts",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(
-                        CONF_INCLUDE_DAILY_FORECAST,
-                        default=DEFAULT_INCLUDE_DAILY_FORECAST,
-                    ): bool,
                     vol.Optional(
                         CONF_INCLUDE_HOURLY_FORECAST,
                         default=DEFAULT_INCLUDE_HOURLY_FORECAST,
@@ -223,20 +220,16 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_CURRENT_NIGHT_INTERVAL,
                 default=DEFAULT_CURRENT_NIGHT_INTERVAL,
             ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            # Daily forecast intervals (always shown - daily forecasts are always enabled)
+            vol.Optional(
+                CONF_DAILY_DAY_INTERVAL,
+                default=DEFAULT_DAILY_DAY_INTERVAL,
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            vol.Optional(
+                CONF_DAILY_NIGHT_INTERVAL,
+                default=DEFAULT_DAILY_NIGHT_INTERVAL,
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
         }
-
-        # Add daily forecast intervals if enabled
-        if self.forecast_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
-            schema_dict.update({
-                vol.Optional(
-                    CONF_DAILY_DAY_INTERVAL,
-                    default=DEFAULT_DAILY_DAY_INTERVAL,
-                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                vol.Optional(
-                    CONF_DAILY_NIGHT_INTERVAL,
-                    default=DEFAULT_DAILY_NIGHT_INTERVAL,
-                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-            })
 
         # Add hourly forecast intervals if enabled
         if self.forecast_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
@@ -430,9 +423,10 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
 
             if not errors:
                 # Store options data and forecast options separately
+                # Daily forecasts are always enabled (not configurable)
                 self.options_data = user_input
                 self.forecast_options = {
-                    CONF_INCLUDE_DAILY_FORECAST: user_input.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST),
+                    CONF_INCLUDE_DAILY_FORECAST: True,  # Always enabled
                     CONF_INCLUDE_HOURLY_FORECAST: user_input.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
                     CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
                 }
@@ -440,6 +434,17 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
 
         # Get current values from config_entry (data or options)
         current_data = {**self.config_entry.data, **self.config_entry.options}
+
+        # Check if coordinator has been created and if alerts are supported
+        coordinator = None
+        alerts_supported = True  # Default to True (show option) if we can't determine
+        try:
+            coordinator = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+            if coordinator and hasattr(coordinator, 'alerts_supported'):
+                # If alerts_supported is False, don't show the option
+                alerts_supported = coordinator.alerts_supported is not False
+        except Exception:
+            pass  # If we can't get coordinator, default to showing alerts option
 
         # Build schema based on current forecast settings
         schema_dict = {
@@ -455,18 +460,10 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 CONF_UNIT_SYSTEM,
                 default=current_data.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM),
             ): vol.In(UNIT_SYSTEMS),
-            # Forecast inclusion options
-            vol.Optional(
-                CONF_INCLUDE_DAILY_FORECAST,
-                default=current_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST),
-            ): bool,
+            # Forecast inclusion options (daily is always enabled, not shown)
             vol.Optional(
                 CONF_INCLUDE_HOURLY_FORECAST,
                 default=current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
-            ): bool,
-            vol.Optional(
-                CONF_INCLUDE_ALERTS,
-                default=current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
             ): bool,
             # Current conditions intervals (always shown)
             vol.Optional(
@@ -477,20 +474,23 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 CONF_CURRENT_NIGHT_INTERVAL,
                 default=current_data.get(CONF_CURRENT_NIGHT_INTERVAL, DEFAULT_CURRENT_NIGHT_INTERVAL),
             ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            # Daily forecast intervals (always shown - daily forecasts are always enabled)
+            vol.Optional(
+                CONF_DAILY_DAY_INTERVAL,
+                default=current_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            vol.Optional(
+                CONF_DAILY_NIGHT_INTERVAL,
+                default=current_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
         }
 
-        # Add daily forecast intervals if currently enabled
-        if current_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST):
-            schema_dict.update({
-                vol.Optional(
-                    CONF_DAILY_DAY_INTERVAL,
-                    default=current_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
-                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                vol.Optional(
-                    CONF_DAILY_NIGHT_INTERVAL,
-                    default=current_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
-                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-            })
+        # Add weather alerts checkbox only if alerts are supported for this location
+        if alerts_supported:
+            schema_dict[vol.Optional(
+                CONF_INCLUDE_ALERTS,
+                default=current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
+            )] = bool
 
         # Add hourly forecast intervals if currently enabled
         if current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
@@ -505,8 +505,8 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
             })
 
-        # Add weather alerts intervals if currently enabled
-        if current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
+        # Add weather alerts intervals if currently enabled AND supported
+        if alerts_supported and current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
             schema_dict.update({
                 vol.Optional(
                     CONF_ALERTS_DAY_INTERVAL,
