@@ -10,8 +10,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN, ENDPOINT_DAILY, ENDPOINT_HOURLY
+from .const import DOMAIN, ENDPOINT_DAILY, ENDPOINT_HOURLY, CONF_INCLUDE_ALERTS
 from .coordinator import GoogleWeatherCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -83,7 +84,44 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
+    # Check if alerts were disabled - if so, remove orphaned alert entities
+    old_data = {**entry.data}
+    new_data = {**entry.data, **entry.options}
+
+    old_alerts_enabled = old_data.get(CONF_INCLUDE_ALERTS, True)
+    new_alerts_enabled = new_data.get(CONF_INCLUDE_ALERTS, True)
+
+    # If alerts changed from enabled to disabled, clean up alert entities
+    if old_alerts_enabled and not new_alerts_enabled:
+        _LOGGER.info("Alerts disabled - removing orphaned alert binary sensor entities")
+        await _remove_alert_entities(hass, entry)
+
+    # Reload the entry to apply changes
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def _remove_alert_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove alert binary sensor entities from the entity registry."""
+    from .const import CONF_LOCATION
+
+    entity_registry = er.async_get(hass)
+    location = entry.data.get(CONF_LOCATION, "home")
+    location_slug = location.lower().replace(" ", "_")
+
+    # Alert sensor keys that need to be removed
+    alert_sensor_keys = ["weather_alert", "severe_weather_alert", "urgent_weather_alert"]
+
+    for sensor_key in alert_sensor_keys:
+        unique_id = f"{location_slug}_{sensor_key}"
+        entity_id = entity_registry.async_get_entity_id(
+            Platform.BINARY_SENSOR, DOMAIN, unique_id
+        )
+
+        if entity_id:
+            _LOGGER.info("Removing orphaned alert entity: %s (unique_id: %s)", entity_id, unique_id)
+            entity_registry.async_remove(entity_id)
+        else:
+            _LOGGER.debug("Alert entity not found in registry: %s", unique_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
