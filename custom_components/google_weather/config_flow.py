@@ -8,9 +8,10 @@ import requests
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, METRIC_SYSTEM
+from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.util.unit_system import METRIC_SYSTEM
 
 from .const import (
     CONF_ALERTS_DAY_INTERVAL,
