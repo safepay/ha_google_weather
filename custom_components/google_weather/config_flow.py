@@ -177,10 +177,11 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             # Store forecast selection data
             # Daily forecasts are always enabled (not configurable)
+            # Alerts default to enabled (can configure in options flow if supported)
             self.forecast_data = {
                 CONF_INCLUDE_DAILY_FORECAST: True,  # Always enabled
                 CONF_INCLUDE_HOURLY_FORECAST: user_input.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
-                CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
+                CONF_INCLUDE_ALERTS: DEFAULT_INCLUDE_ALERTS,  # Default to enabled, configure in options flow
             }
             return await self.async_step_intervals()
 
@@ -191,10 +192,6 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(
                         CONF_INCLUDE_HOURLY_FORECAST,
                         default=DEFAULT_INCLUDE_HOURLY_FORECAST,
-                    ): bool,
-                    vol.Optional(
-                        CONF_INCLUDE_ALERTS,
-                        default=DEFAULT_INCLUDE_ALERTS,
                     ): bool,
                 }
             ),
@@ -492,21 +489,20 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
         })
 
-        # Add hourly forecast intervals if currently enabled
-        if current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
-            schema_dict.update({
-                vol.Optional(
-                    CONF_HOURLY_DAY_INTERVAL,
-                    default=current_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
-                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-                vol.Optional(
-                    CONF_HOURLY_NIGHT_INTERVAL,
-                    default=current_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
-                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-            })
+        # Add hourly forecast intervals (always shown - users can configure before enabling)
+        schema_dict.update({
+            vol.Optional(
+                CONF_HOURLY_DAY_INTERVAL,
+                default=current_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            vol.Optional(
+                CONF_HOURLY_NIGHT_INTERVAL,
+                default=current_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
+            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+        })
 
-        # Add weather alerts intervals if currently enabled AND supported
-        if alerts_supported and current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
+        # Add weather alerts intervals if supported (always shown when available - users can configure before enabling)
+        if alerts_supported:
             schema_dict.update({
                 vol.Optional(
                     CONF_ALERTS_DAY_INTERVAL,
