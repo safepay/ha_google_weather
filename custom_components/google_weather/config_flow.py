@@ -417,16 +417,15 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             try:
                 coordinator = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
                 if coordinator and hasattr(coordinator, 'alerts_supported'):
-                    # Set based on coordinator's alerts_supported value
-                    # If coordinator says False, hide the option
-                    # Otherwise (True or None), show it
-                    self.alerts_supported = coordinator.alerts_supported is not False
+                    # Only show checkbox if alerts are explicitly supported (True)
+                    # Hide if False or None (safer default)
+                    self.alerts_supported = coordinator.alerts_supported is True
                 else:
-                    # If coordinator exists but no alerts_supported attribute, default to True (show)
-                    self.alerts_supported = True
+                    # If coordinator doesn't exist or no attribute, hide checkbox (safer default)
+                    self.alerts_supported = False
             except Exception:
-                # If we can't get coordinator, default to showing alerts option (True)
-                self.alerts_supported = True
+                # If we can't get coordinator, hide alerts option (safer default)
+                self.alerts_supported = False
 
         if user_input is not None:
             # Validate latitude and longitude
