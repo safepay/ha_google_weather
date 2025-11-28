@@ -84,15 +84,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
-    # Check if alerts were disabled - if so, remove orphaned alert entities
-    old_data = {**entry.data}
-    new_data = {**entry.data, **entry.options}
+    # Get current configuration (data + new options)
+    current_config = {**entry.data, **entry.options}
+    alerts_enabled = current_config.get(CONF_INCLUDE_ALERTS, True)
 
-    old_alerts_enabled = old_data.get(CONF_INCLUDE_ALERTS, True)
-    new_alerts_enabled = new_data.get(CONF_INCLUDE_ALERTS, True)
-
-    # If alerts changed from enabled to disabled, clean up alert entities
-    if old_alerts_enabled and not new_alerts_enabled:
+    # If alerts are now disabled, remove any existing alert entities
+    if not alerts_enabled:
         _LOGGER.info("Alerts disabled - removing orphaned alert binary sensor entities")
         await _remove_alert_entities(hass, entry)
 
