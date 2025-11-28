@@ -455,12 +455,24 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 CONF_UNIT_SYSTEM,
                 default=current_data.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM),
             ): vol.In(UNIT_SYSTEMS),
-            # Forecast inclusion options (daily is always enabled, not shown)
-            vol.Optional(
-                CONF_INCLUDE_HOURLY_FORECAST,
-                default=current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
-            ): bool,
-            # Current conditions intervals (always shown)
+        }
+
+        # Add forecast inclusion checkboxes (grouped together)
+        # Hourly forecast checkbox (always shown)
+        schema_dict[vol.Optional(
+            CONF_INCLUDE_HOURLY_FORECAST,
+            default=current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
+        )] = bool
+
+        # Weather alerts checkbox only if alerts are supported for this location
+        if alerts_supported:
+            schema_dict[vol.Optional(
+                CONF_INCLUDE_ALERTS,
+                default=current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
+            )] = bool
+
+        # Current conditions intervals (always shown)
+        schema_dict.update({
             vol.Optional(
                 CONF_CURRENT_DAY_INTERVAL,
                 default=current_data.get(CONF_CURRENT_DAY_INTERVAL, DEFAULT_CURRENT_DAY_INTERVAL),
@@ -478,14 +490,7 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 CONF_DAILY_NIGHT_INTERVAL,
                 default=current_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
             ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-        }
-
-        # Add weather alerts checkbox only if alerts are supported for this location
-        if alerts_supported:
-            schema_dict[vol.Optional(
-                CONF_INCLUDE_ALERTS,
-                default=current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
-            )] = bool
+        })
 
         # Add hourly forecast intervals if currently enabled
         if current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
