@@ -400,7 +400,6 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
         self.location_data: dict[str, Any] = {}
         self.forecast_options: dict[str, Any] = {}
         self.interval_data: dict[str, Any] = {}
-        self.alerts_supported: bool = True
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -410,22 +409,6 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
 
         # Get current values from config_entry (data or options)
         current_data = {**self.config_entry.data, **self.config_entry.options}
-
-        # Check if coordinator has been created and if alerts are supported
-        # Do this check every time we display the form (when user_input is None)
-        if user_input is None:
-            try:
-                coordinator = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
-                if coordinator and hasattr(coordinator, 'alerts_supported'):
-                    # Show checkbox if alerts are supported (True) or not yet determined (None)
-                    # Hide only if explicitly False (not supported)
-                    self.alerts_supported = coordinator.alerts_supported is not False
-                else:
-                    # If coordinator doesn't exist or no attribute, show checkbox (allow configuration)
-                    self.alerts_supported = True
-            except Exception:
-                # If we can't get coordinator, show alerts option
-                self.alerts_supported = True
 
         if user_input is not None:
             # Validate latitude and longitude
@@ -445,11 +428,10 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                     CONF_UNIT_SYSTEM: user_input[CONF_UNIT_SYSTEM],
                 }
                 # Daily forecasts are always enabled (not configurable)
-                # Only include alerts if supported for this location
                 self.forecast_options = {
                     CONF_INCLUDE_DAILY_FORECAST: True,  # Always enabled
                     CONF_INCLUDE_HOURLY_FORECAST: user_input.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
-                    CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS) if self.alerts_supported else False,
+                    CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
                 }
                 return await self.async_step_intervals()
 
@@ -467,21 +449,17 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 CONF_UNIT_SYSTEM,
                 default=current_data.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM),
             ): vol.In(UNIT_SYSTEMS),
-        }
-
-        # Add forecast inclusion checkboxes
-        # Hourly forecast checkbox (always shown)
-        schema_dict[vol.Optional(
-            CONF_INCLUDE_HOURLY_FORECAST,
-            default=current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
-        )] = bool
-
-        # Weather alerts checkbox only if alerts are supported for this location
-        if self.alerts_supported:
-            schema_dict[vol.Optional(
+            # Hourly forecast checkbox
+            vol.Optional(
+                CONF_INCLUDE_HOURLY_FORECAST,
+                default=current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
+            ): bool,
+            # Weather alerts checkbox (always shown - no entities created if not supported)
+            vol.Optional(
                 CONF_INCLUDE_ALERTS,
                 default=current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
-            )] = bool
+            ): bool,
+        }
 
         return self.async_show_form(
             step_id="init",
@@ -536,8 +514,8 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
             })
 
-        # Add weather alerts intervals if enabled AND supported
-        if self.alerts_supported and self.forecast_options.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
+        # Add weather alerts intervals if enabled
+        if self.forecast_options.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
             schema_dict.update({
                 vol.Optional(
                     CONF_ALERTS_DAY_INTERVAL,
