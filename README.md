@@ -1,12 +1,9 @@
 # Google Weather Integration for Home Assistant
 
 [![GitHub Release](https://img.shields.io/github/v/release/safepay/ha_google_weather)](https://github.com/safepay/ha_google_weather/releases)
-[![GitHub Downloads](https://img.shields.io/github/downloads/safepay/ha_google_weather/total)](https://github.com/safepay/ha_google_weather/releases)
 [![License](https://img.shields.io/github/license/safepay/ha_google_weather)](https://github.com/safepay/ha_google_weather/blob/main/LICENSE)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1%2B-blue.svg)](https://www.home-assistant.io/)
-[![GitHub Issues](https://img.shields.io/github/issues/safepay/ha_google_weather)](https://github.com/safepay/ha_google_weather/issues)
-[![GitHub Stars](https://img.shields.io/github/stars/safepay/ha_google_weather)](https://github.com/safepay/ha_google_weather/stargazers)
 
 A comprehensive Home Assistant integration that provides weather data from the Google Weather API with current conditions, forecasts, and alerts.
 
