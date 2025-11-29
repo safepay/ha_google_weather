@@ -29,7 +29,7 @@ A comprehensive Home Assistant integration for Google Weather API with smart pol
 - Full config and options flow
 - No YAML configuration required
 - Simple API key setup
-- Conditional options (alerts only shown if supported)
+- Auto-detection of regional alert support
 
 ## Quick Start
 
