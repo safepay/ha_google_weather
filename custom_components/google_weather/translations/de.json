@@ -1,0 +1,237 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "API-Schlüssel eingeben",
+        "description": "Geben Sie Ihren Google Maps Platform API-Schlüssel ein. Stellen Sie sicher, dass die Wetter-API in Ihrem Google Cloud-Projekt aktiviert ist.",
+        "data": {
+          "api_key": "API-Schlüssel"
+        },
+        "data_description": {
+          "api_key": "Ihr Google Maps Platform API-Schlüssel mit aktivierter Wetter-API"
+        }
+      },
+      "location": {
+        "title": "Standort konfigurieren",
+        "description": "Konfigurieren Sie den Standort und die Einstellungen für Google Weather. Der Standort wird standardmäßig auf Ihre Home Assistant-Konfiguration gesetzt.",
+        "data": {
+          "location": "Standort / Präfix",
+          "latitude": "Breitengrad",
+          "longitude": "Längengrad",
+          "unit_system": "Einheitensystem"
+        },
+        "data_description": {
+          "location": "Standortname für Entitäts-IDs (Standard: 'home'). Beispiele: 'home', 'office', 'gw_home'",
+          "latitude": "Breitengradkoordinate für Wetterdaten (Standard: Home Assistant-Standort)",
+          "longitude": "Längengradkoordinate für Wetterdaten (Standard: Home Assistant-Standort)",
+          "unit_system": "Wählen Sie metrisch (Celsius, km/h, mm) oder imperial (Fahrenheit, mph, Zoll)"
+        }
+      },
+      "forecasts": {
+        "title": "Vorhersageoptionen konfigurieren",
+        "description": "Aktuelle Bedingungen und Tagesvorhersagen sind immer enthalten. Wählen Sie unten zusätzliche Funktionen aus.\n\nDeaktivieren Sie Funktionen, um API-Aufrufe zu sparen. Wetterwarnungen sind in einigen Regionen nicht verfügbar.",
+        "data": {
+          "include_hourly_forecast": "Stündliche Vorhersagen einbeziehen",
+          "include_alerts": "Wetterwarnungen einbeziehen"
+        },
+        "data_description": {
+          "include_hourly_forecast": "Stündliche Wettervorhersagen aktivieren",
+          "include_alerts": "Wetterwarnungen aktivieren (in einigen Regionen nicht verfügbar)"
+        }
+      },
+      "intervals": {
+        "title": "Aktualisierungsintervalle konfigurieren",
+        "description": "Legen Sie fest, wie oft jeder Endpunkt tagsüber und nachts aktualisiert werden soll. Google bietet 10.000 kostenlose API-Aufrufe/Monat insgesamt. Die Standardwerte verwenden ca. 8.640 Aufrufe/Monat (13,6% unter dem Limit). Alle Intervalle sind in Minuten.",
+        "data": {
+          "current_day_interval": "Aktuelle Bedingungen - Tagsüber (Minuten)",
+          "current_night_interval": "Aktuelle Bedingungen - Nachts (Minuten)",
+          "daily_day_interval": "Tagesvorhersage - Tagsüber (Minuten)",
+          "daily_night_interval": "Tagesvorhersage - Nachts (Minuten)",
+          "hourly_day_interval": "Stündliche Vorhersage - Tagsüber (Minuten)",
+          "hourly_night_interval": "Stündliche Vorhersage - Nachts (Minuten)",
+          "alerts_day_interval": "Wetterwarnungen - Tagsüber (Minuten)",
+          "alerts_night_interval": "Wetterwarnungen - Nachts (Minuten)",
+          "night_start": "Beginn der Nachtzeit (HH:MM)",
+          "night_end": "Ende der Nachtzeit (HH:MM)"
+        },
+        "data_description": {
+          "current_day_interval": "Wie oft aktuelle Bedingungen tagsüber aktualisiert werden (Standard: 10 Min.)",
+          "current_night_interval": "Wie oft aktuelle Bedingungen nachts aktualisiert werden (Standard: 30 Min.)",
+          "daily_day_interval": "Wie oft Tagesvorhersage tagsüber aktualisiert wird (Standard: 30 Min.)",
+          "daily_night_interval": "Wie oft Tagesvorhersage nachts aktualisiert wird (Standard: 60 Min.)",
+          "hourly_day_interval": "Wie oft stündliche Vorhersage tagsüber aktualisiert wird (Standard: 20 Min.)",
+          "hourly_night_interval": "Wie oft stündliche Vorhersage nachts aktualisiert wird (Standard: 60 Min.)",
+          "alerts_day_interval": "Wie oft Wetterwarnungen tagsüber geprüft werden (Standard: 15 Min.)",
+          "alerts_night_interval": "Wie oft Wetterwarnungen nachts geprüft werden (Standard: 30 Min.)",
+          "night_start": "Wann der nächtliche Aktualisierungsplan beginnt (z.B. 22:00 für 22 Uhr)",
+          "night_end": "Wann der nächtliche Aktualisierungsplan endet (z.B. 06:00 für 6 Uhr)"
+        }
+      },
+      "confirm": {
+        "title": "API-Nutzung bestätigen",
+        "description": "{usage_summary}"
+      }
+    },
+    "error": {
+      "invalid_api_key": "Ungültiger API-Schlüssel oder Wetter-API nicht aktiviert. Bitte überprüfen Sie Ihre Google Cloud Console.",
+      "cannot_connect": "Verbindung zur Google Weather API nicht möglich. Bitte überprüfen Sie Ihre Netzwerkverbindung.",
+      "invalid_latitude": "Breitengrad muss zwischen -90 und 90 liegen",
+      "invalid_longitude": "Längengrad muss zwischen -180 und 180 liegen"
+    },
+    "abort": {
+      "already_configured": "Dieser Standort ist bereits konfiguriert"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Standort und Vorhersageoptionen aktualisieren",
+        "description": "Standort und optionale Funktionen aktualisieren. Aktuelle Bedingungen und Tagesvorhersagen sind immer enthalten.\n\nWetterwarnungen sind in einigen Regionen nicht verfügbar.",
+        "data": {
+          "latitude": "Breitengrad",
+          "longitude": "Längengrad",
+          "unit_system": "Einheitensystem",
+          "include_hourly_forecast": "Stündliche Vorhersagen einbeziehen",
+          "include_alerts": "Wetterwarnungen einbeziehen"
+        },
+        "data_description": {
+          "latitude": "Breitengradkoordinate für Wetterdaten",
+          "longitude": "Längengradkoordinate für Wetterdaten",
+          "unit_system": "Wählen Sie metrisch (Celsius, km/h, mm) oder imperial (Fahrenheit, mph, Zoll)",
+          "include_hourly_forecast": "Stündliche Wettervorhersagen aktivieren",
+          "include_alerts": "Wetterwarnungen aktivieren (in einigen Regionen nicht verfügbar)"
+        }
+      },
+      "intervals": {
+        "title": "Aktualisierungsintervalle konfigurieren",
+        "description": "Legen Sie fest, wie oft jeder Endpunkt tagsüber und nachts aktualisiert werden soll. Google bietet 10.000 kostenlose API-Aufrufe/Monat insgesamt. Alle Intervalle sind in Minuten.",
+        "data": {
+          "current_day_interval": "Aktuelle Bedingungen - Tagsüber (Minuten)",
+          "current_night_interval": "Aktuelle Bedingungen - Nachts (Minuten)",
+          "daily_day_interval": "Tagesvorhersage - Tagsüber (Minuten)",
+          "daily_night_interval": "Tagesvorhersage - Nachts (Minuten)",
+          "hourly_day_interval": "Stündliche Vorhersage - Tagsüber (Minuten)",
+          "hourly_night_interval": "Stündliche Vorhersage - Nachts (Minuten)",
+          "alerts_day_interval": "Wetterwarnungen - Tagsüber (Minuten)",
+          "alerts_night_interval": "Wetterwarnungen - Nachts (Minuten)",
+          "night_start": "Beginn der Nachtzeit (HH:MM)",
+          "night_end": "Ende der Nachtzeit (HH:MM)"
+        },
+        "data_description": {
+          "current_day_interval": "Wie oft aktuelle Bedingungen tagsüber aktualisiert werden (1-1440 Minuten)",
+          "current_night_interval": "Wie oft aktuelle Bedingungen nachts aktualisiert werden (1-1440 Minuten)",
+          "daily_day_interval": "Wie oft Tagesvorhersage tagsüber aktualisiert wird (1-1440 Minuten)",
+          "daily_night_interval": "Wie oft Tagesvorhersage nachts aktualisiert wird (1-1440 Minuten)",
+          "hourly_day_interval": "Wie oft stündliche Vorhersage tagsüber aktualisiert wird (1-1440 Minuten)",
+          "hourly_night_interval": "Wie oft stündliche Vorhersage nachts aktualisiert wird (1-1440 Minuten)",
+          "alerts_day_interval": "Wie oft Wetterwarnungen tagsüber geprüft werden (1-1440 Minuten)",
+          "alerts_night_interval": "Wie oft Wetterwarnungen nachts geprüft werden (1-1440 Minuten)",
+          "night_start": "Wann der nächtliche Aktualisierungsplan beginnt (z.B. 22:00)",
+          "night_end": "Wann der nächtliche Aktualisierungsplan endet (z.B. 06:00)"
+        }
+      },
+      "confirm": {
+        "title": "API-Nutzung bestätigen",
+        "description": "{usage_summary}"
+      }
+    },
+    "error": {
+      "invalid_latitude": "Breitengrad muss zwischen -90 und 90 liegen",
+      "invalid_longitude": "Längengrad muss zwischen -180 und 180 liegen"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Temperatur"
+      },
+      "feels_like": {
+        "name": "Gefühlte Temperatur"
+      },
+      "dew_point": {
+        "name": "Taupunkt"
+      },
+      "heat_index": {
+        "name": "Hitzeindex"
+      },
+      "wind_chill": {
+        "name": "Windchill"
+      },
+      "humidity": {
+        "name": "Luftfeuchtigkeit"
+      },
+      "pressure": {
+        "name": "Luftdruck"
+      },
+      "wind_speed": {
+        "name": "Windgeschwindigkeit"
+      },
+      "wind_gust": {
+        "name": "Windböen"
+      },
+      "wind_direction": {
+        "name": "Windrichtung"
+      },
+      "visibility": {
+        "name": "Sichtweite"
+      },
+      "cloud_cover": {
+        "name": "Bewölkung"
+      },
+      "uv_index": {
+        "name": "UV-Index"
+      },
+      "precipitation_probability": {
+        "name": "Niederschlagswahrscheinlichkeit"
+      },
+      "precipitation_amount": {
+        "name": "Niederschlagsmenge"
+      },
+      "thunderstorm_probability": {
+        "name": "Gewitterwahrscheinlichkeit"
+      },
+      "temp_change_24h": {
+        "name": "Temperaturänderung (24h)"
+      },
+      "max_temp_24h": {
+        "name": "Höchsttemperatur (24h)"
+      },
+      "min_temp_24h": {
+        "name": "Tiefsttemperatur (24h)"
+      },
+      "precipitation_24h": {
+        "name": "Niederschlag (24h)"
+      },
+      "weather_condition": {
+        "name": "Wetterzustand"
+      }
+    },
+    "binary_sensor": {
+      "weather_alert": {
+        "name": "Wetterwarnung"
+      },
+      "severe_weather_alert": {
+        "name": "Unwetterwarnung"
+      },
+      "urgent_weather_alert": {
+        "name": "Dringende Wetterwarnung"
+      }
+    }
+  },
+  "services": {
+    "get_forecast": {
+      "name": "Vorhersage auf Anfrage abrufen",
+      "description": "Wettervorhersage auf Anfrage abrufen, auch wenn automatische Abfrage deaktiviert ist. Dieser Dienst führt einen einzelnen API-Aufruf durch, um den angeforderten Vorhersagetyp abzurufen.",
+      "fields": {
+        "entity_id": {
+          "name": "Entitäts-ID",
+          "description": "Die Wetter-Entitäts-ID, für die Vorhersagen abgerufen werden sollen."
+        },
+        "forecast_type": {
+          "name": "Vorhersagetyp",
+          "description": "Typ der abzurufenden Vorhersage (täglich oder stündlich)."
+        }
+      }
+    }
+  }
+}
