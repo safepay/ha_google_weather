@@ -29,14 +29,14 @@
       },
       "forecasts": {
         "title": "Configure Forecast Options",
-        "description": "Choose which optional forecasts and alerts to include. Daily forecasts are always enabled. Disabling hourly forecasts or alerts reduces API usage.\n\n**Note:** Weather alerts are not supported in all regions. If alerts are not available for your location, no alert entities will be created even if enabled.",
+        "description": "Current conditions and daily forecasts are always included. Select additional features below.\n\nDisable features to save API calls. Weather alerts are unavailable in some regions.",
         "data": {
           "include_hourly_forecast": "Include Hourly Forecasts",
           "include_alerts": "Include Weather Alerts"
         },
         "data_description": {
-          "include_hourly_forecast": "Enable automatic fetching of hourly forecasts (disable to save API calls)",
-          "include_alerts": "Enable weather alerts if supported in your region (no alert entities created if unavailable)"
+          "include_hourly_forecast": "Enable hourly weather forecasts",
+          "include_alerts": "Enable weather alerts (unavailable in some regions)"
         }
       },
       "intervals": {
@@ -86,7 +86,7 @@
     "step": {
       "init": {
         "title": "Update Location and Forecast Options",
-        "description": "Update location coordinates, unit system, and choose which forecasts to include. Daily forecasts are always enabled.\n\n**Note:** Weather alerts are not supported in all regions. If alerts are not available for your location, no alert entities will be created even if enabled.",
+        "description": "Update location and optional features. Current conditions and daily forecasts are always included.\n\nWeather alerts are unavailable in some regions.",
         "data": {
           "latitude": "Latitude",
           "longitude": "Longitude",
@@ -98,8 +98,8 @@
           "latitude": "Latitude coordinate for weather data",
           "longitude": "Longitude coordinate for weather data",
           "unit_system": "Choose metric (Celsius, km/h, mm) or imperial (Fahrenheit, mph, inches)",
-          "include_hourly_forecast": "Enable automatic fetching of hourly forecasts (disable to save API calls)",
-          "include_alerts": "Enable weather alerts if supported in your region (no alert entities created if unavailable)"
+          "include_hourly_forecast": "Enable hourly weather forecasts",
+          "include_alerts": "Enable weather alerts (unavailable in some regions)"
         }
       },
       "intervals": {
