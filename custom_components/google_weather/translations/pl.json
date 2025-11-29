@@ -1,0 +1,237 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Wprowadź klucz API",
+        "description": "Wprowadź swój klucz API Google Maps Platform. Upewnij się, że API pogody jest włączone w projekcie Google Cloud.",
+        "data": {
+          "api_key": "Klucz API"
+        },
+        "data_description": {
+          "api_key": "Twój klucz API Google Maps Platform z włączonym API pogody"
+        }
+      },
+      "location": {
+        "title": "Konfiguruj lokalizację",
+        "description": "Skonfiguruj lokalizację i ustawienia Google Weather. Lokalizacja domyślnie zostanie ustawiona na konfigurację Home Assistant.",
+        "data": {
+          "location": "Lokalizacja / Prefiks",
+          "latitude": "Szerokość geograficzna",
+          "longitude": "Długość geograficzna",
+          "unit_system": "System jednostek"
+        },
+        "data_description": {
+          "location": "Nazwa lokalizacji używana dla ID encji (domyślnie: 'home'). Przykłady: 'home', 'office', 'gw_home'",
+          "latitude": "Współrzędna szerokości geograficznej dla danych pogodowych (domyślnie: lokalizacja Home Assistant)",
+          "longitude": "Współrzędna długości geograficznej dla danych pogodowych (domyślnie: lokalizacja Home Assistant)",
+          "unit_system": "Wybierz metryczny (Celsjusz, km/h, mm) lub imperialny (Fahrenheit, mph, cale)"
+        }
+      },
+      "forecasts": {
+        "title": "Konfiguruj opcje prognozy",
+        "description": "Bieżące warunki i prognozy dzienne są zawsze uwzględniane. Wybierz poniżej dodatkowe funkcje.\n\nWyłącz funkcje, aby oszczędzać wywołania API. Alerty pogodowe są niedostępne w niektórych regionach.",
+        "data": {
+          "include_hourly_forecast": "Uwzględnij prognozy godzinowe",
+          "include_alerts": "Uwzględnij alerty pogodowe"
+        },
+        "data_description": {
+          "include_hourly_forecast": "Włącz prognozy pogody godzinowej",
+          "include_alerts": "Włącz alerty pogodowe (niedostępne w niektórych regionach)"
+        }
+      },
+      "intervals": {
+        "title": "Konfiguruj interwały aktualizacji",
+        "description": "Ustaw, jak często aktualizować każdy punkt końcowy w ciągu dnia i nocy. Google zapewnia łącznie 10 000 darmowych wywołań API/miesiąc. Wartości domyślne wykorzystują około 8 640 wywołań/miesiąc (13,6% poniżej limitu). Wszystkie interwały są w minutach.",
+        "data": {
+          "current_day_interval": "Bieżące warunki - Dzień (minuty)",
+          "current_night_interval": "Bieżące warunki - Noc (minuty)",
+          "daily_day_interval": "Prognoza dzienna - Dzień (minuty)",
+          "daily_night_interval": "Prognoza dzienna - Noc (minuty)",
+          "hourly_day_interval": "Prognoza godzinowa - Dzień (minuty)",
+          "hourly_night_interval": "Prognoza godzinowa - Noc (minuty)",
+          "alerts_day_interval": "Alerty pogodowe - Dzień (minuty)",
+          "alerts_night_interval": "Alerty pogodowe - Noc (minuty)",
+          "night_start": "Początek nocy (GG:MM)",
+          "night_end": "Koniec nocy (GG:MM)"
+        },
+        "data_description": {
+          "current_day_interval": "Jak często aktualizować bieżące warunki w ciągu dnia (domyślnie: 10 min)",
+          "current_night_interval": "Jak często aktualizować bieżące warunki w nocy (domyślnie: 30 min)",
+          "daily_day_interval": "Jak często aktualizować prognozę dzienną w ciągu dnia (domyślnie: 30 min)",
+          "daily_night_interval": "Jak często aktualizować prognozę dzienną w nocy (domyślnie: 60 min)",
+          "hourly_day_interval": "Jak często aktualizować prognozę godzinową w ciągu dnia (domyślnie: 20 min)",
+          "hourly_night_interval": "Jak często aktualizować prognozę godzinową w nocy (domyślnie: 60 min)",
+          "alerts_day_interval": "Jak często sprawdzać alerty pogodowe w ciągu dnia (domyślnie: 15 min)",
+          "alerts_night_interval": "Jak często sprawdzać alerty pogodowe w nocy (domyślnie: 30 min)",
+          "night_start": "Kiedy zaczyna się harmonogram nocnych aktualizacji (np. 22:00 dla 22)",
+          "night_end": "Kiedy kończy się harmonogram nocnych aktualizacji (np. 06:00 dla 6)"
+        }
+      },
+      "confirm": {
+        "title": "Potwierdź użycie API",
+        "description": "{usage_summary}"
+      }
+    },
+    "error": {
+      "invalid_api_key": "Nieprawidłowy klucz API lub API pogody nie jest włączone. Sprawdź swoją konsolę Google Cloud.",
+      "cannot_connect": "Nie można połączyć się z Google Weather API. Sprawdź swoje połączenie sieciowe.",
+      "invalid_latitude": "Szerokość geograficzna musi być między -90 a 90",
+      "invalid_longitude": "Długość geograficzna musi być między -180 a 180"
+    },
+    "abort": {
+      "already_configured": "Ta lokalizacja jest już skonfigurowana"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Zaktualizuj lokalizację i opcje prognozy",
+        "description": "Zaktualizuj lokalizację i opcjonalne funkcje. Bieżące warunki i prognozy dzienne są zawsze uwzględniane.\n\nAlerty pogodowe są niedostępne w niektórych regionach.",
+        "data": {
+          "latitude": "Szerokość geograficzna",
+          "longitude": "Długość geograficzna",
+          "unit_system": "System jednostek",
+          "include_hourly_forecast": "Uwzględnij prognozy godzinowe",
+          "include_alerts": "Uwzględnij alerty pogodowe"
+        },
+        "data_description": {
+          "latitude": "Współrzędna szerokości geograficznej dla danych pogodowych",
+          "longitude": "Współrzędna długości geograficznej dla danych pogodowych",
+          "unit_system": "Wybierz metryczny (Celsjusz, km/h, mm) lub imperialny (Fahrenheit, mph, cale)",
+          "include_hourly_forecast": "Włącz prognozy pogody godzinowej",
+          "include_alerts": "Włącz alerty pogodowe (niedostępne w niektórych regionach)"
+        }
+      },
+      "intervals": {
+        "title": "Konfiguruj interwały aktualizacji",
+        "description": "Ustaw, jak często aktualizować każdy punkt końcowy w ciągu dnia i nocy. Google zapewnia łącznie 10 000 darmowych wywołań API/miesiąc. Wszystkie interwały są w minutach.",
+        "data": {
+          "current_day_interval": "Bieżące warunki - Dzień (minuty)",
+          "current_night_interval": "Bieżące warunki - Noc (minuty)",
+          "daily_day_interval": "Prognoza dzienna - Dzień (minuty)",
+          "daily_night_interval": "Prognoza dzienna - Noc (minuty)",
+          "hourly_day_interval": "Prognoza godzinowa - Dzień (minuty)",
+          "hourly_night_interval": "Prognoza godzinowa - Noc (minuty)",
+          "alerts_day_interval": "Alerty pogodowe - Dzień (minuty)",
+          "alerts_night_interval": "Alerty pogodowe - Noc (minuty)",
+          "night_start": "Początek nocy (GG:MM)",
+          "night_end": "Koniec nocy (GG:MM)"
+        },
+        "data_description": {
+          "current_day_interval": "Jak często aktualizować bieżące warunki w ciągu dnia (1-1440 minut)",
+          "current_night_interval": "Jak często aktualizować bieżące warunki w nocy (1-1440 minut)",
+          "daily_day_interval": "Jak często aktualizować prognozę dzienną w ciągu dnia (1-1440 minut)",
+          "daily_night_interval": "Jak często aktualizować prognozę dzienną w nocy (1-1440 minut)",
+          "hourly_day_interval": "Jak często aktualizować prognozę godzinową w ciągu dnia (1-1440 minut)",
+          "hourly_night_interval": "Jak często aktualizować prognozę godzinową w nocy (1-1440 minut)",
+          "alerts_day_interval": "Jak często sprawdzać alerty pogodowe w ciągu dnia (1-1440 minut)",
+          "alerts_night_interval": "Jak często sprawdzać alerty pogodowe w nocy (1-1440 minut)",
+          "night_start": "Kiedy zaczyna się harmonogram nocnych aktualizacji (np. 22:00)",
+          "night_end": "Kiedy kończy się harmonogram nocnych aktualizacji (np. 06:00)"
+        }
+      },
+      "confirm": {
+        "title": "Potwierdź użycie API",
+        "description": "{usage_summary}"
+      }
+    },
+    "error": {
+      "invalid_latitude": "Szerokość geograficzna musi być między -90 a 90",
+      "invalid_longitude": "Długość geograficzna musi być między -180 a 180"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Temperatura"
+      },
+      "feels_like": {
+        "name": "Temperatura odczuwalna"
+      },
+      "dew_point": {
+        "name": "Punkt rosy"
+      },
+      "heat_index": {
+        "name": "Indeks ciepła"
+      },
+      "wind_chill": {
+        "name": "Temperatura odczuwalna wiatru"
+      },
+      "humidity": {
+        "name": "Wilgotność"
+      },
+      "pressure": {
+        "name": "Ciśnienie"
+      },
+      "wind_speed": {
+        "name": "Prędkość wiatru"
+      },
+      "wind_gust": {
+        "name": "Podmuchy wiatru"
+      },
+      "wind_direction": {
+        "name": "Kierunek wiatru"
+      },
+      "visibility": {
+        "name": "Widoczność"
+      },
+      "cloud_cover": {
+        "name": "Zachmurzenie"
+      },
+      "uv_index": {
+        "name": "Indeks UV"
+      },
+      "precipitation_probability": {
+        "name": "Prawdopodobieństwo opadów"
+      },
+      "precipitation_amount": {
+        "name": "Ilość opadów"
+      },
+      "thunderstorm_probability": {
+        "name": "Prawdopodobieństwo burzy"
+      },
+      "temp_change_24h": {
+        "name": "Zmiana temperatury (24h)"
+      },
+      "max_temp_24h": {
+        "name": "Temperatura maksymalna (24h)"
+      },
+      "min_temp_24h": {
+        "name": "Temperatura minimalna (24h)"
+      },
+      "precipitation_24h": {
+        "name": "Opady (24h)"
+      },
+      "weather_condition": {
+        "name": "Warunki pogodowe"
+      }
+    },
+    "binary_sensor": {
+      "weather_alert": {
+        "name": "Alert pogodowy"
+      },
+      "severe_weather_alert": {
+        "name": "Poważny alert pogodowy"
+      },
+      "urgent_weather_alert": {
+        "name": "Pilny alert pogodowy"
+      }
+    }
+  },
+  "services": {
+    "get_forecast": {
+      "name": "Pobierz prognozę na żądanie",
+      "description": "Pobierz prognozę pogody na żądanie, nawet gdy automatyczne odpytywanie jest wyłączone. Ta usługa wykonuje pojedyncze wywołanie API, aby pobrać żądany typ prognozy.",
+      "fields": {
+        "entity_id": {
+          "name": "ID encji",
+          "description": "ID encji pogody, dla której należy pobrać prognozy."
+        },
+        "forecast_type": {
+          "name": "Typ prognozy",
+          "description": "Typ prognozy do pobrania (dzienna lub godzinowa)."
+        }
+      }
+    }
+  }
+}

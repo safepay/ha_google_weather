@@ -1,0 +1,237 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "API-sleutel invoeren",
+        "description": "Voer uw Google Maps Platform API-sleutel in. Zorg ervoor dat de Weather API is ingeschakeld in uw Google Cloud-project.",
+        "data": {
+          "api_key": "API-sleutel"
+        },
+        "data_description": {
+          "api_key": "Uw Google Maps Platform API-sleutel met Weather API ingeschakeld"
+        }
+      },
+      "location": {
+        "title": "Locatie configureren",
+        "description": "Configureer de locatie en instellingen voor Google Weather. De locatie wordt standaard ingesteld op uw Home Assistant-configuratie.",
+        "data": {
+          "location": "Locatie / Voorvoegsel",
+          "latitude": "Breedtegraad",
+          "longitude": "Lengtegraad",
+          "unit_system": "Eenheidssysteem"
+        },
+        "data_description": {
+          "location": "Locatienaam gebruikt voor entiteit-ID's (standaard: 'home'). Voorbeelden: 'home', 'office', 'gw_home'",
+          "latitude": "Breedtegraadcoördinaat voor weergegevens (standaard: Home Assistant-locatie)",
+          "longitude": "Lengtegraadcoördinaat voor weergegevens (standaard: Home Assistant-locatie)",
+          "unit_system": "Kies metrisch (Celsius, km/u, mm) of imperiaal (Fahrenheit, mph, inches)"
+        }
+      },
+      "forecasts": {
+        "title": "Voorspellingsopties configureren",
+        "description": "Huidige omstandigheden en dagelijkse voorspellingen zijn altijd inbegrepen. Selecteer hieronder aanvullende functies.\n\nSchakel functies uit om API-aanroepen te besparen. Weerwaarschuwingen zijn in sommige regio's niet beschikbaar.",
+        "data": {
+          "include_hourly_forecast": "Uurlijkse voorspellingen opnemen",
+          "include_alerts": "Weerwaarschuwingen opnemen"
+        },
+        "data_description": {
+          "include_hourly_forecast": "Schakel uurlijkse weervoorspellingen in",
+          "include_alerts": "Schakel weerwaarschuwingen in (niet beschikbaar in sommige regio's)"
+        }
+      },
+      "intervals": {
+        "title": "Update-intervallen configureren",
+        "description": "Stel in hoe vaak elk eindpunt overdag en 's nachts wordt bijgewerkt. Google biedt in totaal 10.000 gratis API-aanroepen/maand. De standaardwaarden gebruiken ongeveer 8.640 aanroepen/maand (13,6% onder de limiet). Alle intervallen zijn in minuten.",
+        "data": {
+          "current_day_interval": "Huidige omstandigheden - Overdag (minuten)",
+          "current_night_interval": "Huidige omstandigheden - 's Nachts (minuten)",
+          "daily_day_interval": "Dagelijkse voorspelling - Overdag (minuten)",
+          "daily_night_interval": "Dagelijkse voorspelling - 's Nachts (minuten)",
+          "hourly_day_interval": "Uurlijkse voorspelling - Overdag (minuten)",
+          "hourly_night_interval": "Uurlijkse voorspelling - 's Nachts (minuten)",
+          "alerts_day_interval": "Weerwaarschuwingen - Overdag (minuten)",
+          "alerts_night_interval": "Weerwaarschuwingen - 's Nachts (minuten)",
+          "night_start": "Begin nachttijd (UU:MM)",
+          "night_end": "Einde nachttijd (UU:MM)"
+        },
+        "data_description": {
+          "current_day_interval": "Hoe vaak huidige omstandigheden overdag worden bijgewerkt (standaard: 10 min)",
+          "current_night_interval": "Hoe vaak huidige omstandigheden 's nachts worden bijgewerkt (standaard: 30 min)",
+          "daily_day_interval": "Hoe vaak dagelijkse voorspelling overdag wordt bijgewerkt (standaard: 30 min)",
+          "daily_night_interval": "Hoe vaak dagelijkse voorspelling 's nachts wordt bijgewerkt (standaard: 60 min)",
+          "hourly_day_interval": "Hoe vaak uurlijkse voorspelling overdag wordt bijgewerkt (standaard: 20 min)",
+          "hourly_night_interval": "Hoe vaak uurlijkse voorspelling 's nachts wordt bijgewerkt (standaard: 60 min)",
+          "alerts_day_interval": "Hoe vaak weerwaarschuwingen overdag worden gecontroleerd (standaard: 15 min)",
+          "alerts_night_interval": "Hoe vaak weerwaarschuwingen 's nachts worden gecontroleerd (standaard: 30 min)",
+          "night_start": "Wanneer het nachtelijke update-schema begint (bijv. 22:00 voor 22 uur)",
+          "night_end": "Wanneer het nachtelijke update-schema eindigt (bijv. 06:00 voor 6 uur)"
+        }
+      },
+      "confirm": {
+        "title": "API-gebruik bevestigen",
+        "description": "{usage_summary}"
+      }
+    },
+    "error": {
+      "invalid_api_key": "Ongeldige API-sleutel of Weather API niet ingeschakeld. Controleer uw Google Cloud Console.",
+      "cannot_connect": "Kan geen verbinding maken met Google Weather API. Controleer uw netwerkverbinding.",
+      "invalid_latitude": "Breedtegraad moet tussen -90 en 90 liggen",
+      "invalid_longitude": "Lengtegraad moet tussen -180 en 180 liggen"
+    },
+    "abort": {
+      "already_configured": "Deze locatie is al geconfigureerd"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Locatie en voorspellingsopties bijwerken",
+        "description": "Werk locatie en optionele functies bij. Huidige omstandigheden en dagelijkse voorspellingen zijn altijd inbegrepen.\n\nWeerwaarschuwingen zijn in sommige regio's niet beschikbaar.",
+        "data": {
+          "latitude": "Breedtegraad",
+          "longitude": "Lengtegraad",
+          "unit_system": "Eenheidssysteem",
+          "include_hourly_forecast": "Uurlijkse voorspellingen opnemen",
+          "include_alerts": "Weerwaarschuwingen opnemen"
+        },
+        "data_description": {
+          "latitude": "Breedtegraadcoördinaat voor weergegevens",
+          "longitude": "Lengtegraadcoördinaat voor weergegevens",
+          "unit_system": "Kies metrisch (Celsius, km/u, mm) of imperiaal (Fahrenheit, mph, inches)",
+          "include_hourly_forecast": "Schakel uurlijkse weervoorspellingen in",
+          "include_alerts": "Schakel weerwaarschuwingen in (niet beschikbaar in sommige regio's)"
+        }
+      },
+      "intervals": {
+        "title": "Update-intervallen configureren",
+        "description": "Stel in hoe vaak elk eindpunt overdag en 's nachts wordt bijgewerkt. Google biedt in totaal 10.000 gratis API-aanroepen/maand. Alle intervallen zijn in minuten.",
+        "data": {
+          "current_day_interval": "Huidige omstandigheden - Overdag (minuten)",
+          "current_night_interval": "Huidige omstandigheden - 's Nachts (minuten)",
+          "daily_day_interval": "Dagelijkse voorspelling - Overdag (minuten)",
+          "daily_night_interval": "Dagelijkse voorspelling - 's Nachts (minuten)",
+          "hourly_day_interval": "Uurlijkse voorspelling - Overdag (minuten)",
+          "hourly_night_interval": "Uurlijkse voorspelling - 's Nachts (minuten)",
+          "alerts_day_interval": "Weerwaarschuwingen - Overdag (minuten)",
+          "alerts_night_interval": "Weerwaarschuwingen - 's Nachts (minuten)",
+          "night_start": "Begin nachttijd (UU:MM)",
+          "night_end": "Einde nachttijd (UU:MM)"
+        },
+        "data_description": {
+          "current_day_interval": "Hoe vaak huidige omstandigheden overdag worden bijgewerkt (1-1440 minuten)",
+          "current_night_interval": "Hoe vaak huidige omstandigheden 's nachts worden bijgewerkt (1-1440 minuten)",
+          "daily_day_interval": "Hoe vaak dagelijkse voorspelling overdag wordt bijgewerkt (1-1440 minuten)",
+          "daily_night_interval": "Hoe vaak dagelijkse voorspelling 's nachts wordt bijgewerkt (1-1440 minuten)",
+          "hourly_day_interval": "Hoe vaak uurlijkse voorspelling overdag wordt bijgewerkt (1-1440 minuten)",
+          "hourly_night_interval": "Hoe vaak uurlijkse voorspelling 's nachts wordt bijgewerkt (1-1440 minuten)",
+          "alerts_day_interval": "Hoe vaak weerwaarschuwingen overdag worden gecontroleerd (1-1440 minuten)",
+          "alerts_night_interval": "Hoe vaak weerwaarschuwingen 's nachts worden gecontroleerd (1-1440 minuten)",
+          "night_start": "Wanneer het nachtelijke update-schema begint (bijv. 22:00)",
+          "night_end": "Wanneer het nachtelijke update-schema eindigt (bijv. 06:00)"
+        }
+      },
+      "confirm": {
+        "title": "API-gebruik bevestigen",
+        "description": "{usage_summary}"
+      }
+    },
+    "error": {
+      "invalid_latitude": "Breedtegraad moet tussen -90 en 90 liggen",
+      "invalid_longitude": "Lengtegraad moet tussen -180 en 180 liggen"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Temperatuur"
+      },
+      "feels_like": {
+        "name": "Gevoelstemperatuur"
+      },
+      "dew_point": {
+        "name": "Dauwpunt"
+      },
+      "heat_index": {
+        "name": "Hitte-index"
+      },
+      "wind_chill": {
+        "name": "Gevoelstemperatuur wind"
+      },
+      "humidity": {
+        "name": "Luchtvochtigheid"
+      },
+      "pressure": {
+        "name": "Luchtdruk"
+      },
+      "wind_speed": {
+        "name": "Windsnelheid"
+      },
+      "wind_gust": {
+        "name": "Windstoten"
+      },
+      "wind_direction": {
+        "name": "Windrichting"
+      },
+      "visibility": {
+        "name": "Zicht"
+      },
+      "cloud_cover": {
+        "name": "Bewolking"
+      },
+      "uv_index": {
+        "name": "UV-index"
+      },
+      "precipitation_probability": {
+        "name": "Neerslagkans"
+      },
+      "precipitation_amount": {
+        "name": "Neerslaghoeveelheid"
+      },
+      "thunderstorm_probability": {
+        "name": "Onweerskans"
+      },
+      "temp_change_24h": {
+        "name": "Temperatuurverandering (24u)"
+      },
+      "max_temp_24h": {
+        "name": "Maximumtemperatuur (24u)"
+      },
+      "min_temp_24h": {
+        "name": "Minimumtemperatuur (24u)"
+      },
+      "precipitation_24h": {
+        "name": "Neerslag (24u)"
+      },
+      "weather_condition": {
+        "name": "Weersomstandigheden"
+      }
+    },
+    "binary_sensor": {
+      "weather_alert": {
+        "name": "Weerwaarschuwing"
+      },
+      "severe_weather_alert": {
+        "name": "Ernstige weerwaarschuwing"
+      },
+      "urgent_weather_alert": {
+        "name": "Urgente weerwaarschuwing"
+      }
+    }
+  },
+  "services": {
+    "get_forecast": {
+      "name": "Voorspelling op aanvraag ophalen",
+      "description": "Haal weervoorspelling op aanvraag op, zelfs wanneer automatisch ophalen is uitgeschakeld. Deze service maakt een enkele API-aanroep om het gevraagde voorspellingstype op te halen.",
+      "fields": {
+        "entity_id": {
+          "name": "Entiteit-ID",
+          "description": "De weer-entiteit-ID waarvoor voorspellingen moeten worden opgehaald."
+        },
+        "forecast_type": {
+          "name": "Voorspellingstype",
+          "description": "Type voorspelling om op te halen (dagelijks of uurlijks)."
+        }
+      }
+    }
+  }
+}
