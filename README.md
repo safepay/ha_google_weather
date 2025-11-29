@@ -207,7 +207,7 @@ You can choose which optional forecasts and alerts to include during setup:
 
 - **Daily Forecasts**: Always enabled - 10-day forecasts (not configurable, always fetched)
 - **Hourly Forecasts**: Optional - Enable/disable automatic fetching of 240-hour forecasts
-- **Weather Alerts**: Optional - Enable/disable automatic fetching of weather alerts (only shown if supported for your location)
+- **Weather Alerts**: Optional - Enable/disable automatic fetching of weather alerts (checkbox always shown, but alert entities only created if supported in your region)
 
 **Benefits of disabling optional forecasts:**
 - **Reduces API calls**: Disabled endpoints are never fetched automatically, saving API calls
