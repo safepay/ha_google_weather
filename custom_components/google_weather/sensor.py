@@ -51,13 +51,22 @@ def get_current_value(data: dict, *keys: str) -> Any:
 # Mapping of full cardinal directions to abbreviations
 CARDINAL_DIRECTION_MAP = {
     "NORTH": "N",
-    "NORTH_EAST": "NE",
+    "NORTHEAST": "NE",
+    "NORTH_NORTHEAST": "NNE",
     "EAST": "E",
-    "SOUTH_EAST": "SE",
+    "EAST_NORTHEAST": "ENE",
+    "EAST_SOUTHEAST": "ESE",
+    "SOUTHEAST": "SE",
+    "SOUTH_SOUTHEAST": "SSE",
     "SOUTH": "S",
-    "SOUTH_WEST": "SW",
+    "SOUTHWEST": "SW",
+    "SOUTH_SOUTHWEST": "SSW",
     "WEST": "W",
-    "NORTH_WEST": "NW",
+    "WEST_NORTHWEST": "WNW",
+    "WEST_SOUTHWEST": "WSW",
+    "NORTHWEST": "NW",
+    "NORTH_NORTHWEST": "NNW",
+    "CARDINAL_DIRECTION_UNSPECIFIED": "UNSPECIFIED",
 }
 
 
