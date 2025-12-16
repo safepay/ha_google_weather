@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+import logging
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -27,6 +28,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_LOCATION, CONF_UNIT_SYSTEM, DOMAIN, UNIT_SYSTEM_IMPERIAL
 from .coordinator import GoogleWeatherCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -355,6 +358,13 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
 
         # Store unit system for property override
         self._unit_system = entry.options.get(CONF_UNIT_SYSTEM) or entry.data.get(CONF_UNIT_SYSTEM, "METRIC")
+        _LOGGER.debug(
+            "Initializing sensor %s with unit_system=%s (from options=%s, data=%s)",
+            description.key,
+            self._unit_system,
+            entry.options.get(CONF_UNIT_SYSTEM),
+            entry.data.get(CONF_UNIT_SYSTEM),
+        )
 
     @property
     def native_unit_of_measurement(self) -> str | None:
@@ -363,22 +373,33 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
         Override entity_description units when imperial is selected,
         since API returns values in the requested unit system.
         """
+        unit = None
         if self._unit_system == UNIT_SYSTEM_IMPERIAL:
             # Override temperature units to Fahrenheit
             if self.entity_description.device_class == SensorDeviceClass.TEMPERATURE:
-                return UnitOfTemperature.FAHRENHEIT
+                unit = UnitOfTemperature.FAHRENHEIT
             # Override wind speed units to MPH
             elif self.entity_description.device_class == SensorDeviceClass.WIND_SPEED:
-                return UnitOfSpeed.MILES_PER_HOUR
+                unit = UnitOfSpeed.MILES_PER_HOUR
             # Override visibility units to Miles
             elif self.entity_description.key == "visibility":
-                return UnitOfLength.MILES
+                unit = UnitOfLength.MILES
             # Override precipitation units to Inches
             elif self.entity_description.device_class == SensorDeviceClass.PRECIPITATION:
-                return UnitOfPrecipitationDepth.INCHES
+                unit = UnitOfPrecipitationDepth.INCHES
 
         # Use default unit from entity description for metric
-        return self.entity_description.native_unit_of_measurement
+        if unit is None:
+            unit = self.entity_description.native_unit_of_measurement
+
+        _LOGGER.debug(
+            "Sensor %s native_unit_of_measurement: unit_system=%s, device_class=%s, returning=%s",
+            self.entity_description.key,
+            self._unit_system,
+            self.entity_description.device_class,
+            unit,
+        )
+        return unit
 
     @property
     def native_value(self) -> float | int | str | None:
