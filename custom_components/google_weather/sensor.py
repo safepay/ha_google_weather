@@ -25,7 +25,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_LOCATION, DOMAIN
+from .const import CONF_LOCATION, CONF_UNIT_SYSTEM, DOMAIN, UNIT_SYSTEM_IMPERIAL
 from .coordinator import GoogleWeatherCoordinator
 
 
@@ -352,6 +352,22 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
             "sw_version": "v1",
             "via_device": (DOMAIN, entry.entry_id),
         }
+
+        # Override units based on unit system - API returns values in the requested unit system
+        unit_system = entry.options.get(CONF_UNIT_SYSTEM) or entry.data.get(CONF_UNIT_SYSTEM, "METRIC")
+        if unit_system == UNIT_SYSTEM_IMPERIAL:
+            # Override temperature units to Fahrenheit
+            if description.device_class == SensorDeviceClass.TEMPERATURE:
+                self._attr_native_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
+            # Override wind speed units to MPH
+            elif description.device_class == SensorDeviceClass.WIND_SPEED:
+                self._attr_native_unit_of_measurement = UnitOfSpeed.MILES_PER_HOUR
+            # Override visibility units to Miles
+            elif description.key == "visibility":
+                self._attr_native_unit_of_measurement = UnitOfLength.MILES
+            # Override precipitation units to Inches
+            elif description.device_class == SensorDeviceClass.PRECIPITATION:
+                self._attr_native_unit_of_measurement = UnitOfPrecipitationDepth.INCHES
 
     @property
     def native_value(self) -> float | int | str | None:
