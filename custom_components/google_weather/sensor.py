@@ -353,21 +353,32 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
             "via_device": (DOMAIN, entry.entry_id),
         }
 
-        # Override units based on unit system - API returns values in the requested unit system
-        unit_system = entry.options.get(CONF_UNIT_SYSTEM) or entry.data.get(CONF_UNIT_SYSTEM, "METRIC")
-        if unit_system == UNIT_SYSTEM_IMPERIAL:
+        # Store unit system for property override
+        self._unit_system = entry.options.get(CONF_UNIT_SYSTEM) or entry.data.get(CONF_UNIT_SYSTEM, "METRIC")
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        """Return the unit of measurement based on configured unit system.
+
+        Override entity_description units when imperial is selected,
+        since API returns values in the requested unit system.
+        """
+        if self._unit_system == UNIT_SYSTEM_IMPERIAL:
             # Override temperature units to Fahrenheit
-            if description.device_class == SensorDeviceClass.TEMPERATURE:
-                self._attr_native_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
+            if self.entity_description.device_class == SensorDeviceClass.TEMPERATURE:
+                return UnitOfTemperature.FAHRENHEIT
             # Override wind speed units to MPH
-            elif description.device_class == SensorDeviceClass.WIND_SPEED:
-                self._attr_native_unit_of_measurement = UnitOfSpeed.MILES_PER_HOUR
+            elif self.entity_description.device_class == SensorDeviceClass.WIND_SPEED:
+                return UnitOfSpeed.MILES_PER_HOUR
             # Override visibility units to Miles
-            elif description.key == "visibility":
-                self._attr_native_unit_of_measurement = UnitOfLength.MILES
+            elif self.entity_description.key == "visibility":
+                return UnitOfLength.MILES
             # Override precipitation units to Inches
-            elif description.device_class == SensorDeviceClass.PRECIPITATION:
-                self._attr_native_unit_of_measurement = UnitOfPrecipitationDepth.INCHES
+            elif self.entity_description.device_class == SensorDeviceClass.PRECIPITATION:
+                return UnitOfPrecipitationDepth.INCHES
+
+        # Use default unit from entity description for metric
+        return self.entity_description.native_unit_of_measurement
 
     @property
     def native_value(self) -> float | int | str | None:
