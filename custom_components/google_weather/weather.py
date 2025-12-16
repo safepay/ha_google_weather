@@ -298,23 +298,22 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
             forecasts: list[Forecast] = []
 
             for day in daily_forecast:
-                display_date = day.get("displayDate", {})
-                # Create a naive datetime at midnight for the forecast day
-                naive_dt = datetime(
-                    display_date.get('year'),
-                    display_date.get('month'),
-                    display_date.get('day')
-                )
-                # Convert to timezone-aware datetime at start of day in local timezone
-                dt_aware = dt_util.start_of_local_day(naive_dt)
-                # Format as ISO 8601 string
-                datetime_str = dt_aware.isoformat()
+                interval = day.get("interval", {})
+                start_time = interval.get("startTime")
+
+                if not start_time:
+                    continue
+
+                # Parse ISO 8601 datetime
+                dt = dt_util.parse_datetime(start_time)
+                if not dt:
+                    continue
 
                 daytime = day.get("daytimeForecast", {})
                 weather_condition = daytime.get("weatherCondition", {})
 
                 forecast = Forecast(
-                    datetime=datetime_str,
+                    datetime=dt.isoformat(),
                     condition=self._map_condition(weather_condition.get("type")),
                     native_temperature=day.get("maxTemperature", {}).get("degrees"),
                     native_templow=day.get("minTemperature", {}).get("degrees"),
