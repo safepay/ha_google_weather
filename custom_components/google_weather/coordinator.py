@@ -217,12 +217,12 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     ) -> dict[str, Any]:
         """Fetch weather data from Google Weather API (runs in executor)."""
         try:
-            # Prepare common parameters for weather endpoints (with units_system)
+            # Prepare common parameters for weather endpoints (with unitsSystem)
             weather_params = {
                 "key": self.api_key,
                 "location.latitude": self.latitude,
                 "location.longitude": self.longitude,
-                "units_system": self.unit_system,
+                "unitsSystem": self.unit_system,
             }
 
             # Prepare parameters for alerts endpoint (without units_system)
