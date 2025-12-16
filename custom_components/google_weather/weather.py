@@ -299,7 +299,16 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
             for day in daily_forecast:
                 display_date = day.get("displayDate", {})
-                datetime_str = f"{display_date.get('year')}-{display_date.get('month'):02d}-{display_date.get('day'):02d}"
+                # Create a naive datetime at midnight for the forecast day
+                naive_dt = datetime(
+                    display_date.get('year'),
+                    display_date.get('month'),
+                    display_date.get('day')
+                )
+                # Convert to timezone-aware datetime at start of day in local timezone
+                dt_aware = dt_util.start_of_local_day(naive_dt)
+                # Format as ISO 8601 string
+                datetime_str = dt_aware.isoformat()
 
                 daytime = day.get("daytimeForecast", {})
                 weather_condition = daytime.get("weatherCondition", {})
