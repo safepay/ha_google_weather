@@ -9,7 +9,7 @@ A comprehensive Home Assistant integration that provides weather data from the G
 
 ## Features
 
-- **Complete Weather Data**: Current conditions, daily forecast (10 days), hourly forecast (240 hours)
+- **Complete Weather Data**: Current conditions, daily forecast (up to 10 days), hourly forecast (up to 240 hours)
 - **Weather Alerts**: Real-time weather warnings and alerts from authoritative agencies worldwide
 - **Comprehensive Sensors**: 25+ observational sensors including temperature, wind, precipitation, snow, UV index, and more
 - **Binary Sensors**: Day/night detection and weather alerts (when supported)
@@ -210,8 +210,8 @@ The integration uses **smart polling** to optimize API usage and stay within Goo
 
 You can choose which optional forecasts and alerts to include during setup:
 
-- **Daily Forecasts**: Always enabled - 10-day forecasts (not configurable, always fetched)
-- **Hourly Forecasts**: Optional - Enable/disable automatic fetching of 240-hour forecasts
+- **Daily Forecasts**: Always enabled - up to 10-day forecasts (not configurable, maximum available always fetched, number of days available is region-dependent)
+- **Hourly Forecasts**: Optional - Enable/disable automatic fetching of up to 240-hour forecasts (maximum available always fetched, number of hours available is region-dependent)
 - **Weather Alerts**: Optional - Enable/disable automatic fetching of weather alerts (checkbox always shown, but alert entities only created if supported in your region)
 
 **Benefits of disabling optional forecasts:**
