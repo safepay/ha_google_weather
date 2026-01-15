@@ -50,6 +50,7 @@ CONDITION_MAP = {
     "RAIN": "rainy",
     "HEAVY_RAIN": "pouring",
     "RAIN_SHOWERS": "rainy",
+    "RAIN_AND_SNOW": "snowy-rainy",
     "SCATTERED_SHOWERS": "rainy",
     "DRIZZLE": "rainy",
     "LIGHT_SNOW": "snowy",
