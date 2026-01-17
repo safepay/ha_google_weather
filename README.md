@@ -51,6 +51,7 @@ A comprehensive Home Assistant integration that provides weather data from the G
 - Precipitation Probability
 - Precipitation Amount
 - Snow Amount
+- Snow Forecast (next 24h, requires hourly forecast)
 - Thunderstorm Probability
 
 **24-Hour Historical:**
