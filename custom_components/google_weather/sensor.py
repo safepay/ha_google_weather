@@ -297,7 +297,7 @@ SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
         value_fn=lambda data: get_current_value(data, "weatherCondition", "description", "text"),
         attributes_fn=lambda data: {
             "type": get_current_value(data, "weatherCondition", "type"),
-            "icon": get_current_value(data, "weatherCondition", "iconBaseUri"),
+            "icon_base_uri": get_current_value(data, "weatherCondition", "iconBaseUri"),
             "is_daytime": data.get("current", {}).get("isDaytime"),
         },
     ),
