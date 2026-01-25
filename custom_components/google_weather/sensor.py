@@ -26,7 +26,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_LOCATION, CONF_UNIT_SYSTEM, DOMAIN, UNIT_SYSTEM_IMPERIAL
+from .const import (
+    CONF_INCLUDE_HOURLY_FORECAST,
+    CONF_LOCATION,
+    CONF_UNIT_SYSTEM,
+    DEFAULT_INCLUDE_HOURLY_FORECAST,
+    DOMAIN,
+    UNIT_SYSTEM_IMPERIAL,
+)
 from .coordinator import GoogleWeatherCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -49,6 +56,11 @@ def get_current_value(data: dict, *keys: str) -> Any:
         else:
             return None
     return current if not isinstance(current, dict) else None
+
+
+def get_snow_forecast_next_24h(data: dict) -> float | None:
+    """Return cached 24-hour snow forecast total from coordinator data."""
+    return data.get("snow_forecast_24h")
 
 
 # Mapping of full cardinal directions to abbreviations
@@ -241,6 +253,16 @@ SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
         value_fn=lambda data: get_current_value(data, "precipitation", "snowQpf", "quantity"),
     ),
     GoogleWeatherSensorDescription(
+        key="snow_forecast_24h",
+        name="Snow Forecast (24h)",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:weather-snowy-rainy",
+        value_fn=get_snow_forecast_next_24h,
+        suggested_display_precision=3,
+    ),
+    GoogleWeatherSensorDescription(
         key="thunderstorm_probability",
         name="Thunderstorm Probability",
         native_unit_of_measurement=PERCENTAGE,
@@ -297,7 +319,7 @@ SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
         value_fn=lambda data: get_current_value(data, "weatherCondition", "description", "text"),
         attributes_fn=lambda data: {
             "type": get_current_value(data, "weatherCondition", "type"),
-            "icon": get_current_value(data, "weatherCondition", "iconBaseUri"),
+            "icon_base_uri": get_current_value(data, "weatherCondition", "iconBaseUri"),
             "is_daytime": data.get("current", {}).get("isDaytime"),
         },
     ),
@@ -313,10 +335,18 @@ async def async_setup_entry(
     coordinator: GoogleWeatherCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     location = entry.data.get(CONF_LOCATION, "home")
+    current_data = {**entry.data, **entry.options}
+    include_hourly = current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST)
+
+    sensor_descriptions = (
+        SENSOR_TYPES
+        if include_hourly
+        else tuple(description for description in SENSOR_TYPES if description.key != "snow_forecast_24h")
+    )
 
     async_add_entities(
         GoogleWeatherSensor(coordinator, entry, description, location)
-        for description in SENSOR_TYPES
+        for description in sensor_descriptions
     )
 
 

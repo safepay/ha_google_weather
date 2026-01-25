@@ -52,6 +52,96 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+SNOW_CONDITION_TYPES = {
+    "LIGHT_SNOW",
+    "SNOW",
+    "HEAVY_SNOW",
+    "SNOW_SHOWERS",
+    "BLIZZARD",
+}
+
+
+def _is_snow_condition(condition: str | None) -> bool:
+    """Return True if condition string represents snow."""
+    if not condition:
+        return False
+    return condition.upper() in SNOW_CONDITION_TYPES
+
+
+def _extract_hourly_snow_amount(hour: dict[str, Any]) -> float | None:
+    """Extract per-hour snow amount using precipitation hints."""
+    precipitation = hour.get("precipitation") or {}
+
+    snow_amount = (precipitation.get("snowQpf") or {}).get("quantity")
+    if snow_amount is None:
+        snow_amount = (precipitation.get("snowfallAmount") or {}).get("quantity")
+
+    if snow_amount is None:
+        precip_type = precipitation.get("type") or (precipitation.get("probability") or {}).get("type")
+        condition_type = hour.get("weatherCondition", {}).get("type")
+        if _is_snow_condition(precip_type) or _is_snow_condition(condition_type):
+            snow_amount = (precipitation.get("qpf") or {}).get("quantity")
+
+    if snow_amount is None:
+        return None
+
+    try:
+        return float(snow_amount)
+    except (TypeError, ValueError):
+        return None
+
+
+def _calculate_snow_forecast_next_24h(hourly_forecast: list[dict[str, Any]]) -> float | None:
+    """Calculate total snow expected over the next 24 hours."""
+    if not hourly_forecast:
+        return None
+
+    now = dt_util.utcnow()
+    cutoff = now + timedelta(hours=24)
+    total_snow = 0.0
+    contributing_hours = 0
+    window_hours = 0
+
+    for hour in hourly_forecast:
+        interval = hour.get("interval", {})
+        start_time = interval.get("startTime")
+        if not start_time:
+            continue
+
+        dt = dt_util.parse_datetime(start_time)
+        if not dt:
+            continue
+
+        forecast_time = dt_util.as_utc(dt)
+        if forecast_time < now or forecast_time >= cutoff:
+            continue
+
+        window_hours += 1
+        snow_amount = _extract_hourly_snow_amount(hour)
+        if snow_amount is None:
+            continue
+
+        contributing_hours += 1
+        total_snow += snow_amount
+
+    if contributing_hours == 0:
+        _LOGGER.debug(
+            "Snow forecast (24h): no qualifying hourly entries (window=%d, total_entries=%d)",
+            window_hours,
+            len(hourly_forecast),
+        )
+        return None
+
+    total_snow = round(total_snow, 3)
+    _LOGGER.debug(
+        "Snow forecast (24h): total %.3f from %d/%d window hours (entries=%d)",
+        total_snow,
+        contributing_hours,
+        window_hours,
+        len(hourly_forecast),
+    )
+    return total_snow
+
 
 class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Coordinator to manage Google Weather API calls with smart polling."""
@@ -277,7 +367,14 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
                 hourly_response.raise_for_status()
                 forecast_data = hourly_response.json()
-                updated_data["hourly_forecast"] = forecast_data.get("forecastHours", [])
+                hourly_entries = forecast_data.get("forecastHours", [])
+                updated_data["hourly_forecast"] = hourly_entries
+
+                snow_total = _calculate_snow_forecast_next_24h(hourly_entries)
+                if snow_total is not None:
+                    updated_data["snow_forecast_24h"] = snow_total
+                else:
+                    updated_data["snow_forecast_24h"] = None
 
             # Fetch weather alerts if needed
             if endpoints_to_update.get(ENDPOINT_ALERTS):
