@@ -37,12 +37,12 @@ URGENT_URGENCIES = ["IMMEDIATE", "EXPECTED"]
 
 def has_alerts(data: dict) -> bool:
     """Check if there are any weather alerts."""
-    return bool(data.get("weatherAlerts", []))
+    return bool(data.get("alerts", []))
 
 
 def has_severe_alerts(data: dict) -> bool:
     """Check if there are severe weather alerts."""
-    alerts = data.get("weatherAlerts", [])
+    alerts = data.get("alerts", [])
     return any(
         alert.get("severity") in SEVERE_SEVERITIES
         for alert in alerts
@@ -51,7 +51,7 @@ def has_severe_alerts(data: dict) -> bool:
 
 def has_urgent_alerts(data: dict) -> bool:
     """Check if there are urgent weather alerts."""
-    alerts = data.get("weatherAlerts", [])
+    alerts = data.get("alerts", [])
     return any(
         alert.get("urgency") in URGENT_URGENCIES
         for alert in alerts
@@ -60,7 +60,7 @@ def has_urgent_alerts(data: dict) -> bool:
 
 def get_alert_attributes(data: dict) -> dict[str, Any]:
     """Get detailed attributes for all alerts."""
-    alerts = data.get("weatherAlerts", [])
+    alerts = data.get("alerts", [])
     if not alerts:
         return {"alert_count": 0}
 
@@ -95,7 +95,7 @@ def get_alert_attributes(data: dict) -> dict[str, Any]:
 
 def get_severe_alert_attributes(data: dict) -> dict[str, Any]:
     """Get detailed attributes for severe alerts only."""
-    alerts = data.get("weatherAlerts", [])
+    alerts = data.get("alerts", [])
     severe_alerts = [
         alert for alert in alerts
         if alert.get("severity") in SEVERE_SEVERITIES
@@ -162,7 +162,7 @@ BINARY_SENSOR_TYPES: tuple[GoogleWeatherBinarySensorDescription, ...] = (
                     "urgency": alert.get("urgency"),
                     "instruction": alert.get("instruction"),
                 }
-                for alert in data.get("weatherAlerts", [])
+                for alert in data.get("alerts", [])
                 if alert.get("urgency") in URGENT_URGENCIES
             ]
         } if has_urgent_alerts(data) else {},
