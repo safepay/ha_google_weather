@@ -16,7 +16,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_INCLUDE_ALERTS, CONF_LOCATION, DEFAULT_INCLUDE_ALERTS, DOMAIN
+from .const import ALERT_SENSOR_KEYS, CONF_INCLUDE_ALERTS, CONF_LOCATION, DEFAULT_INCLUDE_ALERTS, DOMAIN
 from .coordinator import GoogleWeatherCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -187,10 +187,9 @@ async def async_setup_entry(
     # Always include non-alert sensors (like isDaytime)
     # Only include alert sensors if alerts are enabled AND supported
     sensors_to_add = []
-    alert_sensor_keys = {"weather_alert", "severe_weather_alert", "urgent_weather_alert"}
 
     for description in BINARY_SENSOR_TYPES:
-        if description.key in alert_sensor_keys:
+        if description.key in ALERT_SENSOR_KEYS:
             # Only add alert sensors if alerts are enabled and supported
             if include_alerts and coordinator.alerts_supported:
                 sensors_to_add.append(
@@ -248,7 +247,7 @@ class GoogleWeatherBinarySensor(
             "name": f"{location_name} Binary Sensors",
             "manufacturer": "Google",
             "model": "Weather API - Binary Sensors",
-            "sw_version": "v1",
+            "sw_version": "1.1.10",
             "via_device": (DOMAIN, entry.entry_id),
         }
 

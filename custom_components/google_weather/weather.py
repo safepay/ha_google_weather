@@ -121,7 +121,7 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
             "name": f"{location_name} Weather",
             "manufacturer": "Google",
             "model": "Weather API",
-            "sw_version": "v1",
+            "sw_version": "1.1.10",
         }
 
         # Set units based on unit system - API returns values in the requested unit system

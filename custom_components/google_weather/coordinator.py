@@ -1,7 +1,7 @@
 """Data coordinator for Google Weather integration."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, time as dt_time, timedelta
 import logging
 from typing import Any
 import requests
@@ -220,8 +220,6 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Parse time strings
         start_hour, start_min = map(int, self.night_start.split(":"))
         end_hour, end_min = map(int, self.night_end.split(":"))
-
-        from datetime import time as dt_time
 
         start_time = dt_time(start_hour, start_min)
         end_time = dt_time(end_hour, end_min)

@@ -1,5 +1,5 @@
 """Constants for the Google Weather integration."""
-from datetime import timedelta, time
+from datetime import timedelta
 
 DOMAIN = "google_weather"
 
@@ -26,7 +26,6 @@ CONF_INCLUDE_HOURLY_FORECAST = "include_hourly_forecast"
 CONF_INCLUDE_ALERTS = "include_alerts"
 
 # Defaults
-DEFAULT_UPDATE_INTERVAL = timedelta(minutes=15)
 DEFAULT_UNIT_SYSTEM = "METRIC"
 
 # Default update intervals (in minutes) - optimized for 10,000 free API calls/month
@@ -76,3 +75,6 @@ ENDPOINT_CURRENT = "current"
 ENDPOINT_DAILY = "daily"
 ENDPOINT_HOURLY = "hourly"
 ENDPOINT_ALERTS = "alerts"
+
+# Alert sensor keys (used in binary_sensor.py and __init__.py)
+ALERT_SENSOR_KEYS = frozenset({"weather_alert", "severe_weather_alert", "urgent_weather_alert"})

@@ -382,19 +382,12 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
             "name": f"{location_name} Observational Sensors",
             "manufacturer": "Google",
             "model": "Weather API - Sensors",
-            "sw_version": "v1",
+            "sw_version": "1.1.10",
             "via_device": (DOMAIN, entry.entry_id),
         }
 
         # Store unit system for property override
         self._unit_system = entry.options.get(CONF_UNIT_SYSTEM) or entry.data.get(CONF_UNIT_SYSTEM, "METRIC")
-        _LOGGER.debug(
-            "Initializing sensor %s with unit_system=%s (from options=%s, data=%s)",
-            description.key,
-            self._unit_system,
-            entry.options.get(CONF_UNIT_SYSTEM),
-            entry.data.get(CONF_UNIT_SYSTEM),
-        )
 
     @property
     def native_unit_of_measurement(self) -> str | None:
@@ -422,13 +415,6 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
         if unit is None:
             unit = self.entity_description.native_unit_of_measurement
 
-        _LOGGER.debug(
-            "Sensor %s native_unit_of_measurement: unit_system=%s, device_class=%s, returning=%s",
-            self.entity_description.key,
-            self._unit_system,
-            self.entity_description.device_class,
-            unit,
-        )
         return unit
 
     @property

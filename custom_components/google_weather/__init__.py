@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, Supp
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN, ENDPOINT_DAILY, ENDPOINT_HOURLY, CONF_INCLUDE_ALERTS
+from .const import ALERT_SENSOR_KEYS, CONF_INCLUDE_ALERTS, DOMAIN, ENDPOINT_DAILY, ENDPOINT_HOURLY
 from .coordinator import GoogleWeatherCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -105,10 +105,7 @@ async def _remove_alert_entities(hass: HomeAssistant, entry: ConfigEntry) -> Non
     location = entry.data.get(CONF_LOCATION, "home")
     location_slug = location.lower().replace(" ", "_")
 
-    # Alert sensor keys that need to be removed
-    alert_sensor_keys = ["weather_alert", "severe_weather_alert", "urgent_weather_alert"]
-
-    for sensor_key in alert_sensor_keys:
+    for sensor_key in ALERT_SENSOR_KEYS:
         unique_id = f"{location_slug}_{sensor_key}"
         entity_id = entity_registry.async_get_entity_id(
             Platform.BINARY_SENSOR, DOMAIN, unique_id

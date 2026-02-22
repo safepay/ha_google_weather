@@ -54,6 +54,88 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
+def _calculate_monthly_calls(
+    day_interval: int, night_interval: int, day_hours: int = 16, night_hours: int = 8
+) -> int:
+    """Calculate monthly API calls for an endpoint."""
+    days_per_month = 30
+    calls_per_hour_day = 60 / day_interval
+    calls_per_hour_night = 60 / night_interval
+
+    day_calls = calls_per_hour_day * day_hours * days_per_month
+    night_calls = calls_per_hour_night * night_hours * days_per_month
+
+    return int(day_calls + night_calls)
+
+
+def _build_usage_description(
+    forecast_data: dict[str, Any], interval_data: dict[str, Any]
+) -> str:
+    """Build API usage description string from forecast and interval data."""
+    current_calls = _calculate_monthly_calls(
+        interval_data[CONF_CURRENT_DAY_INTERVAL],
+        interval_data[CONF_CURRENT_NIGHT_INTERVAL],
+    )
+
+    daily_calls = _calculate_monthly_calls(
+        interval_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
+        interval_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
+    )
+
+    hourly_calls = 0
+    if forecast_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
+        hourly_calls = _calculate_monthly_calls(
+            interval_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
+            interval_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
+        )
+
+    alerts_calls = 0
+    if forecast_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
+        alerts_calls = _calculate_monthly_calls(
+            interval_data.get(CONF_ALERTS_DAY_INTERVAL, DEFAULT_ALERTS_DAY_INTERVAL),
+            interval_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
+        )
+
+    total_calls = current_calls + daily_calls + hourly_calls + alerts_calls
+    headroom = 10000 - total_calls
+    headroom_pct = (headroom / 10000) * 100
+
+    status = "\u2705" if total_calls <= 10000 else "\u274c"
+
+    daily_line = f"\u2022 Daily Forecast: ~{daily_calls:,} calls/month\n"
+
+    if forecast_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
+        hourly_line = f"\u2022 Hourly Forecast: ~{hourly_calls:,} calls/month\n"
+    else:
+        hourly_line = "\u2022 Hourly Forecast: 0 calls/month (disabled)\n"
+
+    if forecast_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
+        alerts_line = f"\u2022 Weather Alerts: ~{alerts_calls:,} calls/month\n"
+    else:
+        alerts_line = "\u2022 Weather Alerts: 0 calls/month (disabled)\n"
+
+    description = (
+        f"**Estimated Monthly API Usage:**\n\n"
+        f"\u2022 Current Conditions: ~{current_calls:,} calls/month\n"
+        f"{daily_line}"
+        f"{hourly_line}"
+        f"{alerts_line}\n"
+        f"**Total: ~{total_calls:,} calls/month** {status}\n"
+        f"Free tier limit: 10,000 calls/month\n"
+    )
+
+    if total_calls <= 10000:
+        description += f"Headroom: {headroom:,} calls ({headroom_pct:.1f}% buffer)\n\n\u2705 Within free tier limits"
+    else:
+        excess = total_calls - 10000
+        description += f"\n\u26a0\ufe0f **Warning:** Exceeds free tier by {excess:,} calls/month\n"
+        description += "Consider reducing update intervals or expect charges."
+
+    description += "\n\n---\n**Ready to proceed?** Click **Next** to complete setup."
+
+    return description
+
+
 class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Google Weather."""
 
@@ -274,19 +356,6 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(schema_dict),
         )
 
-    def _calculate_monthly_calls(
-        self, day_interval: int, night_interval: int, day_hours: int = 16, night_hours: int = 8
-    ) -> int:
-        """Calculate monthly API calls for an endpoint."""
-        days_per_month = 30
-        calls_per_hour_day = 60 / day_interval
-        calls_per_hour_night = 60 / night_interval
-
-        day_calls = calls_per_hour_day * day_hours * days_per_month
-        night_calls = calls_per_hour_night * night_hours * days_per_month
-
-        return int(day_calls + night_calls)
-
     async def async_step_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -306,74 +375,7 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data=final_data,
             )
 
-        # Calculate API usage for each endpoint
-        current_calls = self._calculate_monthly_calls(
-            self.interval_data[CONF_CURRENT_DAY_INTERVAL],
-            self.interval_data[CONF_CURRENT_NIGHT_INTERVAL],
-        )
-
-        # Daily forecast calls (always enabled)
-        daily_calls = self._calculate_monthly_calls(
-            self.interval_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
-            self.interval_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
-        )
-
-        # Only calculate hourly forecast calls if enabled
-        hourly_calls = 0
-        if self.forecast_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
-            hourly_calls = self._calculate_monthly_calls(
-                self.interval_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
-                self.interval_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
-            )
-
-        # Only calculate alerts calls if enabled
-        alerts_calls = 0
-        if self.forecast_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
-            alerts_calls = self._calculate_monthly_calls(
-                self.interval_data.get(CONF_ALERTS_DAY_INTERVAL, DEFAULT_ALERTS_DAY_INTERVAL),
-                self.interval_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
-            )
-
-        total_calls = current_calls + daily_calls + hourly_calls + alerts_calls
-        headroom = 10000 - total_calls
-        headroom_pct = (headroom / 10000) * 100
-
-        # Build description with calculation results
-        status = "✅" if total_calls <= 10000 else "❌"
-
-        # Daily forecast is always enabled
-        daily_line = f"• Daily Forecast: ~{daily_calls:,} calls/month\n"
-
-        # Format hourly forecast line
-        if self.forecast_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
-            hourly_line = f"• Hourly Forecast: ~{hourly_calls:,} calls/month\n"
-        else:
-            hourly_line = "• Hourly Forecast: 0 calls/month (disabled)\n"
-
-        # Format alerts line
-        if self.forecast_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
-            alerts_line = f"• Weather Alerts: ~{alerts_calls:,} calls/month\n"
-        else:
-            alerts_line = "• Weather Alerts: 0 calls/month (disabled)\n"
-
-        description = (
-            f"**Estimated Monthly API Usage:**\n\n"
-            f"• Current Conditions: ~{current_calls:,} calls/month\n"
-            f"{daily_line}"
-            f"{hourly_line}"
-            f"{alerts_line}\n"
-            f"**Total: ~{total_calls:,} calls/month** {status}\n"
-            f"Free tier limit: 10,000 calls/month\n"
-        )
-
-        if total_calls <= 10000:
-            description += f"Headroom: {headroom:,} calls ({headroom_pct:.1f}% buffer)\n\n✅ Within free tier limits"
-        else:
-            excess = total_calls - 10000
-            description += f"\n⚠️ **Warning:** Exceeds free tier by {excess:,} calls/month\n"
-            description += "Consider reducing update intervals or expect charges."
-
-        description += "\n\n---\n**Ready to proceed?** Click **Next** to complete setup."
+        description = _build_usage_description(self.forecast_data, self.interval_data)
 
         return self.async_show_form(
             step_id="confirm",
@@ -544,19 +546,6 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema(schema_dict),
         )
 
-    def _calculate_monthly_calls(
-        self, day_interval: int, night_interval: int, day_hours: int = 16, night_hours: int = 8
-    ) -> int:
-        """Calculate monthly API calls for an endpoint."""
-        days_per_month = 30
-        calls_per_hour_day = 60 / day_interval
-        calls_per_hour_night = 60 / night_interval
-
-        day_calls = calls_per_hour_day * day_hours * days_per_month
-        night_calls = calls_per_hour_night * night_hours * days_per_month
-
-        return int(day_calls + night_calls)
-
     async def async_step_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -570,74 +559,7 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             }
             return self.async_create_entry(title="", data=final_data)
 
-        # Calculate API usage for each endpoint
-        current_calls = self._calculate_monthly_calls(
-            self.interval_data[CONF_CURRENT_DAY_INTERVAL],
-            self.interval_data[CONF_CURRENT_NIGHT_INTERVAL],
-        )
-
-        # Daily forecast calls (always enabled)
-        daily_calls = self._calculate_monthly_calls(
-            self.interval_data.get(CONF_DAILY_DAY_INTERVAL, DEFAULT_DAILY_DAY_INTERVAL),
-            self.interval_data.get(CONF_DAILY_NIGHT_INTERVAL, DEFAULT_DAILY_NIGHT_INTERVAL),
-        )
-
-        # Only calculate hourly forecast calls if enabled
-        hourly_calls = 0
-        if self.forecast_options.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
-            hourly_calls = self._calculate_monthly_calls(
-                self.interval_data.get(CONF_HOURLY_DAY_INTERVAL, DEFAULT_HOURLY_DAY_INTERVAL),
-                self.interval_data.get(CONF_HOURLY_NIGHT_INTERVAL, DEFAULT_HOURLY_NIGHT_INTERVAL),
-            )
-
-        # Only calculate alerts calls if enabled
-        alerts_calls = 0
-        if self.forecast_options.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
-            alerts_calls = self._calculate_monthly_calls(
-                self.interval_data.get(CONF_ALERTS_DAY_INTERVAL, DEFAULT_ALERTS_DAY_INTERVAL),
-                self.interval_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
-            )
-
-        total_calls = current_calls + daily_calls + hourly_calls + alerts_calls
-        headroom = 10000 - total_calls
-        headroom_pct = (headroom / 10000) * 100
-
-        # Build description with calculation results
-        status = "✅" if total_calls <= 10000 else "❌"
-
-        # Daily forecast is always enabled
-        daily_line = f"• Daily Forecast: ~{daily_calls:,} calls/month\n"
-
-        # Format hourly forecast line
-        if self.forecast_options.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST):
-            hourly_line = f"• Hourly Forecast: ~{hourly_calls:,} calls/month\n"
-        else:
-            hourly_line = "• Hourly Forecast: 0 calls/month (disabled)\n"
-
-        # Format alerts line
-        if self.forecast_options.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS):
-            alerts_line = f"• Weather Alerts: ~{alerts_calls:,} calls/month\n"
-        else:
-            alerts_line = "• Weather Alerts: 0 calls/month (disabled)\n"
-
-        description = (
-            f"**Estimated Monthly API Usage:**\n\n"
-            f"• Current Conditions: ~{current_calls:,} calls/month\n"
-            f"{daily_line}"
-            f"{hourly_line}"
-            f"{alerts_line}\n"
-            f"**Total: ~{total_calls:,} calls/month** {status}\n"
-            f"Free tier limit: 10,000 calls/month\n"
-        )
-
-        if total_calls <= 10000:
-            description += f"Headroom: {headroom:,} calls ({headroom_pct:.1f}% buffer)\n\n✅ Within free tier limits"
-        else:
-            excess = total_calls - 10000
-            description += f"\n⚠️ **Warning:** Exceeds free tier by {excess:,} calls/month\n"
-            description += "Consider reducing update intervals or expect charges."
-
-        description += "\n\n---\n**Ready to proceed?** Click **Next** to complete setup."
+        description = _build_usage_description(self.forecast_options, self.interval_data)
 
         return self.async_show_form(
             step_id="confirm",
