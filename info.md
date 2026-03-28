@@ -25,8 +25,6 @@ A comprehensive Home Assistant integration for Google Weather API with smart pol
 - On-demand forecast service for manual fetching
 
 🌍 **Region-Friendly**
-- Metric and Imperial unit systems
-- Auto-detects Home Assistant location and units
 - Configurable location
 - Customizable entity prefixes
 
