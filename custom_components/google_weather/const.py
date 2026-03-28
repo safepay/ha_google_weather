@@ -1,15 +1,13 @@
 """Constants for the Google Weather integration."""
-from datetime import timedelta
 
 DOMAIN = "google_weather"
+VERSION = "1.1.11"
 
 # Configuration
 CONF_API_KEY = "api_key"
 CONF_LOCATION = "location"
 CONF_LATITUDE = "latitude"
 CONF_LONGITUDE = "longitude"
-CONF_UNIT_SYSTEM = "unit_system"
-
 # Update interval configuration
 CONF_CURRENT_DAY_INTERVAL = "current_day_interval"
 CONF_CURRENT_NIGHT_INTERVAL = "current_night_interval"
@@ -26,7 +24,6 @@ CONF_INCLUDE_HOURLY_FORECAST = "include_hourly_forecast"
 CONF_INCLUDE_ALERTS = "include_alerts"
 
 # Defaults
-DEFAULT_UNIT_SYSTEM = "METRIC"
 
 # Default update intervals (in minutes) - optimized for 10,000 free API calls/month
 # Nighttime is 8 hours (22:00-06:00), daytime is 16 hours (06:00-22:00)
@@ -65,7 +62,6 @@ DEFAULT_INCLUDE_ALERTS = True
 # Unit systems
 UNIT_SYSTEM_METRIC = "METRIC"
 UNIT_SYSTEM_IMPERIAL = "IMPERIAL"
-UNIT_SYSTEMS = [UNIT_SYSTEM_METRIC, UNIT_SYSTEM_IMPERIAL]
 
 # API
 API_BASE_URL = "https://weather.googleapis.com/v1"

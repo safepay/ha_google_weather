@@ -17,14 +17,12 @@
         "data": {
           "location": "Emplacement / Préfixe",
           "latitude": "Latitude",
-          "longitude": "Longitude",
-          "unit_system": "Système d'unités"
+          "longitude": "Longitude"
         },
         "data_description": {
           "location": "Nom de l'emplacement utilisé pour les ID d'entité (par défaut : 'home'). Exemples : 'home', 'office', 'gw_home'",
           "latitude": "Coordonnée de latitude pour les données météo (par défaut : emplacement Home Assistant)",
-          "longitude": "Coordonnée de longitude pour les données météo (par défaut : emplacement Home Assistant)",
-          "unit_system": "Choisissez métrique (Celsius, km/h, mm) ou impérial (Fahrenheit, mph, pouces)"
+          "longitude": "Coordonnée de longitude pour les données météo (par défaut : emplacement Home Assistant)"
         }
       },
       "forecasts": {
@@ -90,14 +88,12 @@
         "data": {
           "latitude": "Latitude",
           "longitude": "Longitude",
-          "unit_system": "Système d'unités",
           "include_hourly_forecast": "Inclure les prévisions horaires",
           "include_alerts": "Inclure les alertes météo"
         },
         "data_description": {
           "latitude": "Coordonnée de latitude pour les données météo",
           "longitude": "Coordonnée de longitude pour les données météo",
-          "unit_system": "Choisissez métrique (Celsius, km/h, mm) ou impérial (Fahrenheit, mph, pouces)",
           "include_hourly_forecast": "Activer les prévisions météo horaires",
           "include_alerts": "Activer les alertes météo (non disponibles dans certaines régions)"
         }

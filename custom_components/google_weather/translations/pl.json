@@ -17,14 +17,12 @@
         "data": {
           "location": "Lokalizacja / Prefiks",
           "latitude": "Szerokość geograficzna",
-          "longitude": "Długość geograficzna",
-          "unit_system": "System jednostek"
+          "longitude": "Długość geograficzna"
         },
         "data_description": {
           "location": "Nazwa lokalizacji używana dla ID encji (domyślnie: 'home'). Przykłady: 'home', 'office', 'gw_home'",
           "latitude": "Współrzędna szerokości geograficznej dla danych pogodowych (domyślnie: lokalizacja Home Assistant)",
-          "longitude": "Współrzędna długości geograficznej dla danych pogodowych (domyślnie: lokalizacja Home Assistant)",
-          "unit_system": "Wybierz metryczny (Celsjusz, km/h, mm) lub imperialny (Fahrenheit, mph, cale)"
+          "longitude": "Współrzędna długości geograficznej dla danych pogodowych (domyślnie: lokalizacja Home Assistant)"
         }
       },
       "forecasts": {
@@ -90,14 +88,12 @@
         "data": {
           "latitude": "Szerokość geograficzna",
           "longitude": "Długość geograficzna",
-          "unit_system": "System jednostek",
           "include_hourly_forecast": "Uwzględnij prognozy godzinowe",
           "include_alerts": "Uwzględnij alerty pogodowe"
         },
         "data_description": {
           "latitude": "Współrzędna szerokości geograficznej dla danych pogodowych",
           "longitude": "Współrzędna długości geograficznej dla danych pogodowych",
-          "unit_system": "Wybierz metryczny (Celsjusz, km/h, mm) lub imperialny (Fahrenheit, mph, cale)",
           "include_hourly_forecast": "Włącz prognozy pogody godzinowej",
           "include_alerts": "Włącz alerty pogodowe (niedostępne w niektórych regionach)"
         }

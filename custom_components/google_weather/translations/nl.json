@@ -17,14 +17,12 @@
         "data": {
           "location": "Locatie / Voorvoegsel",
           "latitude": "Breedtegraad",
-          "longitude": "Lengtegraad",
-          "unit_system": "Eenheidssysteem"
+          "longitude": "Lengtegraad"
         },
         "data_description": {
           "location": "Locatienaam gebruikt voor entiteit-ID's (standaard: 'home'). Voorbeelden: 'home', 'office', 'gw_home'",
           "latitude": "Breedtegraadcoördinaat voor weergegevens (standaard: Home Assistant-locatie)",
-          "longitude": "Lengtegraadcoördinaat voor weergegevens (standaard: Home Assistant-locatie)",
-          "unit_system": "Kies metrisch (Celsius, km/u, mm) of imperiaal (Fahrenheit, mph, inches)"
+          "longitude": "Lengtegraadcoördinaat voor weergegevens (standaard: Home Assistant-locatie)"
         }
       },
       "forecasts": {
@@ -90,14 +88,12 @@
         "data": {
           "latitude": "Breedtegraad",
           "longitude": "Lengtegraad",
-          "unit_system": "Eenheidssysteem",
           "include_hourly_forecast": "Uurlijkse voorspellingen opnemen",
           "include_alerts": "Weerwaarschuwingen opnemen"
         },
         "data_description": {
           "latitude": "Breedtegraadcoördinaat voor weergegevens",
           "longitude": "Lengtegraadcoördinaat voor weergegevens",
-          "unit_system": "Kies metrisch (Celsius, km/u, mm) of imperiaal (Fahrenheit, mph, inches)",
           "include_hourly_forecast": "Schakel uurlijkse weervoorspellingen in",
           "include_alerts": "Schakel weerwaarschuwingen in (niet beschikbaar in sommige regio's)"
         }

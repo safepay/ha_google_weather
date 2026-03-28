@@ -29,10 +29,10 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import (
     CONF_INCLUDE_HOURLY_FORECAST,
     CONF_LOCATION,
-    CONF_UNIT_SYSTEM,
     DEFAULT_INCLUDE_HOURLY_FORECAST,
     DOMAIN,
     UNIT_SYSTEM_IMPERIAL,
+    VERSION,
 )
 from .coordinator import GoogleWeatherCoordinator
 
@@ -387,12 +387,12 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
             "name": f"{location_name} Observational Sensors",
             "manufacturer": "Google",
             "model": "Weather API - Sensors",
-            "sw_version": "1.1.10",
+            "sw_version": VERSION,
             "via_device": (DOMAIN, entry.entry_id),
         }
 
-        # Store unit system for property override
-        self._unit_system = entry.options.get(CONF_UNIT_SYSTEM) or entry.data.get(CONF_UNIT_SYSTEM, "METRIC")
+        # Read unit system from coordinator (auto-detected from HA config)
+        self._unit_system = coordinator.unit_system
 
     @property
     def native_unit_of_measurement(self) -> str | None:

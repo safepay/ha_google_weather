@@ -11,8 +11,6 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.util.unit_system import METRIC_SYSTEM
-
 from .const import (
     CONF_ALERTS_DAY_INTERVAL,
     CONF_ALERTS_NIGHT_INTERVAL,
@@ -29,7 +27,6 @@ from .const import (
     CONF_LOCATION,
     CONF_NIGHT_END,
     CONF_NIGHT_START,
-    CONF_UNIT_SYSTEM,
     DEFAULT_ALERTS_DAY_INTERVAL,
     DEFAULT_ALERTS_NIGHT_INTERVAL,
     DEFAULT_CURRENT_DAY_INTERVAL,
@@ -43,12 +40,8 @@ from .const import (
     DEFAULT_INCLUDE_HOURLY_FORECAST,
     DEFAULT_NIGHT_END,
     DEFAULT_NIGHT_START,
-    DEFAULT_UNIT_SYSTEM,
     DOMAIN,
     API_BASE_URL,
-    UNIT_SYSTEMS,
-    UNIT_SYSTEM_METRIC,
-    UNIT_SYSTEM_IMPERIAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -226,7 +219,6 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_LOCATION: user_input[CONF_LOCATION],
                     CONF_LATITUDE: latitude,
                     CONF_LONGITUDE: longitude,
-                    CONF_UNIT_SYSTEM: user_input[CONF_UNIT_SYSTEM],
                 }
                 return await self.async_step_forecasts()
 
@@ -235,10 +227,6 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         default_longitude = self.hass.config.longitude
         default_location_name = self.hass.config.location_name or "home"
 
-        # Determine default unit system from Home Assistant configuration
-        # Use instance check (is_metric is deprecated since HA 2022.11)
-        default_unit_system = UNIT_SYSTEM_METRIC if self.hass.config.units is METRIC_SYSTEM else UNIT_SYSTEM_IMPERIAL
-
         return self.async_show_form(
             step_id="location",
             data_schema=vol.Schema(
@@ -246,7 +234,6 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_LOCATION, default=default_location_name): str,
                     vol.Required(CONF_LATITUDE, default=default_latitude): vol.Coerce(float),
                     vol.Required(CONF_LONGITUDE, default=default_longitude): vol.Coerce(float),
-                    vol.Required(CONF_UNIT_SYSTEM, default=default_unit_system): vol.In(UNIT_SYSTEMS),
                 }
             ),
             errors=errors,
@@ -427,7 +414,6 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 self.location_data = {
                     CONF_LATITUDE: latitude,
                     CONF_LONGITUDE: longitude,
-                    CONF_UNIT_SYSTEM: user_input[CONF_UNIT_SYSTEM],
                 }
                 # Daily forecasts are always enabled (not configurable)
                 self.forecast_options = {
@@ -447,10 +433,6 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 CONF_LONGITUDE,
                 default=current_data.get(CONF_LONGITUDE),
             ): vol.Coerce(float),
-            vol.Required(
-                CONF_UNIT_SYSTEM,
-                default=current_data.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM),
-            ): vol.In(UNIT_SYSTEMS),
             # Hourly forecast checkbox
             vol.Optional(
                 CONF_INCLUDE_HOURLY_FORECAST,
