@@ -11,6 +11,7 @@ from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
+from homeassistant.util.unit_system import METRIC_SYSTEM
 
 from .const import (
     API_BASE_URL,
@@ -28,7 +29,6 @@ from .const import (
     CONF_INCLUDE_HOURLY_FORECAST,
     CONF_NIGHT_END,
     CONF_NIGHT_START,
-    CONF_UNIT_SYSTEM,
     DEFAULT_ALERTS_DAY_INTERVAL,
     DEFAULT_ALERTS_NIGHT_INTERVAL,
     DEFAULT_CURRENT_DAY_INTERVAL,
@@ -42,12 +42,13 @@ from .const import (
     DEFAULT_INCLUDE_HOURLY_FORECAST,
     DEFAULT_NIGHT_END,
     DEFAULT_NIGHT_START,
-    DEFAULT_UNIT_SYSTEM,
     DOMAIN,
     ENDPOINT_ALERTS,
     ENDPOINT_CURRENT,
     ENDPOINT_DAILY,
     ENDPOINT_HOURLY,
+    UNIT_SYSTEM_IMPERIAL,
+    UNIT_SYSTEM_METRIC,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -160,7 +161,9 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.api_key = entry.data.get(CONF_API_KEY)
         self.latitude = current_data.get(CONF_LATITUDE)
         self.longitude = current_data.get(CONF_LONGITUDE)
-        self.unit_system = current_data.get(CONF_UNIT_SYSTEM, DEFAULT_UNIT_SYSTEM)
+
+        # Auto-detect unit system from Home Assistant's configuration
+        self.unit_system = UNIT_SYSTEM_METRIC if hass.config.units is METRIC_SYSTEM else UNIT_SYSTEM_IMPERIAL
 
         # Get forecast/alerts inclusion settings
         self.include_daily_forecast = current_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST)

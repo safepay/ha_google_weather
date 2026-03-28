@@ -16,7 +16,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import ALERT_SENSOR_KEYS, CONF_INCLUDE_ALERTS, CONF_LOCATION, DEFAULT_INCLUDE_ALERTS, DOMAIN
+from .const import ALERT_SENSOR_KEYS, CONF_INCLUDE_ALERTS, CONF_LOCATION, DEFAULT_INCLUDE_ALERTS, DOMAIN, VERSION
 from .coordinator import GoogleWeatherCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -247,7 +247,7 @@ class GoogleWeatherBinarySensor(
             "name": f"{location_name} Binary Sensors",
             "manufacturer": "Google",
             "model": "Weather API - Binary Sensors",
-            "sw_version": "1.1.10",
+            "sw_version": VERSION,
             "via_device": (DOMAIN, entry.entry_id),
         }
 

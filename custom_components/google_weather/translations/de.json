@@ -17,14 +17,12 @@
         "data": {
           "location": "Standort / Präfix",
           "latitude": "Breitengrad",
-          "longitude": "Längengrad",
-          "unit_system": "Einheitensystem"
+          "longitude": "Längengrad"
         },
         "data_description": {
           "location": "Standortname für Entitäts-IDs (Standard: 'home'). Beispiele: 'home', 'office', 'gw_home'",
           "latitude": "Breitengradkoordinate für Wetterdaten (Standard: Home Assistant-Standort)",
-          "longitude": "Längengradkoordinate für Wetterdaten (Standard: Home Assistant-Standort)",
-          "unit_system": "Wählen Sie metrisch (Celsius, km/h, mm) oder imperial (Fahrenheit, mph, Zoll)"
+          "longitude": "Längengradkoordinate für Wetterdaten (Standard: Home Assistant-Standort)"
         }
       },
       "forecasts": {
@@ -90,14 +88,12 @@
         "data": {
           "latitude": "Breitengrad",
           "longitude": "Längengrad",
-          "unit_system": "Einheitensystem",
           "include_hourly_forecast": "Stündliche Vorhersagen einbeziehen",
           "include_alerts": "Wetterwarnungen einbeziehen"
         },
         "data_description": {
           "latitude": "Breitengradkoordinate für Wetterdaten",
           "longitude": "Längengradkoordinate für Wetterdaten",
-          "unit_system": "Wählen Sie metrisch (Celsius, km/h, mm) oder imperial (Fahrenheit, mph, Zoll)",
           "include_hourly_forecast": "Stündliche Wettervorhersagen aktivieren",
           "include_alerts": "Wetterwarnungen aktivieren (in einigen Regionen nicht verfügbar)"
         }

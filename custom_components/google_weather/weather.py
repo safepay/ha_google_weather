@@ -24,14 +24,12 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    CONF_INCLUDE_DAILY_FORECAST,
     CONF_INCLUDE_HOURLY_FORECAST,
     CONF_LOCATION,
-    CONF_UNIT_SYSTEM,
-    DEFAULT_INCLUDE_DAILY_FORECAST,
     DEFAULT_INCLUDE_HOURLY_FORECAST,
     DOMAIN,
     UNIT_SYSTEM_IMPERIAL,
+    VERSION,
 )
 from .coordinator import GoogleWeatherCoordinator
 
@@ -121,11 +119,11 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
             "name": f"{location_name} Weather",
             "manufacturer": "Google",
             "model": "Weather API",
-            "sw_version": "1.1.10",
+            "sw_version": VERSION,
         }
 
         # Set units based on unit system - API returns values in the requested unit system
-        unit_system = entry.options.get(CONF_UNIT_SYSTEM) or entry.data.get(CONF_UNIT_SYSTEM, "METRIC")
+        unit_system = coordinator.unit_system
         if unit_system == UNIT_SYSTEM_IMPERIAL:
             self._attr_native_temperature_unit = UnitOfTemperature.FAHRENHEIT
             self._attr_native_pressure_unit = UnitOfPressure.MBAR  # API does not convert pressure
