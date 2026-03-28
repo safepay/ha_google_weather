@@ -13,7 +13,6 @@ A comprehensive Home Assistant integration that provides weather data from the G
 - **Weather Alerts**: Real-time weather warnings and alerts from authoritative agencies worldwide
 - **Comprehensive Sensors**: 25+ observational sensors including temperature, wind, precipitation, snow, UV index, and more
 - **Binary Sensors**: Day/night detection and weather alerts (when supported)
-- **Region-Friendly**: Support for both Metric and Imperial unit systems
 - **Configurable Location**: Set custom coordinates via config and options flow
 - **API Key Authentication**: Simple setup using Google Maps API key
 - **HACS Compatible**: Easy installation and updates
@@ -148,7 +147,6 @@ All alert sensors include detailed attributes with alert descriptions, instructi
      Examples: "home", "office", "weather_station"
    - **Latitude**: Location latitude (defaults to Home Assistant location)
    - **Longitude**: Location longitude (defaults to Home Assistant location)
-   - **Unit System**: Choose METRIC or IMPERIAL
 6. Choose forecast and alert options:
    - **Include Daily Forecasts**: Enable automatic fetching of daily forecasts (enabled by default)
    - **Include Hourly Forecasts**: Enable automatic fetching of hourly forecasts (enabled by default)
@@ -348,7 +346,6 @@ You can update location coordinates, unit system, forecast options, and update i
 3. Click "Configure"
 4. Update any of the following:
    - Location coordinates (latitude/longitude)
-   - Unit system (Metric/Imperial)
    - Forecast and alert inclusion (enable/disable daily forecasts, hourly forecasts, weather alerts)
    - Update intervals for enabled endpoints (daytime and nighttime)
    - Nighttime schedule (start and end times)
@@ -357,24 +354,6 @@ You can update location coordinates, unit system, forecast options, and update i
 The integration will automatically reload with the new settings. Changes to forecast options and update intervals take effect immediately.
 
 **Note**: When you disable a forecast or alert option, the corresponding binary sensors will not be created on reload. Re-enabling them will restore the sensors.
-
-## Unit Systems
-
-The integration supports both Metric and Imperial unit systems. Choose your preferred system during setup, and the Google Weather API will return data in those units.
-
-### Metric (Default for most regions)
-- Temperature: Celsius (°C)
-- Wind Speed: Kilometers per hour (km/h)
-- Precipitation: Millimeters (mm)
-- Visibility: Kilometers (km)
-- Pressure: Millibars (mbar)
-
-### Imperial (US and some other regions)
-- Temperature: Fahrenheit (°F)
-- Wind Speed: Miles per hour (mph)
-- Precipitation: Inches (in)
-- Visibility: Miles (mi)
-- Pressure: Millibars (mbar) *Note: API does not convert pressure*
 
 **API Behavior**: The Google Weather API automatically converts most values based on your selected unit system. However, air pressure is always returned in millibars regardless of the unit system setting.
 
