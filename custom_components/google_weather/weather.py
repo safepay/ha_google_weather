@@ -6,6 +6,8 @@ import logging
 from typing import Any
 
 from homeassistant.components.weather import (
+    ATTR_CONDITION_CLEAR_NIGHT,
+    ATTR_CONDITION_SUNNY,
     Forecast,
     WeatherEntity,
     WeatherEntityFeature,
@@ -143,11 +145,18 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
             return None
         return self.coordinator.data.get("current")
 
-    def _map_condition(self, condition_type: str | None) -> str | None:
+    def _map_condition(
+        self,
+        condition_type: str | None,
+        is_daytime: bool | None = None,
+    ) -> str | None:
         """Map Google Weather condition type to Home Assistant condition."""
         if not condition_type:
             return None
-        return CONDITION_MAP.get(condition_type, condition_type.lower())
+        condition = CONDITION_MAP.get(condition_type, condition_type.lower())
+        if condition == ATTR_CONDITION_SUNNY and is_daytime is False:
+            return ATTR_CONDITION_CLEAR_NIGHT
+        return condition
 
     @property
     def condition(self) -> str | None:
@@ -158,7 +167,7 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
         weather_condition = current.get("weatherCondition", {})
         condition_type = weather_condition.get("type")
-        return self._map_condition(condition_type)
+        return self._map_condition(condition_type, current.get("isDaytime"))
 
     @property
     def native_temperature(self) -> float | None:
@@ -381,7 +390,10 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
                 forecast = Forecast(
                     datetime=dt.isoformat(),
-                    condition=self._map_condition(weather_condition.get("type")),
+                    condition=self._map_condition(
+                        weather_condition.get("type"),
+                        hour.get("isDaytime"),
+                    ),
                     native_temperature=hour.get("temperature", {}).get("degrees"),
                     native_apparent_temperature=hour.get("feelsLikeTemperature", {}).get("degrees"),
                     native_precipitation=hour.get("precipitation", {}).get("qpf", {}).get("quantity"),
