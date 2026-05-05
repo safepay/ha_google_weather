@@ -37,7 +37,8 @@ from .coordinator import GoogleWeatherCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-# Map Google Weather API condition types to Home Assistant condition types
+# Map Google Weather API condition types to Home Assistant condition types.
+# Source enum: https://developers.google.com/maps/documentation/weather/reference/rest/v1/WeatherCondition
 CONDITION_MAP = {
     "CLEAR": "sunny",
     "MOSTLY_CLEAR": "sunny",
@@ -46,28 +47,54 @@ CONDITION_MAP = {
     "CLOUDY": "cloudy",
     "OVERCAST": "cloudy",
     "FOG": "fog",
+    "WINDY": "windy",
+    "WIND_AND_RAIN": "rainy",
+    # Rain
     "LIGHT_RAIN": "rainy",
     "RAIN": "rainy",
     "HEAVY_RAIN": "pouring",
-    "RAIN_SHOWERS": "rainy",
-    "RAIN_AND_SNOW": "snowy-rainy",
+    "LIGHT_RAIN_SHOWERS": "rainy",
+    "CHANCE_OF_SHOWERS": "rainy",
     "SCATTERED_SHOWERS": "rainy",
+    "RAIN_SHOWERS": "rainy",
+    "HEAVY_RAIN_SHOWERS": "pouring",
+    "LIGHT_TO_MODERATE_RAIN": "rainy",
+    "MODERATE_TO_HEAVY_RAIN": "pouring",
+    "RAIN_PERIODICALLY_HEAVY": "pouring",
     "DRIZZLE": "rainy",
+    # Snow
     "LIGHT_SNOW": "snowy",
-    "LIGHT_SNOW_SHOWERS": "snowy",
     "SNOW": "snowy",
     "HEAVY_SNOW": "snowy",
-    "HEAVY_SNOW_STORM": "snowy",
+    "LIGHT_SNOW_SHOWERS": "snowy",
+    "CHANCE_OF_SNOW_SHOWERS": "snowy",
+    "SCATTERED_SNOW_SHOWERS": "snowy",
     "SNOW_SHOWERS": "snowy",
+    "HEAVY_SNOW_SHOWERS": "snowy",
+    "LIGHT_TO_MODERATE_SNOW": "snowy",
+    "MODERATE_TO_HEAVY_SNOW": "snowy",
+    "SNOWSTORM": "snowy",
+    "SNOW_PERIODICALLY_HEAVY": "snowy",
+    "HEAVY_SNOW_STORM": "snowy",
+    "BLOWING_SNOW": "snowy",
     "BLIZZARD": "snowy",
+    # Mixed precipitation
+    "RAIN_AND_SNOW": "snowy-rainy",
     "SLEET": "snowy-rainy",
+    # Hail
     "HAIL": "hail",
+    "HAIL_SHOWERS": "hail",
+    # Thunderstorms
     "THUNDERSTORM": "lightning",
+    "THUNDERSHOWER": "lightning-rainy",
+    "LIGHT_THUNDERSTORM_RAIN": "lightning-rainy",
+    "SCATTERED_THUNDERSTORMS": "lightning",
+    "HEAVY_THUNDERSTORM": "lightning-rainy",
     "SEVERE_THUNDERSTORM": "lightning-rainy",
+    # Severe
     "TORNADO": "exceptional",
     "HURRICANE": "hurricane",
     "TROPICAL_STORM": "hurricane",
-    "WINDY": "windy",
     "PARTLY_CLEAR": "partlycloudy",
 }
 
