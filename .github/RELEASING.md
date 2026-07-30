@@ -5,8 +5,8 @@ to be bumped, tagged or written by hand.
 
 ## Cutting a release
 
-1. Make sure everything you want to ship is merged into `main` and that any
-   checks on the branch are green.
+1. Make sure everything you want to ship is merged into `main` and that
+   **Hassfest** and **Validate** are green.
 2. Go to **Actions → Release → Run workflow**.
 3. Choose the bump:
    - **patch** — bug fixes (`1.1.13` → `1.1.14`)
