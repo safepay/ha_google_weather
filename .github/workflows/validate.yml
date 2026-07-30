@@ -1,0 +1,24 @@
+name: Validate
+
+on:
+  # Branch pushes are covered by the pull_request trigger, so push is limited to
+  # main to stop every commit on an open PR running this twice.
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  validate-hacs:
+    runs-on: "ubuntu-latest"
+    name: Validate with HACS Action
+    steps:
+      - name: HACS validation
+        uses: "hacs/action@main"
+        with:
+          category: "integration"
+          # Skipped until brand assets are added at
+          # custom_components/google_weather/brand/icon.png.
+          ignore: "brands"

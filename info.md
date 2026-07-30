@@ -3,7 +3,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/safepay/ha_google_weather)](https://github.com/safepay/ha_google_weather/releases)
 [![License](https://img.shields.io/github/license/safepay/ha_google_weather)](https://github.com/safepay/ha_google_weather/blob/main/LICENSE)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1%2B-blue.svg)](https://www.home-assistant.io/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.11.0+-blue.svg)](https://www.home-assistant.io/)
 
 A comprehensive Home Assistant integration for Google Weather API with smart polling and API optimization.
 
@@ -56,7 +56,7 @@ Optimized for Google's free tier (10,000 calls/month):
 
 ## Requirements
 
-- Home Assistant 2023.1+
+- Home Assistant 2024.11.0+
 - Google Cloud project with Weather API enabled
 - Google Maps Platform API key
 

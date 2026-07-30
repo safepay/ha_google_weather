@@ -1,0 +1,20 @@
+name: Hassfest
+
+on:
+  # Branch pushes are covered by the pull_request trigger, so push is limited to
+  # main to stop every commit on an open PR running this twice.
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: "ubuntu-latest"
+    name: Validate with hassfest
+    steps:
+      - name: Checkout repository
+        uses: "actions/checkout@v4"
+
+      - name: Run hassfest
+        uses: "home-assistant/actions/hassfest@master"

@@ -1,0 +1,163 @@
+name: Release
+
+# Manually triggered from the Actions tab. Pick a bump type and this will:
+#   1. work out the next version from manifest.json
+#   2. bump manifest.json and commit it
+#   3. tag that commit as vX.Y.Z
+#   4. create the GitHub release HACS reads, with notes generated from the
+#      merged PRs and commits since the previous release
+#
+# Versions are always plain X.Y.Z, including pre-releases. A pre-release is the
+# same version number as the eventual stable one, distinguished only by GitHub's
+# pre-release flag, so promoting it needs no rebuild: see .github/RELEASING.md.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Which part of the version to increment"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      title:
+        description: "Release title (leave blank to use the version number)"
+        type: string
+      prerelease:
+        description: "Publish as a pre-release (only reaches HACS users who have enabled beta versions)"
+        type: boolean
+        default: false
+      draft:
+        description: "Create as a draft so the notes can be edited before publishing"
+        type: boolean
+        default: false
+
+# The repository default for GITHUB_TOKEN is read-only, so the write access
+# needed to push the bump commit, the tag and the release is requested here.
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+
+env:
+  MANIFEST: custom_components/google_weather/manifest.json
+  # const.py carries a second copy of the version, used as sw_version on the
+  # device info, so it has to be bumped in lockstep with the manifest.
+  CONST: custom_components/google_weather/const.py
+
+jobs:
+  release:
+    name: Bump, tag and publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Needed so the existing tags are available to check against.
+          fetch-depth: 0
+
+      - name: Guard against releasing from a side branch
+        run: |
+          if [ "$GITHUB_REF_NAME" != "${{ github.event.repository.default_branch }}" ]; then
+            echo "::error::Releases must be cut from ${{ github.event.repository.default_branch }}, not $GITHUB_REF_NAME."
+            exit 1
+          fi
+
+      - name: Work out the next version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          current="$(jq -r '.version' "$MANIFEST")"
+          IFS='.' read -r major minor patch <<< "$current"
+          case "$BUMP" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+          next="${major}.${minor}.${patch}"
+
+          if git rev-parse -q --verify "refs/tags/v${next}" >/dev/null; then
+            echo "::error::Tag v${next} already exists. Bump a different part of the version."
+            exit 1
+          fi
+
+          echo "next=${next}" >> "$GITHUB_OUTPUT"
+          echo "Releasing **${current} -> ${next}**" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Bump the version in manifest.json and const.py
+        env:
+          NEXT: ${{ steps.version.outputs.next }}
+        run: |
+          # Edit the single line in each file rather than rewriting them, so the
+          # existing formatting is preserved and each diff stays to one line.
+          sed -i -E "s/(\"version\": \")[^\"]+(\")/\1${NEXT}\2/" "$MANIFEST"
+          sed -i -E "s/(^VERSION = \")[^\"]+(\")/\1${NEXT}\2/" "$CONST"
+
+          # Confirm the manifest is still valid JSON and that both bumps landed.
+          # A silent no-op here would ship a release whose device info disagrees
+          # with the version HACS installed.
+          jq -e --arg v "$NEXT" '.version == $v' "$MANIFEST" > /dev/null
+          if ! grep -qx "VERSION = \"${NEXT}\"" "$CONST"; then
+            echo "::error::VERSION in ${CONST} was not bumped to ${NEXT}."
+            exit 1
+          fi
+
+          git --no-pager diff -- "$MANIFEST" "$CONST"
+
+      - name: Commit and tag
+        env:
+          NEXT: ${{ steps.version.outputs.next }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: bump version to ${NEXT}"
+          git tag -a "v${NEXT}" -m "v${NEXT}"
+          # --atomic: the branch and the tag land together, or neither does.
+          git push --atomic origin \
+            "HEAD:refs/heads/${GITHUB_REF_NAME}" \
+            "refs/tags/v${NEXT}"
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEXT: ${{ steps.version.outputs.next }}
+          TITLE: ${{ inputs.title }}
+          DRAFT: ${{ inputs.draft }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          args=(--verify-tag --generate-notes --title "${TITLE:-v${NEXT}}")
+
+          if [ "$PRERELEASE" = "true" ]; then
+            args+=(--prerelease)
+          fi
+
+          if [ "$DRAFT" = "true" ]; then
+            args+=(--draft)
+          fi
+
+          # --latest is what makes HACS offer the release to everyone, so it is
+          # withheld from a pre-release (beta opt-ins only) and from a draft
+          # (nothing is published yet). Promoting a pre-release is done from the
+          # GitHub UI afterwards; the tag and manifest already hold the real
+          # version, so there is nothing to rebuild.
+          if [ "$PRERELEASE" != "true" ] && [ "$DRAFT" != "true" ]; then
+            args+=(--latest)
+          fi
+
+          gh release create "v${NEXT}" "${args[@]}"
+
+          if [ "$PRERELEASE" = "true" ]; then
+            {
+              echo "Pre-release v${NEXT} created."
+              echo ""
+              echo "It reaches only users who have enabled beta versions for this"
+              echo "repository in HACS. To ship it to everyone, edit the release on"
+              echo "GitHub: untick **Set as a pre-release**, tick **Set as the latest"
+              echo "release**. No new version or tag is needed."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Release v${NEXT} created." >> "$GITHUB_STEP_SUMMARY"
+          fi
