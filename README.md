@@ -3,7 +3,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/safepay/ha_google_weather)](https://github.com/safepay/ha_google_weather/releases)
 [![License](https://img.shields.io/github/license/safepay/ha_google_weather)](https://github.com/safepay/ha_google_weather/blob/main/LICENSE)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1%2B-blue.svg)](https://www.home-assistant.io/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.11.0+-blue.svg)](https://www.home-assistant.io/)
 
 A comprehensive Home Assistant integration that provides weather data from the Google Weather API with current conditions, forecasts, and alerts.
 
@@ -83,7 +83,7 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 1. **Google Cloud Project**: Create a project at [Google Cloud Console](https://console.cloud.google.com/)
 2. **Google Weather API**: Enable the Weather API in your project
 3. **API Key**: Create a Google Maps API key in Google Cloud
-4. **Home Assistant**: Version 2023.1 or later
+4. **Home Assistant**: Version 2024.11.0 or later
 
 ## Installation
 
