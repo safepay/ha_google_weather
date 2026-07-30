@@ -19,3 +19,6 @@ jobs:
         uses: "hacs/action@main"
         with:
           category: "integration"
+          # Skipped until brand assets are added at
+          # custom_components/google_weather/brand/icon.png.
+          ignore: "brands"
