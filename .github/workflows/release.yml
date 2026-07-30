@@ -43,6 +43,9 @@ concurrency:
 
 env:
   MANIFEST: custom_components/google_weather/manifest.json
+  # const.py carries a second copy of the version, used as sw_version on the
+  # device info, so it has to be bumped in lockstep with the manifest.
+  CONST: custom_components/google_weather/const.py
 
 jobs:
   release:
@@ -84,17 +87,25 @@ jobs:
           echo "next=${next}" >> "$GITHUB_OUTPUT"
           echo "Releasing **${current} -> ${next}**" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Bump the version in manifest.json
+      - name: Bump the version in manifest.json and const.py
         env:
           NEXT: ${{ steps.version.outputs.next }}
         run: |
-          # Edit the single line rather than rewriting via jq, so the file's
-          # existing formatting is preserved and the diff stays to one line.
+          # Edit the single line in each file rather than rewriting them, so the
+          # existing formatting is preserved and each diff stays to one line.
           sed -i -E "s/(\"version\": \")[^\"]+(\")/\1${NEXT}\2/" "$MANIFEST"
+          sed -i -E "s/(^VERSION = \")[^\"]+(\")/\1${NEXT}\2/" "$CONST"
 
-          # Confirm the file is still valid JSON and the bump actually landed.
+          # Confirm the manifest is still valid JSON and that both bumps landed.
+          # A silent no-op here would ship a release whose device info disagrees
+          # with the version HACS installed.
           jq -e --arg v "$NEXT" '.version == $v' "$MANIFEST" > /dev/null
-          git --no-pager diff -- "$MANIFEST"
+          if ! grep -qx "VERSION = \"${NEXT}\"" "$CONST"; then
+            echo "::error::VERSION in ${CONST} was not bumped to ${NEXT}."
+            exit 1
+          fi
+
+          git --no-pager diff -- "$MANIFEST" "$CONST"
 
       - name: Commit and tag
         env:

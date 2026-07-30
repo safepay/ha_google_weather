@@ -17,10 +17,13 @@ to be bumped, tagged or written by hand.
 5. Tick **prerelease** to ship it to beta testers only — see below.
 6. Tick **draft** if you want to rewrite the notes before users see it.
 
-The workflow then bumps `version` in
-[manifest.json](../custom_components/google_weather/manifest.json), commits it
-as `chore: bump version to X.Y.Z`, tags that commit `vX.Y.Z`, and creates the
-GitHub release with notes generated from the PRs and commits since the last one.
+The workflow then bumps the version in both
+[manifest.json](../custom_components/google_weather/manifest.json) and
+[const.py](../custom_components/google_weather/const.py) — the latter's
+`VERSION` is what the integration reports as `sw_version` on the device page, so
+the two must stay in lockstep. It commits them as `chore: bump version to
+X.Y.Z`, tags that commit `vX.Y.Z`, and creates the GitHub release with notes
+generated from the PRs and commits since the last one.
 
 HACS picks the release up from that point. Because the tag points at the bump
 commit, the version HACS installs always matches the tag.
