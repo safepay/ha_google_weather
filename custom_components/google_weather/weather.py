@@ -25,6 +25,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
+from .conditions import CONDITION_MAP
 from .const import (
     CONF_INCLUDE_HOURLY_FORECAST,
     CONF_LOCATION,
@@ -36,67 +37,6 @@ from .const import (
 from .coordinator import GoogleWeatherCoordinator
 
 _LOGGER = logging.getLogger(__name__)
-
-# Map Google Weather API condition types to Home Assistant condition types.
-# Source enum: https://developers.google.com/maps/documentation/weather/reference/rest/v1/WeatherCondition
-CONDITION_MAP = {
-    "CLEAR": "sunny",
-    "MOSTLY_CLEAR": "sunny",
-    "PARTLY_CLOUDY": "partlycloudy",
-    "MOSTLY_CLOUDY": "cloudy",
-    "CLOUDY": "cloudy",
-    "OVERCAST": "cloudy",
-    "FOG": "fog",
-    "WINDY": "windy",
-    "WIND_AND_RAIN": "rainy",
-    # Rain
-    "LIGHT_RAIN": "rainy",
-    "RAIN": "rainy",
-    "HEAVY_RAIN": "pouring",
-    "LIGHT_RAIN_SHOWERS": "rainy",
-    "CHANCE_OF_SHOWERS": "rainy",
-    "SCATTERED_SHOWERS": "rainy",
-    "RAIN_SHOWERS": "rainy",
-    "HEAVY_RAIN_SHOWERS": "pouring",
-    "LIGHT_TO_MODERATE_RAIN": "rainy",
-    "MODERATE_TO_HEAVY_RAIN": "pouring",
-    "RAIN_PERIODICALLY_HEAVY": "pouring",
-    "DRIZZLE": "rainy",
-    # Snow
-    "LIGHT_SNOW": "snowy",
-    "SNOW": "snowy",
-    "HEAVY_SNOW": "snowy",
-    "LIGHT_SNOW_SHOWERS": "snowy",
-    "CHANCE_OF_SNOW_SHOWERS": "snowy",
-    "SCATTERED_SNOW_SHOWERS": "snowy",
-    "SNOW_SHOWERS": "snowy",
-    "HEAVY_SNOW_SHOWERS": "snowy",
-    "LIGHT_TO_MODERATE_SNOW": "snowy",
-    "MODERATE_TO_HEAVY_SNOW": "snowy",
-    "SNOWSTORM": "snowy",
-    "SNOW_PERIODICALLY_HEAVY": "snowy",
-    "HEAVY_SNOW_STORM": "snowy",
-    "BLOWING_SNOW": "snowy",
-    "BLIZZARD": "snowy",
-    # Mixed precipitation
-    "RAIN_AND_SNOW": "snowy-rainy",
-    "SLEET": "snowy-rainy",
-    # Hail
-    "HAIL": "hail",
-    "HAIL_SHOWERS": "hail",
-    # Thunderstorms
-    "THUNDERSTORM": "lightning",
-    "THUNDERSHOWER": "lightning-rainy",
-    "LIGHT_THUNDERSTORM_RAIN": "lightning-rainy",
-    "SCATTERED_THUNDERSTORMS": "lightning",
-    "HEAVY_THUNDERSTORM": "lightning-rainy",
-    "SEVERE_THUNDERSTORM": "lightning-rainy",
-    # Severe
-    "TORNADO": "exceptional",
-    "HURRICANE": "hurricane",
-    "TROPICAL_STORM": "hurricane",
-    "PARTLY_CLEAR": "partlycloudy",
-}
 
 
 async def async_setup_entry(
