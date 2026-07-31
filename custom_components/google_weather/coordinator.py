@@ -13,6 +13,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_system import METRIC_SYSTEM
 
+from .conditions import SNOW_CONDITION_TYPES
 from .const import (
     API_BASE_URL,
     CONF_ALERTS_DAY_INTERVAL,
@@ -52,24 +53,6 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-SNOW_CONDITION_TYPES = {
-    "LIGHT_SNOW",
-    "SNOW",
-    "HEAVY_SNOW",
-    "LIGHT_SNOW_SHOWERS",
-    "CHANCE_OF_SNOW_SHOWERS",
-    "SCATTERED_SNOW_SHOWERS",
-    "SNOW_SHOWERS",
-    "HEAVY_SNOW_SHOWERS",
-    "LIGHT_TO_MODERATE_SNOW",
-    "MODERATE_TO_HEAVY_SNOW",
-    "SNOWSTORM",
-    "SNOW_PERIODICALLY_HEAVY",
-    "HEAVY_SNOW_STORM",
-    "BLOWING_SNOW",
-    "BLIZZARD",
-}
 
 
 def _is_snow_condition(condition: str | None) -> bool:
