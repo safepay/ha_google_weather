@@ -21,10 +21,40 @@ Each segment carries a time frame, a precipitation `type` (`NONE`, `RAIN`,
 `intensity` (`NO_INTENSITY`, `LIGHT`, `MODERATE`, `HEAVY`). Onset is the first
 non-`NONE` segment; accumulation is the sum of `qpf` over a window.
 
+### What a real response looks like
+
+A live dry-weather request (Melbourne, September 2026) returned **six segments,
+not the ~180 a fixed two-minute cadence would give**, and an empty
+`nextPageToken` — so a refresh is genuinely one call, and the cost model below
+holds.
+
+Segment boundaries follow the data rather than the clock. The first segment was
+a single merged block covering five and a half hours of `NONE`; the remaining
+five were fifteen minutes each. Google's own documented example shows two-minute
+segments, and it contains `RAIN`. The most likely reading is that granularity is
+**adaptive — fine where something is happening, coarse where nothing is** — and
+that responses are run-length encoded. This needs a wet-weather sample to
+confirm, and the fifteen-minute tail is unexplained either way.
+
+Two consequences worth designing around, both observed:
+
+- **Segments do not tile `overallPredictionTimeframe`.** The declared window was
+  22:16–04:16; the segments ran 21:15–04:00. The first began an hour in the
+  past, and the final sixteen minutes of the window had no segment at all. Clamp
+  to the present when computing onset, and never assume full coverage.
+- **A dry response is tiny**, because the merge collapses it. The common case
+  costs almost nothing to parse or store.
+
+If the run-length reading is right it hands the design something better than it
+asked for: that first merged block is a machine-readable assertion of "nothing
+until 02:45", which is the dry guarantee the polling scheme rests on, stated
+outright rather than inferred by scanning every segment.
+
 The endpoint is **Experimental (pre-GA)**. It is absent from the versioned REST
 reference, and the API FAQ still claims nowcasting is not offered at all — only
-the guide page documents it. Treat the response shape as unstable and guard
-every read, more strictly than for the GA endpoints.
+the guide page documents it. Note that the documented segment cadence already
+disagrees with observed responses. Treat the shape as unstable and guard every
+read, more strictly than for the GA endpoints.
 
 ## Why sensors, not the weather entity
 
@@ -165,10 +195,18 @@ Gated on a new opt-in, defaulting to off because the endpoint is pre-GA:
 Derived values should be computed at fetch time in the coordinator and cached,
 following the existing 24-hour snow total, so the sensors stay simple lookups.
 
-Do not put all ~180 raw segments in a state attribute. The recorder
-re-serialises attributes on every state change, and a payload that size is
-enough to notice. Downsample to ten-minute buckets for the attribute, or keep it
-out of the recorder.
+Attaching the raw segments as a state attribute is fine. An earlier draft of
+this plan called for downsampling them, on the assumption of ~180 objects per
+response; the observed count is single figures, so there is nothing to
+downsample and the recorder has nothing to complain about. Revisit only if a
+wet-weather sample turns out to be very much larger.
+
+Onset precision must not be overstated. The sensor's value comes from a
+segment's `startTime`, and that segment may be fifteen minutes wide — or five
+hours, in the merged dry case. Reporting "rain in 7 minutes" off the front edge
+of a fifteen-minute block invents precision the data does not carry. Report the
+onset time as given and expose the segment's duration alongside it, so the
+resolution is visible rather than implied.
 
 ## Config flow
 
@@ -199,12 +237,18 @@ fit for fetching a nowcast from an automation with polling turned down.
 
 ## Unknowns to settle first
 
-- `pageSize` has no documented default or maximum. If the default is small, one
-  logical refresh becomes several billed calls and every figure above is wrong.
-  Probe with a large `pageSize`, count the segments and check for a
-  `nextPageToken` before committing to the cost model.
-- Confirm coverage at the target location, and that segment duration is really
-  two minutes rather than an artefact of the documentation's example.
+- **Settled:** a plain request with no `pageSize` returned the whole six-hour
+  window in one page with an empty `nextPageToken`. A refresh is one billed
+  call, and the cost model above stands. Coverage is confirmed for Melbourne.
+- Re-request the same period with `pageSize=100`. If more, finer segments come
+  back, granularity is being capped by a default rather than driven by the data,
+  and the adaptive-resolution reading above is wrong. An empty `nextPageToken`
+  argues against this, but it is a cheap and decisive check.
+- Capture a **wet-weather sample**. Everything about how this feature behaves
+  when it matters — segment count, whether granularity really sharpens to two
+  minutes around precipitation, whether a busy response paginates — is currently
+  inferred from a single dry response and Google's example. Do this before
+  writing the parser.
 
 ## Not in scope
 
