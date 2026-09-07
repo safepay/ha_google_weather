@@ -74,3 +74,9 @@ ENDPOINT_ALERTS = "alerts"
 
 # Alert sensor keys (used in binary_sensor.py and __init__.py)
 ALERT_SENSOR_KEYS = frozenset({"weather_alert", "severe_weather_alert", "urgent_weather_alert"})
+
+# How long to leave between requests once a location has answered 404 for
+# alerts. Google adds alert coverage over time, so support is re-checked rather
+# than treated as permanent, but at a rate that costs ~30 calls a month instead
+# of the ~2,400 the configured intervals would spend on a 404.
+ALERTS_UNSUPPORTED_RETRY_MINUTES = 1440  # once a day

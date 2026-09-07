@@ -15,6 +15,7 @@ from homeassistant.util.unit_system import METRIC_SYSTEM
 
 from .conditions import SNOW_CONDITION_TYPES
 from .const import (
+    ALERTS_UNSUPPORTED_RETRY_MINUTES,
     API_BASE_URL,
     CONF_ALERTS_DAY_INTERVAL,
     CONF_ALERTS_NIGHT_INTERVAL,
@@ -238,6 +239,13 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         is_night = self._is_night_time()
         interval_minutes = self.intervals[endpoint]["night" if is_night else "day"]
 
+        # A location outside Google's alert coverage answers 404 to every
+        # request, so polling it at the configured interval spends calls on a
+        # response that can never carry an alert. Back off to a daily probe
+        # instead of giving up, since coverage does get added over time.
+        if endpoint == ENDPOINT_ALERTS and self.alerts_supported is False:
+            interval_minutes = max(interval_minutes, ALERTS_UNSUPPORTED_RETRY_MINUTES)
+
         # Check if enough time has passed
         time_since_update = (dt_util.now() - last_update).total_seconds() / 60
         return time_since_update >= interval_minutes
@@ -382,20 +390,25 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     alerts_response.raise_for_status()
                     alerts_data = alerts_response.json()
                     updated_data["alerts"] = alerts_data.get("weatherAlerts", [])
-                    # Mark alerts as supported for this location
-                    if self.alerts_supported is None:
+                    # Mark alerts as supported for this location. This also
+                    # covers a location that starts answering after previously
+                    # returning 404; the alert entities are created at platform
+                    # setup, so they appear on the next reload or restart.
+                    if self.alerts_supported is not True:
                         self.alerts_supported = True
                         _LOGGER.info("Weather alerts are supported for this location")
                 except requests.HTTPError as err:
                     # Handle 404 errors gracefully - region doesn't support alerts
                     if err.response.status_code == 404:
-                        # Mark alerts as not supported for this location
-                        if self.alerts_supported is None:
+                        # Mark alerts as not supported for this location, which
+                        # also drops the endpoint back to a daily probe.
+                        if self.alerts_supported is not False:
                             self.alerts_supported = False
                             _LOGGER.info(
                                 "Weather alerts not available for this location (HTTP 404). "
                                 "This is normal for regions without alert coverage. "
-                                "Warning sensors will not be created."
+                                "Warning sensors will not be created, and the endpoint "
+                                "will only be re-checked once a day."
                             )
                         updated_data["alerts"] = []
                     else:
