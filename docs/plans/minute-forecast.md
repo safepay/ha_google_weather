@@ -5,8 +5,8 @@
 > Live sampling shows the real nowcast is available in the US but not in
 > Australia, where the endpoint returns a degraded response over `200 OK`. The
 > feature needs a runtime capability check; see
-> [Regional availability](#regional-availability). One call returns one hour,
-> not six.
+> [Regional availability](#regional-availability). Always request
+> `pageSize=500` — the default returns one sixth of the window.
 
 ## Objective
 
@@ -35,11 +35,11 @@ one URL.
 
 | | Melbourne (dry) | Adelaide (wet) | West Virginia (wet) |
 | --- | --- | --- | --- |
-| Segments | 6 | 6 | 30 |
+| Segments | 6 | 6 | 30 by default, 180 at `pageSize=500` |
 | Cadence | 1 block + 5×15m | 1 block + 5×15m | 2 minutes, uniform |
-| Span covered | 6h 45m | 6h 45m | exactly 1h |
+| Span covered | 6h 45m | 6h 45m | 1h by default, 6h at `pageSize=500` |
 | First segment | starts 1h in the past | starts 1h in the past | starts at `startTime` |
-| `nextPageToken` | empty | empty | **populated** |
+| `nextPageToken` | empty | empty | present until the window is exhausted |
 
 **The Australian responses are a degraded tier.** Both returned identical
 segment boundaries — one block covering 21:15–02:45, then five quarter-hour
@@ -65,23 +65,44 @@ Segment count and the duration of the first segment are the discriminators: a
 handful of segments, the first of them hours long, means the nowcast is not
 really available.
 
-**A page is one hour, not six.** The US response covers 22:24–23:24 and hands
-back a `nextPageToken` for the rest. The six-hour `overallPredictionTimeframe`
-is the *model's* horizon, not what one call returns. Thirty segments looks like
-a default page size, so the full window is plausibly six calls.
+**Always send a large explicit `pageSize`.** The parameter is honoured, and it
+decides whether a refresh costs one call or six:
 
-This corrects an earlier conclusion in this document. "One refresh is one billed
-call" was generalised from the Australian samples, whose token was empty only
-because six segments was all they had. For the same reason the `pageSize` test
-run against an Australian location proved nothing about pagination: there was
-nothing further to return. **Whether `pageSize` raises the segments-per-call at a
-supported location is now the open question the cost model depends on.**
+| `pageSize` | Segments | Span | `nextPageToken` |
+| --- | --- | --- | --- |
+| omitted | 30 | 1h | present |
+| 100 | 100 | 3h 20m | present |
+| 179 | 179 | 5h 58m | present |
+| 180 | 180 | 6h — the whole window | **empty** |
+| 500 | 180 | 6h | **empty** |
+
+The window is exactly 180 two-minute segments, and 180 is the exact threshold at
+which the page token disappears. Request the whole thing in one call rather than
+paging: each page is another billed call, and calls are the scarce resource
+here, whereas a larger response body costs nothing.
+
+**Ask for more than 180, not exactly 180.** The figure is a product of the
+current six-hour window and two-minute cadence, and both are undocumented
+behaviour of a pre-GA endpoint. A request pinned to exactly 180 silently returns
+a truncated forecast the day either changes. Send `pageSize=500` and treat a
+non-empty `nextPageToken` as a signal that the assumption has broken — log it
+rather than quietly acting on a partial window, because the polling design
+below trusts the span it was given.
+
+The default is a trap for the same reason. Thirty segments with a page token
+looks like a complete answer and is quietly one sixth of one. An earlier
+`pageSize` test in this project appeared to show the parameter had no effect —
+it was run against an Australian location, where six segments was everything
+available, so it demonstrated nothing.
 
 Other findings from the samples:
 
-- **`intensity` returned `MID_LIGHT`** in both wet responses, which is not among
-  the documented values (`NO_INTENSITY`, `LIGHT`, `MODERATE`, `HEAVY`). The enum
-  is open; do not map it from a closed set.
+- **`intensity` returned `MID_LIGHT`**, which is not among the documented values
+  (`NO_INTENSITY`, `LIGHT`, `MODERATE`, `HEAVY`). The enum is open, and its
+  ordering is not what the names suggest: `MID_LIGHT` accompanied 0.2–0.4 mm/h
+  while `LIGHT` accompanied 1.0 mm/h, so **`MID_LIGHT` is lighter than
+  `LIGHT`** — `MID_` marks a step between named levels, not an intensification
+  of one. Do not rank these by name, and do not map them from a closed set.
 - **`type` is `RAIN` at 36–43% probability**, and at 20–22% in the Adelaide
   sample. Treating any non-`NONE` segment as onset would announce rain on a
   one-in-five chance. Onset needs a probability threshold, not a type check.
@@ -154,18 +175,13 @@ sleep = clamp(minutes_until_first_wet_segment / 2, floor, cap)
 with a floor of about 3 minutes and a cap that depends on whether rain is
 expected at all (below). Precipitation already falling pins it to the floor.
 
-**The horizon is one hour, not six.** An earlier draft of this plan built the
-caps around a six-hour guarantee, before sampling showed that a single call
-returns one hour and hands back a page token for the rest. The scheme is
-unchanged in shape, but every cap must now fit inside the span actually
-fetched — a dry cap somewhere under 50 minutes, leaving margin, rather than the
-two hours previously proposed. Do not let a cap exceed the coverage of the last
-response; that is the invariant the whole design rests on.
-
-Paging further out to extend the horizon is possible but rarely worth it. Each
-page is another billed call, and a second hour of two-minute detail answers a
-question — will it rain late this afternoon — that the hourly forecast already
-answers for free.
+**The cap may never exceed the span the last response actually covered.** That
+is the invariant the whole design rests on, and it is why `pageSize` is a
+requirement rather than an optimisation: at the default the horizon is one hour
+and the dry cap would have to stay under about fifty minutes, whereas
+`pageSize=500` buys a six-hour guarantee for the same single call. Ask for the
+whole window, then cap at around two hours — comfortably inside it, with margin
+for convection developing mid-window.
 
 This was chosen over a fixed day/night interval pair, as used by the other
 endpoints, for two reasons. The day/night split suits data whose *value* varies
@@ -227,26 +243,20 @@ Headroom against the 10,000-call free tier depends on what else is enabled:
 | Hourly forecasts off (−1,680) | 6,960 | 3,040 |
 | Hourly and alerts off (−2,400) | 4,560 | 5,440 |
 
-The one-hour page horizon sets the cost, because it caps how long the integration
-may wait between calls. A 45-minute dry cap with a three-minute floor, in a
-temperate climate with rain falling perhaps 5% of the time, comes to roughly
-**1,600 calls a month** — about 900 from dry-weather polling and 700 from the
-floor during rain.
+With the whole six-hour window fetched in one call, a two-hour dry cap and a
+three-minute floor cost roughly **1,260 calls a month** in a temperate climate:
+about twenty dry days, plus ten carrying a few hours of rain each. That fits
+inside even the smallest headroom above, so the nowcast never *requires* giving
+anything up — though turning hourly forecasts off remains the natural trade for
+anyone who wants more margin.
 
-This is a correction. An earlier draft put the figure at 1,260 using a two-hour
-dry cap, which the six-hour horizon appeared to permit; one hour per call does
-not. The consequence is that the nowcast no longer fits the top row of the
-table. With every other endpoint at its default, adding it runs a couple of
-hundred calls over the free tier, so something must give — and turning hourly
-forecasts off, which frees 1,680, is by far the most natural thing to give. On
-the second row it fits with room to spare.
-
-Note also what the table does *not* imply: surplus headroom cannot be spent
-here. The dry cap is bounded above by the hour a page covers and below by
-diminishing returns — under about fifteen minutes it is re-fetching a forecast
-that has barely changed. That confines any sensible configuration to roughly
-1,500–2,400 calls a month regardless of how much headroom exists. Surplus is
-better given to current conditions, which genuinely improves with frequency.
+Note what the table does *not* imply: surplus headroom cannot usefully be spent
+here. The dry cap is bounded above by the six hours a response covers and below
+by diminishing returns — under about fifteen minutes it is re-fetching a
+forecast that has barely changed. That confines any sensible configuration to
+roughly 1,200–2,400 calls a month regardless of how much headroom exists.
+Surplus is better given to current conditions, which genuinely improves with
+frequency.
 
 Alerts are the wrong thing to trade. Hourly forecasts are a convenience the
 nowcast largely supersedes for short-range rain, so swapping them is a real
@@ -281,10 +291,10 @@ Gated on a new opt-in, defaulting to off because the endpoint is pre-GA:
 Derived values should be computed at fetch time in the coordinator and cached,
 following the existing 24-hour snow total, so the sensors stay simple lookups.
 
-Attaching the raw segments as a state attribute is fine. An earlier draft called
-for downsampling them, assuming ~180 objects per response; a supported-region
-page holds thirty, which the recorder will not notice. Revisit only if raising
-`pageSize` turns out to multiply that.
+Do not attach all the raw segments to a state attribute. Fetching the full
+window means 180 objects, and the recorder re-serialises attributes on every
+state change. Downsample to ten- or fifteen-minute buckets for display, or keep
+the segments out of the recorder entirely and expose only the derived scalars.
 
 Onset precision must not be overstated. The sensor's value comes from a
 segment's `startTime`. In a supported region that is a two-minute window and the
@@ -330,17 +340,13 @@ fit for fetching a nowcast from an automation with polling turned down.
 ## Unknowns to settle first
 
 **Settled.** The real nowcast exists and is regional: US coordinates return
-thirty uniform two-minute segments with genuine variation, Australian ones a
-degraded six-segment response over `200 OK`. Degradation is not signalled by
-status code. A page covers one hour and carries a `nextPageToken` for the rest,
-so a refresh is one call per hour of lookahead, not one call for six.
+uniform two-minute segments with genuine variation, Australian ones a degraded
+six-segment response over `200 OK`. Degradation is not signalled by status code.
 
-**Blocking, and cheap.** Re-run the `pageSize` test against a *supported*
-location. The earlier test used Australian coordinates, where six segments was
-everything available, so it demonstrated nothing about pagination. Thirty
-segments looks like a default page size; if `pageSize` raises it, a longer
-horizon costs one call instead of several and several caps in this plan can be
-loosened. This is the last input the cost model needs.
+`pageSize` is honoured at supported locations, and `pageSize=500` returns all
+180 segments of the six-hour window in one call with an empty page token — so a
+refresh is one billed call and the cost model above stands. Nothing blocks a
+first implementation.
 
 **Still open.**
 
