@@ -199,8 +199,8 @@ overnight. And a fixed interval spends calls uniformly, whereas the whole cost
 problem is that calls are only worth making as rain approaches.
 
 An intermediate "armed" tier polling every 20 minutes was considered and
-rejected: with a dry page already covering the next hour, it buys little onset
-precision for several hundred calls a month.
+rejected: with a dry response already guaranteeing six dry hours, it buys little
+onset precision for several hundred calls a month.
 
 ## What the gate reads: hourly where available, daily otherwise
 
