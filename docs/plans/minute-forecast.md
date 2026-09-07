@@ -95,6 +95,15 @@ looks like a complete answer and is quietly one sixth of one. An earlier
 it was run against an Australian location, where six segments was everything
 available, so it demonstrated nothing.
 
+**Do not generalise this from the other endpoints, or to them.** `forecast/hours`
+caps at 24 results per page whatever `pageSize` asks for — `pageSize=300`
+returns 24 — which is why its full 240-hour window costs ten calls and why
+issue #64 is closed as not worth the budget. `forecast/minutes` honours
+`pageSize` to at least 500. Same API, same parameter, opposite behaviour.
+Reasoning about one from the other gives the wrong answer in both directions,
+so the nowcast's one-call cost model must not be assumed to extend anywhere
+else.
+
 Other findings from the samples:
 
 - **`intensity` returned `MID_LIGHT`**, which is not among the documented values
