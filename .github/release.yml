@@ -1,0 +1,11 @@
+# Controls the notes GitHub generates for a release, which HACS shows users in
+# Home Assistant's update dialog. Read from the default branch at release time,
+# so a change here applies to the next release without needing a new tag.
+#
+# Generated notes list merged pull requests only, so working notes committed
+# straight to main (docs/plans/**) never appear. This excludes the other case:
+# a documentation change that does arrive as a pull request.
+changelog:
+  exclude:
+    labels:
+      - documentation

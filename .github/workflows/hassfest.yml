@@ -2,9 +2,13 @@ name: Hassfest
 
 on:
   # Branch pushes are covered by the pull_request trigger, so push is limited to
-  # main to stop every commit on an open PR running this twice.
+  # main to stop every commit on an open PR running this twice. Design plans are
+  # committed straight to main and touch nothing this validates, so they are
+  # skipped rather than running the job for no reason.
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
   pull_request:
   workflow_dispatch:
 

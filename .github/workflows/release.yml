@@ -5,7 +5,10 @@ name: Release
 #   2. bump manifest.json and commit it
 #   3. tag that commit as vX.Y.Z
 #   4. create the GitHub release HACS reads, with notes generated from the
-#      merged PRs and commits since the previous release
+#      pull requests merged since the previous release. Only merged PRs are
+#      listed, so commits pushed straight to main -- the bump commit below,
+#      and docs/plans updates -- never appear in the notes. A docs change that
+#      does arrive as a PR is excluded via .github/release.yml.
 #
 # Versions are always plain X.Y.Z, including pre-releases. A pre-release is the
 # same version number as the eventual stable one, distinguished only by GitHub's
