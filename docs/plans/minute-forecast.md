@@ -1,6 +1,11 @@
 # Minute forecast (nowcast) support
 
-**Status:** Proposed · **Last reviewed:** 2026-09-08
+**Status:** On hold · **Last reviewed:** 2026-09-08
+
+> Live responses from two Australian cities carry no time resolution in the next
+> four and a half hours, which is the period this feature exists to describe.
+> Do not start building until the US comparison in
+> [Blocking problem](#blocking-problem-no-near-term-resolution) is run.
 
 ## Objective
 
@@ -23,38 +28,78 @@ non-`NONE` segment; accumulation is the sum of `qpf` over a window.
 
 ### What a real response looks like
 
-A live dry-weather request (Melbourne, September 2026) returned **six segments,
-not the ~180 a fixed two-minute cadence would give**, and an empty
-`nextPageToken` — so a refresh is genuinely one call, and the cost model below
-holds.
+Two live requests, September 2026, five minutes apart: Melbourne in dry weather
+and Adelaide in wet. Both returned **six segments, not the ~180 a two-minute
+cadence implies**, and an empty `nextPageToken`. A refresh is genuinely one
+billed call, and the cost model below holds. `pageSize` had no effect on either.
 
-Segment boundaries follow the data rather than the clock. The first segment was
-a single merged block covering five and a half hours of `NONE`; the remaining
-five were fifteen minutes each. Google's own documented example shows two-minute
-segments, and it contains `RAIN`. The most likely reading is that granularity is
-**adaptive — fine where something is happening, coarse where nothing is** — and
-that responses are run-length encoded. This needs a wet-weather sample to
-confirm, and the fifteen-minute tail is unexplained either way.
+Both returned **identical segment boundaries** despite different locations and
+opposite weather:
 
-Two consequences worth designing around, both observed:
+| Segment | Span | Duration |
+| --- | --- | --- |
+| 1 | 21:15 → 02:45 | 5h 30m |
+| 2–6 | 02:45 → 04:00 | 15m each |
 
-- **Segments do not tile `overallPredictionTimeframe`.** The declared window was
-  22:16–04:16; the segments ran 21:15–04:00. The first began an hour in the
-  past, and the final sixteen minutes of the window had no segment at all. Clamp
-  to the present when computing onset, and never assume full coverage.
-- **A dry response is tiny**, because the merge collapses it. The common case
-  costs almost nothing to parse or store.
+So segmentation is a **fixed structure, not driven by the data**. An earlier
+draft of this plan proposed that responses were run-length encoded, with
+granularity sharpening where something was happening; the wet sample disproves
+it. The wet response carried `RAIN` in every segment and was shaped exactly like
+the dry one.
 
-If the run-length reading is right it hands the design something better than it
-asked for: that first merged block is a machine-readable assertion of "nothing
-until 02:45", which is the dry guarantee the polling scheme rests on, stated
-outright rather than inferred by scanning every segment.
+Also observed:
+
+- **Segments do not tile `overallPredictionTimeframe`.** Melbourne's declared
+  window was 22:16–04:16, and its segments ran 21:15–04:00. The first began an
+  hour in the *past*, and the last twenty-odd minutes of the window had no
+  segment. Clamp to the present when computing onset, and never read "no wet
+  segment found" as "dry for the whole window".
+- **`intensity` returned `MID_LIGHT`**, which is not among the documented
+  values (`NO_INTENSITY`, `LIGHT`, `MODERATE`, `HEAVY`). The enum is open. Do
+  not map it from a closed set; unknown values must degrade gracefully.
+- **`type` was `RAIN` at 20–22% probability.** Treating any non-`NONE` segment
+  as onset would fire on a one-in-five chance. Onset needs a probability
+  threshold, not a type check alone.
 
 The endpoint is **Experimental (pre-GA)**. It is absent from the versioned REST
-reference, and the API FAQ still claims nowcasting is not offered at all — only
-the guide page documents it. Note that the documented segment cadence already
-disagrees with observed responses. Treat the shape as unstable and guard every
-read, more strictly than for the GA endpoints.
+reference, the API FAQ still claims nowcasting is not offered at all, and the
+documented segment cadence and intensity enum both disagree with what the API
+actually returns. Treat the shape as unstable and guard every read, more
+strictly than for the GA endpoints.
+
+## Blocking problem: no near-term resolution
+
+The fixed structure puts the detail in the wrong place. The Adelaide request was
+made at 22:21Z and segment 1 ran to 02:45Z, so **the next four and a half hours
+came back as one undifferentiated block**. The only fine detail covered
+02:45–04:00 — between 4.4 and 5.6 hours ahead.
+
+That is backwards for a nowcast, and it defeats the objective at the top of this
+document. For "when will rain arrive", the near term is the whole question, and
+there is no time resolution in it. The most such a response can support is *"22%
+chance of rain, 5.5 mm, somewhere in the next four and a half hours"* — which
+the daily forecast already provides, at no additional cost.
+
+The `qpf` figures confirm the block carries no internal structure: 5.5 mm across
+5.5 hours in segment 1, and 0.25 mm across each 15-minute segment, are both
+exactly 1.0 mm/h. The block is a flat smear at the same uniform rate, not a
+summary of anything varying.
+
+**Most likely a degraded regional tier.** Google's documented example, which
+does show two-minute segments, uses coordinates in West Virginia. The weather
+maps endpoint is explicitly US and Europe only. The high-resolution nowcast
+model is plausibly limited the same way, with other regions receiving a
+synthesised fallback.
+
+This is cheap to settle: request the documentation's own US coordinates
+(`37.60451, -80.59044`) with the same key and compare. Two-minute segments there
+means the resolution is regional and Australian users gain nothing from this
+endpoint. The same six-segment shape means the documented example is stale and
+the endpoint is like this everywhere.
+
+Until that is answered, the rest of this plan is contingent. The polling design
+below still holds — a dry block is still a usable guarantee — but the product it
+would deliver in this region is not worth the calls.
 
 ## Why sensors, not the weather entity
 
@@ -237,18 +282,26 @@ fit for fetching a nowcast from an automation with polling turned down.
 
 ## Unknowns to settle first
 
-- **Settled:** a plain request with no `pageSize` returned the whole six-hour
-  window in one page with an empty `nextPageToken`. A refresh is one billed
-  call, and the cost model above stands. Coverage is confirmed for Melbourne.
-- Re-request the same period with `pageSize=100`. If more, finer segments come
-  back, granularity is being capped by a default rather than driven by the data,
-  and the adaptive-resolution reading above is wrong. An empty `nextPageToken`
-  argues against this, but it is a cheap and decisive check.
-- Capture a **wet-weather sample**. Everything about how this feature behaves
-  when it matters — segment count, whether granularity really sharpens to two
-  minutes around precipitation, whether a busy response paginates — is currently
-  inferred from a single dry response and Google's example. Do this before
-  writing the parser.
+**Settled.** A plain request returns the whole window in one page with an empty
+`nextPageToken`, so a refresh is one billed call and the cost model stands.
+`pageSize` changes nothing. The endpoint responds for Australian coordinates, so
+this is not a coverage 404. A wet-weather sample has been captured, and it is
+shaped identically to a dry one.
+
+**Blocking.** Request `37.60451, -80.59044` — the documentation's own US
+coordinates — and compare the segment structure. This decides whether the
+feature is worth building at all; see [Blocking
+problem](#blocking-problem-no-near-term-resolution).
+
+**Still open, if the US test is favourable.**
+
+- Whether the near-term block shortens as the model's confidence window moves,
+  or is always roughly the next four to five hours. Two samples taken five
+  minutes apart cannot distinguish a fixed structure from a clock-quantised one;
+  sample again several hours later.
+- The full `intensity` enum, given that `MID_LIGHT` is already outside the
+  documented set. Collect values over time rather than guessing at the pattern.
+- A sensible probability threshold for onset, given `RAIN` is reported at 20%.
 
 ## Not in scope
 
