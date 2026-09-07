@@ -69,37 +69,45 @@ An intermediate "armed" tier polling every 20 minutes was considered and
 rejected. Because a dry response already guarantees six dry hours, that tier
 buys almost no onset precision while costing several hundred calls a month.
 
-## Why the gate reads the daily forecast, not the hourly one
+## What the gate reads: hourly where available, daily otherwise
 
 The cap is set from precipitation probability in a forecast the coordinator has
-already fetched and paid for — no extra calls.
+already fetched and paid for — no extra calls either way.
 
-That gate reads the **daily** forecast, not the hourly one. Hourly forecasts are
-user-optional and many users disable them to save calls, so a gate depending on
-hourly silently loses its signal for exactly the people most concerned about
-budget. Daily forecasts are hard-coded on in both the config and options flows,
-so `daytimeForecast` / `nighttimeForecast` precipitation probability is always
-available.
+**Prefer the hourly forecast when it is enabled.** Its lookahead can be trimmed
+to exactly the six hours the nowcast itself covers, so the cap tightens for the
+specific window rain is expected in and stays loose the rest of the day. A daily
+block probability cannot do that: forty per cent across a sixteen-hour daytime
+block holds the cap tight from breakfast onwards for rain that arrives at six in
+the evening.
 
-This matters more than it first appears. Turning hourly off is what creates the
-headroom the nowcast needs (see below), so the users with room to run this
-feature are disproportionately the ones with no hourly data to gate on. An
-hourly-based gate would have been unavailable to precisely the audience the
-feature is for.
+**Fall back to the daily forecast when hourly is disabled.** Hourly forecasts
+are user-optional, and turning them off is exactly what frees the headroom the
+nowcast needs, so the users most likely to run this feature are
+disproportionately the ones with no hourly data to gate on. A gate that only
+understood hourly would be unavailable to its own audience. Daily forecasts are
+hard-coded on in both the config and options flows, so `daytimeForecast` /
+`nighttimeForecast` precipitation probability is always there to fall back to.
 
-Daily is coarser — a probability across a sixteen-hour block says nothing about
-which hours — but that barely matters here, because the gate only sets the cap
-on how long a *dry* response is trusted. The expensive part, polling every few
-minutes while rain is inbound, is driven by the nowcast's own segments. Where
-hourly forecasts are enabled they can sharpen the cap, since their six-hour
-lookahead matches the nowcast window exactly; this is a refinement, never a
-dependency.
+This is one predicate with two sources, not two code paths and not a
+configuration dependency: read hourly if present, else daily. Nothing in the
+config flow needs to couple the two options together, and disabling hourly later
+must degrade the gate rather than break it.
+
+Be honest about the size of the gain. Preferring hourly saves a few hundred
+calls a month at most, because the cost is dominated by time spent at the floor
+while rain is actually falling, and no gate affects that. The real benefit is
+responsiveness: the cap exists to catch convection that develops *inside* the
+six-hour window — the one case the nowcast's own guarantee does not cover — and
+an hourly signal tightens it when that development is actually likely, rather
+than across a whole daylight block.
 
 Two further signals are free and should feed the same predicate: current
-conditions already reporting rain should go straight to the floor, and daily
-`thunderstormProbability` should tighten the cap even when rain probability is
-low, since convective showers are the case hourly and daily guidance most often
-misses and radar nowcasting handles best.
+conditions already reporting rain should go straight to the floor, and
+`thunderstormProbability` — present on both the hourly and the daily blocks —
+should tighten the cap even when rain probability is low, since convective
+showers are the case forecast guidance most often misses and radar nowcasting
+handles best.
 
 ## Estimated cost
 
@@ -177,8 +185,8 @@ disabling alerts prunes the alert entities.
 
 The per-endpoint update predicate is the right seam; the nowcast simply gets a
 different rule from the fixed-interval one. Note that the set of endpoints to
-update is decided for all endpoints before any of them are fetched, so a gate
-reading the daily forecast sees the previous tick's copy. At a one-minute tick
+update is decided for all endpoints before any of them are fetched, so the gate
+sees the previous tick's copy of whichever forecast it reads. At a one-minute tick
 against a six-hour window that lag is harmless, but it should be a deliberate
 choice rather than an accident.
 
