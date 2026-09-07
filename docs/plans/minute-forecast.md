@@ -1,18 +1,19 @@
 # Minute forecast (nowcast) support
 
-**Status:** On hold · **Last reviewed:** 2026-09-08
+**Status:** Proposed, regionally limited · **Last reviewed:** 2026-09-08
 
-> Live responses from two Australian cities carry no time resolution in the next
-> four and a half hours, which is the period this feature exists to describe.
-> Do not start building until the US comparison in
-> [Blocking problem](#blocking-problem-no-near-term-resolution) is run.
+> Live sampling shows the real nowcast is available in the US but not in
+> Australia, where the endpoint returns a degraded response over `200 OK`. The
+> feature needs a runtime capability check; see
+> [Regional availability](#regional-availability). One call returns one hour,
+> not six.
 
 ## Objective
 
 Answer two questions the current entities cannot: *when will rain start* and
-*how much will fall*. Google's experimental minute forecast endpoint returns a
-six-hour precipitation nowcast in roughly two-minute segments, which is the
-right resolution for both.
+*how much will fall*. Google's experimental minute forecast endpoint returns
+precipitation in two-minute segments — one hour of them per call, against a
+six-hour model horizon — which is the right resolution for both.
 
 ## The endpoint
 
@@ -28,78 +29,96 @@ non-`NONE` segment; accumulation is the sum of `qpf` over a window.
 
 ### What a real response looks like
 
-Two live requests, September 2026, five minutes apart: Melbourne in dry weather
-and Adelaide in wet. Both returned **six segments, not the ~180 a two-minute
-cadence implies**, and an empty `nextPageToken`. A refresh is genuinely one
-billed call, and the cost model below holds. `pageSize` had no effect on either.
+Three live requests, September 2026, within minutes of each other. They differ
+so sharply that the endpoint is best understood as two different services behind
+one URL.
 
-Both returned **identical segment boundaries** despite different locations and
-opposite weather:
+| | Melbourne (dry) | Adelaide (wet) | West Virginia (wet) |
+| --- | --- | --- | --- |
+| Segments | 6 | 6 | 30 |
+| Cadence | 1 block + 5×15m | 1 block + 5×15m | 2 minutes, uniform |
+| Span covered | 6h 45m | 6h 45m | exactly 1h |
+| First segment | starts 1h in the past | starts 1h in the past | starts at `startTime` |
+| `nextPageToken` | empty | empty | **populated** |
 
-| Segment | Span | Duration |
-| --- | --- | --- |
-| 1 | 21:15 → 02:45 | 5h 30m |
-| 2–6 | 02:45 → 04:00 | 15m each |
+**The Australian responses are a degraded tier.** Both returned identical
+segment boundaries — one block covering 21:15–02:45, then five quarter-hour
+segments to 04:00 — despite different cities and opposite weather. Segmentation
+there is a fixed structure carrying no information. An earlier draft proposed
+these were run-length encoded, with granularity following the data; the two
+samples together disprove it.
 
-So segmentation is a **fixed structure, not driven by the data**. An earlier
-draft of this plan proposed that responses were run-length encoded, with
-granularity sharpening where something was happening; the wet sample disproves
-it. The wet response carried `RAIN` in every segment and was shaped exactly like
-the dry one.
+**The US response is the real product.** Thirty two-minute segments tiling
+contiguously from `startTime`, with genuine variation: probability drifting
+43→36%, `qpf` stepping 0.0133→0.0067 mm (0.4 down to 0.2 mm/h), and a clean edge
+where `RAIN` gives way to `NONE` at 23:00. That last is exactly the signal this
+plan exists to surface — "rain stops in 36 minutes", stated by the data.
 
-Also observed:
+This confirms regional tiering, matching the US-and-Europe limit already
+documented for weather maps. Two consequences follow, and both matter more than
+the resolution difference itself.
 
-- **Segments do not tile `overallPredictionTimeframe`.** Melbourne's declared
-  window was 22:16–04:16, and its segments ran 21:15–04:00. The first began an
-  hour in the *past*, and the last twenty-odd minutes of the window had no
-  segment. Clamp to the present when computing onset, and never read "no wet
-  segment found" as "dry for the whole window".
-- **`intensity` returned `MID_LIGHT`**, which is not among the documented
-  values (`NO_INTENSITY`, `LIGHT`, `MODERATE`, `HEAVY`). The enum is open. Do
-  not map it from a closed set; unknown values must degrade gracefully.
-- **`type` was `RAIN` at 20–22% probability.** Treating any non-`NONE` segment
-  as onset would fire on a one-in-five chance. Onset needs a probability
-  threshold, not a type check alone.
+**Degradation is invisible at the HTTP layer.** Australia returns `200 OK` with
+a well-formed body. The `alerts_supported` pattern, which keys off a 404, cannot
+be reused directly — support has to be inferred by inspecting the response.
+Segment count and the duration of the first segment are the discriminators: a
+handful of segments, the first of them hours long, means the nowcast is not
+really available.
+
+**A page is one hour, not six.** The US response covers 22:24–23:24 and hands
+back a `nextPageToken` for the rest. The six-hour `overallPredictionTimeframe`
+is the *model's* horizon, not what one call returns. Thirty segments looks like
+a default page size, so the full window is plausibly six calls.
+
+This corrects an earlier conclusion in this document. "One refresh is one billed
+call" was generalised from the Australian samples, whose token was empty only
+because six segments was all they had. For the same reason the `pageSize` test
+run against an Australian location proved nothing about pagination: there was
+nothing further to return. **Whether `pageSize` raises the segments-per-call at a
+supported location is now the open question the cost model depends on.**
+
+Other findings from the samples:
+
+- **`intensity` returned `MID_LIGHT`** in both wet responses, which is not among
+  the documented values (`NO_INTENSITY`, `LIGHT`, `MODERATE`, `HEAVY`). The enum
+  is open; do not map it from a closed set.
+- **`type` is `RAIN` at 36–43% probability**, and at 20–22% in the Adelaide
+  sample. Treating any non-`NONE` segment as onset would announce rain on a
+  one-in-five chance. Onset needs a probability threshold, not a type check.
+- **Segments need not tile `overallPredictionTimeframe`.** In the degraded
+  responses the first began an hour in the past and the last ended twenty
+  minutes short of the declared window. Clamp to the present, and never read "no
+  wet segment found" as "dry for the whole window".
 
 The endpoint is **Experimental (pre-GA)**. It is absent from the versioned REST
-reference, the API FAQ still claims nowcasting is not offered at all, and the
-documented segment cadence and intensity enum both disagree with what the API
-actually returns. Treat the shape as unstable and guard every read, more
-strictly than for the GA endpoints.
+reference, the API FAQ still claims nowcasting is not offered at all, and both
+the documented segment cadence and the intensity enum disagree with what the API
+returns. Treat the shape as unstable and guard every read, more strictly than
+for the GA endpoints.
 
-## Blocking problem: no near-term resolution
+## Regional availability
 
-The fixed structure puts the detail in the wrong place. The Adelaide request was
-made at 22:21Z and segment 1 ran to 02:45Z, so **the next four and a half hours
-came back as one undifferentiated block**. The only fine detail covered
-02:45–04:00 — between 4.4 and 5.6 hours ahead.
+The feature is worth building, but only where the real nowcast exists. Elsewhere
+the response supports nothing the daily forecast does not already provide — a
+flat 1.0 mm/h smear across four and a half hours, which is an absence of
+information rather than a coarse version of it.
 
-That is backwards for a nowcast, and it defeats the objective at the top of this
-document. For "when will rain arrive", the near term is the whole question, and
-there is no time resolution in it. The most such a response can support is *"22%
-chance of rain, 5.5 mm, somewhere in the next four and a half hours"* — which
-the daily forecast already provides, at no additional cost.
+So the endpoint needs a **runtime capability check**, in the spirit of
+`alerts_supported` but keyed on content rather than status: after the first
+fetch, judge whether segments are fine-grained enough to be useful, and if not,
+suppress the entities and stop polling. Getting this right matters more than
+usual, because a user in a degraded region who is not detected pays for calls
+that can never tell them anything.
 
-The `qpf` figures confirm the block carries no internal structure: 5.5 mm across
-5.5 hours in segment 1, and 0.25 mm across each 15-minute segment, are both
-exactly 1.0 mm/h. The block is a flat smear at the same uniform rate, not a
-summary of anything varying.
+Two practical consequences to accept openly:
 
-**Most likely a degraded regional tier.** Google's documented example, which
-does show two-minute segments, uses coordinates in West Virginia. The weather
-maps endpoint is explicitly US and Europe only. The high-resolution nowcast
-model is plausibly limited the same way, with other regions receiving a
-synthesised fallback.
-
-This is cheap to settle: request the documentation's own US coordinates
-(`37.60451, -80.59044`) with the same key and compare. Two-minute segments there
-means the resolution is regional and Australian users gain nothing from this
-endpoint. The same six-segment shape means the documented example is stale and
-the endpoint is like this everywhere.
-
-Until that is answered, the rest of this plan is contingent. The polling design
-below still holds — a dry block is still a usable guarantee — but the product it
-would deliver in this region is not worth the calls.
+- The maintainer cannot dogfood this. Development and support would be for a
+  feature that only functions in regions the maintainer cannot observe from, so
+  the capability check and the parser both need to be defensive by construction
+  rather than by testing.
+- Regional coverage is undocumented and will change. The check must re-evaluate
+  periodically rather than latching permanently, so that regions gaining support
+  later start working without user intervention.
 
 ## Why sensors, not the weather entity
 
@@ -122,10 +141,11 @@ nowcast is useful at all, and a genuinely useful 5-minute interval would cost
 
 ## Design: let the forecast schedule itself
 
-The decisive property is that a response is a **six-hour lookahead, not a
-snapshot**. A response showing `NONE` across every segment is a guarantee that
-rain cannot begin for six hours — so it is also a licence not to poll. Polling
-frequency should therefore be derived from the data already in hand:
+The decisive property is that a response is a **lookahead, not a snapshot**. A
+page showing `NONE` across every segment is a guarantee that rain cannot begin
+for the span that page covers — so it is also a licence not to poll until near
+the end of it. Polling frequency should therefore be derived from the data
+already in hand:
 
 ```text
 sleep = clamp(minutes_until_first_wet_segment / 2, floor, cap)
@@ -134,6 +154,19 @@ sleep = clamp(minutes_until_first_wet_segment / 2, floor, cap)
 with a floor of about 3 minutes and a cap that depends on whether rain is
 expected at all (below). Precipitation already falling pins it to the floor.
 
+**The horizon is one hour, not six.** An earlier draft of this plan built the
+caps around a six-hour guarantee, before sampling showed that a single call
+returns one hour and hands back a page token for the rest. The scheme is
+unchanged in shape, but every cap must now fit inside the span actually
+fetched — a dry cap somewhere under 50 minutes, leaving margin, rather than the
+two hours previously proposed. Do not let a cap exceed the coverage of the last
+response; that is the invariant the whole design rests on.
+
+Paging further out to extend the horizon is possible but rarely worth it. Each
+page is another billed call, and a second hour of two-minute detail answers a
+question — will it rain late this afternoon — that the hourly forecast already
+answers for free.
+
 This was chosen over a fixed day/night interval pair, as used by the other
 endpoints, for two reasons. The day/night split suits data whose *value* varies
 by time of day, which does not describe rain onset — arguably it matters more
@@ -141,8 +174,8 @@ overnight. And a fixed interval spends calls uniformly, whereas the whole cost
 problem is that calls are only worth making as rain approaches.
 
 An intermediate "armed" tier polling every 20 minutes was considered and
-rejected. Because a dry response already guarantees six dry hours, that tier
-buys almost no onset precision while costing several hundred calls a month.
+rejected: with a dry page already covering the next hour, it buys little onset
+precision for several hundred calls a month.
 
 ## What the gate reads: hourly where available, daily otherwise
 
@@ -150,11 +183,11 @@ The cap is set from precipitation probability in a forecast the coordinator has
 already fetched and paid for — no extra calls either way.
 
 **Prefer the hourly forecast when it is enabled.** Its lookahead can be trimmed
-to exactly the six hours the nowcast itself covers, so the cap tightens for the
-specific window rain is expected in and stays loose the rest of the day. A daily
-block probability cannot do that: forty per cent across a sixteen-hour daytime
-block holds the cap tight from breakfast onwards for rain that arrives at six in
-the evening.
+to the next hour or two — roughly what a nowcast page covers — so the cap
+tightens for the specific window rain is expected in and stays loose the rest of
+the day. A daily block probability cannot do that: forty per cent across a
+sixteen-hour daytime block holds the cap tight from breakfast onwards for rain
+that arrives at six in the evening.
 
 **Fall back to the daily forecast when hourly is disabled.** Hourly forecasts
 are user-optional, and turning them off is exactly what frees the headroom the
@@ -173,9 +206,9 @@ Be honest about the size of the gain. Preferring hourly saves a few hundred
 calls a month at most, because the cost is dominated by time spent at the floor
 while rain is actually falling, and no gate affects that. The real benefit is
 responsiveness: the cap exists to catch convection that develops *inside* the
-six-hour window — the one case the nowcast's own guarantee does not cover — and
-an hourly signal tightens it when that development is actually likely, rather
-than across a whole daylight block.
+hour a page covers — the one case the nowcast's own guarantee does not cover —
+and an hourly signal tightens it when that development is actually likely,
+rather than across a whole daylight block.
 
 Two further signals are free and should feed the same predicate: current
 conditions already reporting rain should go straight to the floor, and
@@ -194,18 +227,26 @@ Headroom against the 10,000-call free tier depends on what else is enabled:
 | Hourly forecasts off (−1,680) | 6,960 | 3,040 |
 | Hourly and alerts off (−2,400) | 4,560 | 5,440 |
 
-A conservative configuration — a three-minute floor, a two-hour cap on dry days
-— costs roughly 1,260 calls a month in a temperate climate: about twenty dry
-days, plus ten carrying a few hours of rain each. That fits inside even the
-smallest of those, so the nowcast never *requires* giving anything up. With
-hourly off, a two-minute floor and a one-hour dry cap lands near 1,800.
+The one-hour page horizon sets the cost, because it caps how long the integration
+may wait between calls. A 45-minute dry cap with a three-minute floor, in a
+temperate climate with rain falling perhaps 5% of the time, comes to roughly
+**1,600 calls a month** — about 900 from dry-weather polling and 700 from the
+floor during rain.
 
-Note what the table does *not* imply. Extra headroom does not convert into
-proportionally more useful polling, because a dry response already guarantees
-six dry hours — shortening the dry cap only buys earlier notice of newly
-developed convection, and its value falls away fast. Past roughly 2,000 calls a
-month the nowcast has nothing worthwhile left to spend on, and surplus headroom
-is better given to current conditions, which genuinely improves with frequency.
+This is a correction. An earlier draft put the figure at 1,260 using a two-hour
+dry cap, which the six-hour horizon appeared to permit; one hour per call does
+not. The consequence is that the nowcast no longer fits the top row of the
+table. With every other endpoint at its default, adding it runs a couple of
+hundred calls over the free tier, so something must give — and turning hourly
+forecasts off, which frees 1,680, is by far the most natural thing to give. On
+the second row it fits with room to spare.
+
+Note also what the table does *not* imply: surplus headroom cannot be spent
+here. The dry cap is bounded above by the hour a page covers and below by
+diminishing returns — under about fifteen minutes it is re-fetching a forecast
+that has barely changed. That confines any sensible configuration to roughly
+1,500–2,400 calls a month regardless of how much headroom exists. Surplus is
+better given to current conditions, which genuinely improves with frequency.
 
 Alerts are the wrong thing to trade. Hourly forecasts are a convenience the
 nowcast largely supersedes for short-range rain, so swapping them is a real
@@ -240,18 +281,17 @@ Gated on a new opt-in, defaulting to off because the endpoint is pre-GA:
 Derived values should be computed at fetch time in the coordinator and cached,
 following the existing 24-hour snow total, so the sensors stay simple lookups.
 
-Attaching the raw segments as a state attribute is fine. An earlier draft of
-this plan called for downsampling them, on the assumption of ~180 objects per
-response; the observed count is single figures, so there is nothing to
-downsample and the recorder has nothing to complain about. Revisit only if a
-wet-weather sample turns out to be very much larger.
+Attaching the raw segments as a state attribute is fine. An earlier draft called
+for downsampling them, assuming ~180 objects per response; a supported-region
+page holds thirty, which the recorder will not notice. Revisit only if raising
+`pageSize` turns out to multiply that.
 
 Onset precision must not be overstated. The sensor's value comes from a
-segment's `startTime`, and that segment may be fifteen minutes wide — or five
-hours, in the merged dry case. Reporting "rain in 7 minutes" off the front edge
-of a fifteen-minute block invents precision the data does not carry. Report the
-onset time as given and expose the segment's duration alongside it, so the
-resolution is visible rather than implied.
+segment's `startTime`. In a supported region that is a two-minute window and the
+precision is real; in a degraded one it may be five hours wide. Report the onset
+time as given and expose the segment's duration alongside it, so the resolution
+is visible rather than implied — and rely on the capability check to keep the
+degraded case from producing entities at all.
 
 ## Config flow
 
@@ -269,39 +309,52 @@ disabling alerts prunes the alert entities.
 The per-endpoint update predicate is the right seam; the nowcast simply gets a
 different rule from the fixed-interval one. Note that the set of endpoints to
 update is decided for all endpoints before any of them are fetched, so the gate
-sees the previous tick's copy of whichever forecast it reads. At a one-minute tick
-against a six-hour window that lag is harmless, but it should be a deliberate
-choice rather than an accident.
+sees the previous tick's copy of whichever forecast it reads. At a one-minute
+tick against an hour of coverage that lag is harmless, but it should be a
+deliberate choice rather than an accident.
 
-Coverage for a pre-GA endpoint is unlikely to be global. Mirror the existing
-handling for alerts, where a 404 marks the endpoint unsupported for the location
-and suppresses the entities rather than erroring.
+Support is regional, and — unlike alerts — it is not signalled by a 404. The
+alerts handling is the right *shape* to copy: a tri-state supported flag, checked
+before the endpoint is polled and before entities are created. The test itself
+must be different, judging the response body rather than the status code. See
+[Regional availability](#regional-availability).
+
+Note also the bug that pattern currently has: `alerts_supported` suppresses the
+entities but is never consulted when building the endpoint list, so an
+unsupported location keeps paying for 404s. Do not reproduce that here — a
+degraded response must stop the polling, not just hide the sensors.
 
 The on-demand `get_forecast` service should gain a `minute` option — a natural
 fit for fetching a nowcast from an automation with polling turned down.
 
 ## Unknowns to settle first
 
-**Settled.** A plain request returns the whole window in one page with an empty
-`nextPageToken`, so a refresh is one billed call and the cost model stands.
-`pageSize` changes nothing. The endpoint responds for Australian coordinates, so
-this is not a coverage 404. A wet-weather sample has been captured, and it is
-shaped identically to a dry one.
+**Settled.** The real nowcast exists and is regional: US coordinates return
+thirty uniform two-minute segments with genuine variation, Australian ones a
+degraded six-segment response over `200 OK`. Degradation is not signalled by
+status code. A page covers one hour and carries a `nextPageToken` for the rest,
+so a refresh is one call per hour of lookahead, not one call for six.
 
-**Blocking.** Request `37.60451, -80.59044` — the documentation's own US
-coordinates — and compare the segment structure. This decides whether the
-feature is worth building at all; see [Blocking
-problem](#blocking-problem-no-near-term-resolution).
+**Blocking, and cheap.** Re-run the `pageSize` test against a *supported*
+location. The earlier test used Australian coordinates, where six segments was
+everything available, so it demonstrated nothing about pagination. Thirty
+segments looks like a default page size; if `pageSize` raises it, a longer
+horizon costs one call instead of several and several caps in this plan can be
+loosened. This is the last input the cost model needs.
 
-**Still open, if the US test is favourable.**
+**Still open.**
 
-- Whether the near-term block shortens as the model's confidence window moves,
-  or is always roughly the next four to five hours. Two samples taken five
-  minutes apart cannot distinguish a fixed structure from a clock-quantised one;
-  sample again several hours later.
-- The full `intensity` enum, given that `MID_LIGHT` is already outside the
-  documented set. Collect values over time rather than guessing at the pattern.
-- A sensible probability threshold for onset, given `RAIN` is reported at 20%.
+- Whether the degraded response's structure is fixed or clock-quantised. The two
+  Australian samples were five minutes apart and cannot distinguish the two.
+  Sample again hours later — it decides how the capability check should be
+  written.
+- Where the boundary of the supported region actually falls. Europe is
+  documented as supported for weather maps and is untested here. The capability
+  check must be derived from the response rather than from any list of regions.
+- The full `intensity` enum, given `MID_LIGHT` already sits outside the
+  documented set. Collect values rather than guessing the pattern.
+- A sensible probability threshold for onset, given `RAIN` is reported at 20% in
+  one sample and 36–43% in another, in the latter case while rain was falling.
 
 ## Not in scope
 
