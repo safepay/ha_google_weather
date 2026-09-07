@@ -81,6 +81,12 @@ budget. Daily forecasts are hard-coded on in both the config and options flows,
 so `daytimeForecast` / `nighttimeForecast` precipitation probability is always
 available.
 
+This matters more than it first appears. Turning hourly off is what creates the
+headroom the nowcast needs (see below), so the users with room to run this
+feature are disproportionately the ones with no hourly data to gate on. An
+hourly-based gate would have been unavailable to precisely the audience the
+feature is for.
+
 Daily is coarser — a probability across a sixteen-hour block says nothing about
 which hours — but that barely matters here, because the gate only sets the cap
 on how long a *dry* response is trusted. The expensive part, polling every few
@@ -97,9 +103,40 @@ misses and radar nowcasting handles best.
 
 ## Estimated cost
 
-Roughly 1,260 calls per month for a temperate climate — about twenty dry days
-at a two-hour cap, plus ten days carrying a few hours of rain each. That fits
-the existing headroom without reducing any other endpoint's interval.
+Headroom against the 10,000-call free tier depends on what else is enabled:
+
+| Configuration | Spent | Headroom |
+| --- | --- | --- |
+| Defaults, everything on | 8,640 | 1,360 |
+| Hourly forecasts off (−1,680) | 6,960 | 3,040 |
+| Hourly and alerts off (−2,400) | 4,560 | 5,440 |
+
+A conservative configuration — a three-minute floor, a two-hour cap on dry days
+— costs roughly 1,260 calls a month in a temperate climate: about twenty dry
+days, plus ten carrying a few hours of rain each. That fits inside even the
+smallest of those, so the nowcast never *requires* giving anything up. With
+hourly off, a two-minute floor and a one-hour dry cap lands near 1,800.
+
+Note what the table does *not* imply. Extra headroom does not convert into
+proportionally more useful polling, because a dry response already guarantees
+six dry hours — shortening the dry cap only buys earlier notice of newly
+developed convection, and its value falls away fast. Past roughly 2,000 calls a
+month the nowcast has nothing worthwhile left to spend on, and surplus headroom
+is better given to current conditions, which genuinely improves with frequency.
+
+Alerts are the wrong thing to trade. Hourly forecasts are a convenience the
+nowcast largely supersedes for short-range rain, so swapping them is a real
+upgrade; alerts are safety-critical, and turning them off to fund a rain timer
+is a bad exchange that the documentation should not encourage. The 5,440 row
+describes users whose region has no alert coverage at all, more than it
+describes a configuration to recommend.
+
+Worth saying plainly in the user documentation: for the question this plan
+exists to answer, the nowcast is strictly better than the hourly forecast, and
+the two compete for one budget. Trading hourly for the nowcast is an upgrade for
+short-range rain timing. What it costs is the ten-day hourly outlook, the hourly
+forecast on the weather entity, and the 24-hour snow total, which is derived
+from hourly entries and would go unavailable with them.
 
 The figure is weather-dependent, which changes what the config flow's
 confirmation screen can promise: today it does exact arithmetic, and for this
