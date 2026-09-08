@@ -25,9 +25,10 @@ auth or request plumbing.
 
 Each segment carries a time frame, a precipitation `type` (`NONE`, `RAIN`,
 `SNOW`, `HAIL`), a `probability`, a `qpf` quantity, a `snowfallAmount` and an
-`intensity`. The documented `intensity` values are incomplete and `qpf` appears
-to be conditional on rain occurring; both are covered below, and both change how
-onset and accumulation must be derived.
+`intensity`. Onset comes from `type` and `qpf`; accumulation is the raw sum of
+`qpf`. Two fields are not what their names suggest — the `intensity` values are
+incompletely documented, and `probability` is not the chance of rain — and both
+are covered below.
 
 ### What a real response looks like
 
@@ -147,24 +148,57 @@ either end of the scale. This is the same failure that produced the missing snow
 icons: a new condition needs both an icon and a state, or it renders as
 unknown.
 
-### Probability moves inversely to qpf
+### qpf sums directly; probability does not mean chance of rain
 
-In the London sample the heaviest segments (0.6 mm per quarter hour,
-`MID_MODERATE`) carry 10–13% probability, while the lightest (0.1 mm) carry
-38–46%. That is the signature of a conditional forecast: `qpf` is how much falls
-*if* it rains, and `probability` is whether it does.
+The London nowcast and the hourly forecast were captured for the same location
+and the same six hours, which settles how `qpf` should be aggregated. Summing the
+nowcast's per-segment `qpf` within each hour, against that hour's forecast `qpf`:
 
-Two consequences, and the first is worth 6× on a user-facing number:
+| Hour (UTC) | Nowcast Σ`qpf` | Hourly `qpf` | Ratio | Nowcast probability | Hourly probability |
+| --- | --- | --- | --- | --- | --- |
+| 02 | 0.70 | 0.729 | 0.96 | 27–46% | 70% |
+| 03 | 1.15 | 1.047 | 1.10 | 18–39% | 80% |
+| 04 | 1.80 | 1.305 | 1.38 | 12–23% | 85% |
+| 05 | 2.40 | 1.359 | 1.77 | 12–13% | 86% |
+| 06 | 2.40 | 1.184 | 2.03 | 10–13% | 79% |
+| 07 | 1.60 | 0.868 | 1.84 | 12–17% | 65% |
+| **Total** | **10.05** | **6.49** | **1.55** | | |
 
-- **Summing raw `qpf` may badly overstate accumulation.** Across London's six
-  hours the raw sum is 10.05 mm; weighting each segment by its own probability
-  gives 1.7 mm. That is the difference between a wet morning and drizzle, and
-  which one is correct is not documented. See the open questions.
-- **An onset threshold on probability must be low, or must not use probability
-  at all.** Nothing in the London sample exceeds 46%, so a `probability > 50%`
-  rule would report no rain across six continuous hours of it peaking at
-  2.4 mm/h. Across every wet sample `RAIN` appears between 10% and 46%,
-  including while rain was actually falling.
+**Sum `qpf` raw. Do not weight it by `probability`.** Weighting gives 1.7 mm
+against the hourly endpoint's 6.49, understating by roughly four times. The raw
+sum comes to 1.55× overall and matches almost exactly in the near-term hours,
+which is where a nowcast is most trustworthy. Treating `qpf` as a rate rather
+than a per-segment total was also checked and gives 0.24–0.44×, which is clearly
+wrong.
+
+The residual 1.55× is disagreement between two different forecast systems, not
+an error to correct. Note its shape: the first two hours agree within 10% and
+the divergence grows with lead time, which is what radar-extrapolation nowcasting
+against numerical weather prediction is expected to look like. Do not try to
+reconcile them, and do not blend them.
+
+**The nowcast's `probability` is not the chance of rain, and is not comparable
+to the hourly endpoint's.** For the same hours the hourly forecast reports 65–86%
+while the nowcast reports 10–13%, and the two move in opposite directions: as
+hourly probability and `qpf` both rise, nowcast probability falls. A field that
+drops while rainfall rises is measuring something else — confidence, or the
+likelihood of a particular intensity class — and its meaning is undocumented.
+
+Three rules follow:
+
+- **Derive onset from `type` and `qpf`, not from `probability`.** Those two
+  behave exactly as expected across every sample: `NONE` with `qpf` 0 when dry,
+  `RAIN` with positive `qpf` when wet. This replaces an earlier proposal in this
+  plan to pick a probability threshold, which would have been arbitrary at best:
+  nothing in the London sample exceeds 46%, so a `probability > 50%` rule would
+  have reported no rain at all across six continuous hours of it peaking at
+  2.4 mm/h.
+- **Never share a threshold between the two endpoints.** The polling gate reads
+  hourly probability and sits on a 65–86% scale; anything reading nowcast
+  probability sits on a 10–46% one. A single configured percentage cannot serve
+  both.
+- **Surface the nowcast probability as an attribute at most, never as the basis
+  of a binary sensor**, until its meaning is established.
 
 ### Other findings
 
@@ -338,12 +372,14 @@ too.
 
 Gated on a new opt-in, defaulting to off because the endpoint is pre-GA:
 
-- minutes until precipitation starts (duration)
-- expected precipitation over the next 60 minutes (precipitation depth) —
-  blocked on the `qpf` question in the open questions below, since a raw sum and
-  a probability-weighted one differ by around 6×
+- minutes until precipitation starts (duration), from the first segment whose
+  `type` is not `NONE`
+- expected precipitation over the next 60 minutes (precipitation depth), the raw
+  sum of `qpf` across those segments
 - minutes until precipitation stops (duration)
 - a binary sensor for precipitation expected within the next hour
+
+None of these read `probability`, which does not mean what its name suggests.
 
 Derived values should be computed at fetch time in the coordinator and cached,
 following the existing 24-hour snow total, so the sensors stay simple lookups.
@@ -408,20 +444,9 @@ one billed call and the cost model above stands.
 
 Nothing blocks a first implementation.
 
-**Blocking one sensor, not the feature.** Is `qpf` conditional on rain
-occurring, or already an expected value? London's six hours sum to 10.05 mm raw
-and 1.7 mm probability-weighted, and the inverse relationship between the two
-fields says conditional — but that is inference, and the accumulation sensor
-would be wrong by 6× if it goes the other way.
-
-This is cheap to settle without waiting for rain to fall: the hourly forecast
-already carries `precipitation.qpf.quantity` and
-`precipitation.probability.percent` for the same location and period, and the
-coordinator already fetches it. Compare an hour of summed nowcast `qpf` against
-that hour's forecast `qpf`. If they agree, `qpf` is an expected value and a raw
-sum is right; if the nowcast sum is several times larger, it is conditional and
-must be weighted. Do this before writing the accumulation sensor. Onset and the
-"rain expected" binary sensor do not depend on the answer.
+Aggregation is settled too: `qpf` sums raw, verified against the hourly
+forecast for the same London hours. `probability` is not the chance of rain and
+no entity should read it. Both are set out above.
 
 **Still open, and none of it blocking.**
 
@@ -435,10 +460,13 @@ must be weighted. Do this before writing the accumulation sensor. Onset and the
   `MID_HEAVY` are documented or inferred but unobserved — every sample so far
   has been light rain. Collect values from heavier weather rather than guessing
   the thresholds.
-- The onset threshold, given `RAIN` appears between 10% and 46% across every wet
-  sample including while raining. Probability alone is a poor trigger; a
-  combination with `qpf` is likely better, and depends partly on the question
-  above.
+- What the nowcast's `probability` actually measures. It falls as `qpf` rises
+  and sits on a different scale from the hourly endpoint's, so it is not the
+  chance of rain. Nothing depends on the answer while no entity reads it, but it
+  would be worth knowing before anything ever does.
+- Whether a `qpf` floor is needed for onset, so that a trace of drizzle does not
+  announce incoming rain. `type` alone may be enough; a small threshold is the
+  obvious fallback.
 
 ## Not in scope
 
