@@ -2,12 +2,13 @@
 
 **Status:** Proposed · **Last reviewed:** 2026-09-08
 
-> Live sampling shows the endpoint works in both sampled regions, at two-minute
-> resolution in the US and fifteen-minute in Australia. Response shape varies at
-> the same location over hours, so the implementation must read what arrived
-> rather than classify the location; see
+> Live sampling across four cities shows the endpoint works everywhere tried, at
+> two-minute resolution in the US and fifteen-minute in Australia and the UK.
+> Response shape varies at the same location over hours, so the implementation
+> must read what arrived rather than classify the location; see
 > [Regional resolution](#regional-resolution). Always request `pageSize=500` —
-> the default returns one sixth of the window.
+> the default returns one sixth of the window. Read `qpf` for every decision;
+> `intensity` is derived from it and `probability` is not the chance of rain.
 
 ## Objective
 
@@ -32,23 +33,23 @@ are covered below.
 
 ### What a real response looks like
 
-Five live requests, September 2026, all returning `200 OK` with a well-formed
-body and all differing in ways that matter:
+Six live requests across four cities, September 2026, all returning `200 OK`
+with a well-formed body and all differing in ways that matter:
 
-| | Melbourne, dry | Adelaide 22:21Z | Adelaide 01:57Z | London | West Virginia |
-| --- | --- | --- | --- | --- | --- |
-| Cadence | block + 5×15m | block + 5×15m | uniform 15m | uniform 15m | uniform 2m |
-| Segments | 6 | 6 | 24 | 24 | 180 |
-| Coverage | partial | partial | full 6h | full 6h | full 6h |
-| Variation | none, all `NONE` | none, flat 1.0 mm/h | real | real | real |
+| | Melbourne, dry | Adelaide 22:21Z | Adelaide 01:57Z | London | West Virginia | Chicago |
+| --- | --- | --- | --- | --- | --- | --- |
+| Cadence | block + 5×15m | block + 5×15m | uniform 15m | uniform 15m | uniform 2m | uniform 2m |
+| Segments | 6 | 6 | 24 | 24 | 180 | 180 |
+| Coverage | partial | partial | full 6h | full 6h | full 6h | full 6h |
+| Variation | none, all `NONE` | none, flat 1.0 mm/h | real | real | real | real, full intensity range |
 
 **The window is always six hours. The cadence is not fixed.** Fifteen minutes in
 Australia and in London, two minutes in the US. Segment *count* therefore varies
 with region — 24 against 180 for the same six hours — so nothing may be
 hard-coded to a particular number of segments.
 
-Two-minute resolution appears to be US-only among everything sampled. An earlier
-draft expected Europe to match it, by analogy with the US-and-Europe coverage
+Two-minute resolution is US-only across everything sampled. An earlier draft
+expected Europe to match it, by analogy with the US-and-Europe coverage
 documented for weather maps; London disproves that. The analogy was never
 evidence, and no list of regions should be written into the integration.
 
@@ -106,47 +107,65 @@ Reasoning about one from the other gives the wrong answer in both directions,
 so the nowcast's one-call cost model must not be assumed to extend anywhere
 else.
 
-### The intensity scale is larger than documented
+### qpf is quantised, and intensity is derived from it
 
-The documented values are `PRECIPITATION_INTENSITY_UNSPECIFIED`,
+The documented `intensity` values are `PRECIPITATION_INTENSITY_UNSPECIFIED`,
 `NO_INTENSITY`, `LIGHT`, `MODERATE` and `HEAVY`. Live responses also return
-`MID_LIGHT` and `MID_MODERATE`, which are documented nowhere.
+`MID_LIGHT`, `MID_MODERATE` and `MID_HEAVY`, none of which are documented.
 
-Normalising every sample to mm/h gives a mapping that holds across three regions
-and both cadences:
+Converting every observed `qpf` to mm/h — multiply by 30 for two-minute
+segments, by 4 for fifteen-minute — gives a mapping that holds across four
+cities and both cadences:
 
 | mm/h | `intensity` | Observed in |
 | --- | --- | --- |
-| 0.2 | `MID_LIGHT` | Adelaide, West Virginia |
-| 0.4 | `MID_LIGHT` | Adelaide, West Virginia, London |
-| 1.0 | `LIGHT` | Adelaide, West Virginia, London |
-| 1.6 | `LIGHT` | London |
-| 2.4 | `MID_MODERATE` | London |
+| 0 | `NO_INTENSITY` | all |
+| 0.2 | `MID_LIGHT` | Adelaide, West Virginia, Chicago |
+| 0.4 | `MID_LIGHT` | Adelaide, West Virginia, London, Chicago |
+| 1.0 | `LIGHT` | Adelaide, West Virginia, London, Chicago |
+| 1.6 | `LIGHT` | London, Chicago |
+| 2.4 | `MID_MODERATE` | London, Chicago |
+| 4.0 | `MODERATE` | Chicago |
+| 7.0 | `MID_HEAVY` | Chicago |
+| 15.0 | `HEAVY` | Chicago |
 
-So `MID_` marks a step *between* the previous named level and this one, not an
-intensification of it: `MID_LIGHT` is lighter than `LIGHT`, and `MID_MODERATE`
-sits between `LIGHT` and `MODERATE`. The ordered ladder is therefore at least:
+A single tapering shower in Chicago walked down every rung in order, which
+confirms the ordering outright rather than by inference. `MID_` marks a step
+*between* the previous named level and this one, so `MID_LIGHT` is lighter than
+`LIGHT`:
 
 ```text
-NO_INTENSITY < MID_LIGHT < LIGHT < MID_MODERATE < MODERATE < [MID_HEAVY?] < HEAVY
+NO_INTENSITY < MID_LIGHT < LIGHT < MID_MODERATE < MODERATE < MID_HEAVY < HEAVY
 ```
 
-`MID_HEAVY` is a guess from the pattern and has not been seen. A `MID_` variant
-exists only where there is a gap to sit in, so `MID_LIGHT`, `MID_MODERATE` and
-plausibly `MID_HEAVY` are the whole set — there is nothing below `NO_INTENSITY`
-for a `MID_NO_INTENSITY` to occupy.
+That is the complete set. A `MID_` variant exists only where there is a gap to
+sit in, and there is nothing below `NO_INTENSITY` for a `MID_NO_INTENSITY` to
+occupy.
+
+**`qpf` is quantised.** Those mm/h figures are the only values seen anywhere —
+eight discrete rates with nothing in between, identical across four cities and
+both cadences. `qpf` is not a continuous forecast quantity but a bucket.
+
+**`intensity` therefore carries no information that `qpf` does not.** It is a
+label on the bucket, a pure function of the rate. Read `qpf` for every decision
+and treat `intensity` as display only; an unrecognised value then costs nothing,
+because the number behind it is still there. This is a stronger guarantee than
+the usual advice to guard an open enum — there is genuinely nothing to lose.
+
+It also confirms, independently of the hourly comparison below, that `qpf` is a
+per-segment total rather than a rate. Read as a rate, Chicago's `HEAVY` segments
+would be 0.5 mm/h, which is drizzle; as a per-segment total they are 15 mm/h,
+which is heavy rain. Two unrelated lines of evidence agree.
 
 **`PRECIPITATION_INTENSITY_UNSPECIFIED` is not a rung on this ladder.** It is
 the protobuf zero value, meaning the field was never set, and it must not be
 conflated with `NO_INTENSITY`, which is a real reading of no precipitation.
 Treat it as unknown — neither dry nor wet — and fall back to `qpf` and `type`.
 
-Never rank these by name, never map from a closed set, and prefer `qpf` over
-`intensity` wherever a numeric comparison will do. `intensity` is for display,
-and an unrecognised value must render as unknown rather than defaulting to
-either end of the scale. This is the same failure that produced the missing snow
-icons: a new condition needs both an icon and a state, or it renders as
-unknown.
+Never rank these by name and never map from a closed set. An unrecognised value
+must render as unknown rather than defaulting to either end of the scale, the
+same failure that produced the missing snow icons: a new condition needs both an
+icon and a state, or it renders as unknown.
 
 ### qpf sums directly; probability does not mean chance of rain
 
@@ -456,17 +475,17 @@ no entity should read it. Both are set out above.
 - Where fine resolution is actually available. Only the US has shown two-minute
   segments; Australia and London both give fifteen. Changes nothing structural,
   since precision is read per segment.
-- The rest of the `intensity` ladder. `MODERATE`, `HEAVY` and a plausible
-  `MID_HEAVY` are documented or inferred but unobserved — every sample so far
-  has been light rain. Collect values from heavier weather rather than guessing
-  the thresholds.
 - What the nowcast's `probability` actually measures. It falls as `qpf` rises
   and sits on a different scale from the hourly endpoint's, so it is not the
   chance of rain. Nothing depends on the answer while no entity reads it, but it
   would be worth knowing before anything ever does.
 - Whether a `qpf` floor is needed for onset, so that a trace of drizzle does not
-  announce incoming rain. `type` alone may be enough; a small threshold is the
-  obvious fallback.
+  announce incoming rain. `type` alone may be enough; the quantised rate ladder
+  makes a threshold easy to place if not, since 0.2 mm/h is the lowest non-zero
+  bucket.
+- Whether the eight observed rates are the complete set. They are consistent
+  across four cities, but nothing above 15 mm/h has been seen and the buckets
+  may be wider than the observed values suggest.
 
 ## Not in scope
 
