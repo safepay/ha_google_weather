@@ -1,19 +1,20 @@
 # Minute forecast (nowcast) support
 
-**Status:** Proposed, regionally limited · **Last reviewed:** 2026-09-08
+**Status:** Proposed · **Last reviewed:** 2026-09-08
 
-> Live sampling shows the real nowcast is available in the US but not in
-> Australia, where the endpoint returns a degraded response over `200 OK`. The
-> feature needs a runtime capability check; see
-> [Regional availability](#regional-availability). Always request
-> `pageSize=500` — the default returns one sixth of the window.
+> Live sampling shows the endpoint works in both sampled regions, at two-minute
+> resolution in the US and fifteen-minute in Australia. Response shape varies at
+> the same location over hours, so the implementation must read what arrived
+> rather than classify the location; see
+> [Regional resolution](#regional-resolution). Always request `pageSize=500` —
+> the default returns one sixth of the window.
 
 ## Objective
 
 Answer two questions the current entities cannot: *when will rain start* and
-*how much will fall*. Google's experimental minute forecast endpoint returns
-precipitation in two-minute segments — one hour of them per call, against a
-six-hour model horizon — which is the right resolution for both.
+*how much will fall*. Google's experimental minute forecast endpoint returns a
+six-hour precipitation forecast segmented finely enough for both — two-minute
+segments where the resolution is best, fifteen-minute where it is not.
 
 ## The endpoint
 
@@ -29,41 +30,38 @@ non-`NONE` segment; accumulation is the sum of `qpf` over a window.
 
 ### What a real response looks like
 
-Three live requests, September 2026, within minutes of each other. They differ
-so sharply that the endpoint is best understood as two different services behind
-one URL.
+Four live requests, September 2026, all returning `200 OK` with a well-formed
+body and all differing in ways that matter:
 
-| | Melbourne (dry) | Adelaide (wet) | West Virginia (wet) |
-| --- | --- | --- | --- |
-| Segments | 6 | 6 | 30 by default, 180 at `pageSize=500` |
-| Cadence | 1 block + 5×15m | 1 block + 5×15m | 2 minutes, uniform |
-| Span covered | 6h 45m | 6h 45m | 1h by default, 6h at `pageSize=500` |
-| First segment | starts 1h in the past | starts 1h in the past | starts at `startTime` |
-| `nextPageToken` | empty | empty | present until the window is exhausted |
+| | Melbourne, dry | Adelaide, wet | Adelaide, wet, 3½h later | West Virginia, wet |
+| --- | --- | --- | --- | --- |
+| Segments | 6 | 6 | 24 | 180 at `pageSize=500` |
+| Cadence | 1 block of 5h30m + 5×15m | 1 block of 5h30m + 5×15m | uniform 15m | uniform 2m |
+| Coverage | 21:15 → 04:00 | 21:15 → 04:00 | 01:45 → 07:45, full 6h | full 6h |
+| Variation | none, all `NONE` | none, a flat 1.0 mm/h smear | real: qpf 0.05→0.1, prob 35→25 | real: qpf 0.0333→0.0067, prob 44→36 |
 
-**The Australian responses are a degraded tier.** Both returned identical
-segment boundaries — one block covering 21:15–02:45, then five quarter-hour
-segments to 04:00 — despite different cities and opposite weather. Segmentation
-there is a fixed structure carrying no information. An earlier draft proposed
-these were run-length encoded, with granularity following the data; the two
-samples together disprove it.
+**The window is always six hours. The cadence is not fixed.** Two minutes in the
+US sample, fifteen in the Australian ones. Segment *count* therefore varies with
+region — 180 against 24 for the same six hours — so nothing may be hard-coded to
+a particular number of segments.
 
-**The US response is the real product.** Thirty two-minute segments tiling
-contiguously from `startTime`, with genuine variation: probability drifting
-43→36%, `qpf` stepping 0.0133→0.0067 mm (0.4 down to 0.2 mm/h), and a clean edge
-where `RAIN` gives way to `NONE` at 23:00. That last is exactly the signal this
-plan exists to surface — "rain stops in 36 minutes", stated by the data.
+**The shape is not a stable property of a location.** The same Adelaide
+coordinates returned the one-big-block shape and, three and a half hours later,
+uniform quarter-hour segments covering the whole window with genuine variation
+in both `qpf` and `probability`. Two earlier readings of this were wrong and are
+recorded here so they are not re-derived: the first samples suggested run-length
+encoding, which a second sample disproved; the next pair suggested a fixed
+degraded structure keyed to region, which this fourth sample disproves in turn.
+The block shape is transient, not characteristic.
 
-This confirms regional tiering, matching the US-and-Europe limit already
-documented for weather maps. Two consequences follow, and both matter more than
-the resolution difference itself.
-
-**Degradation is invisible at the HTTP layer.** Australia returns `200 OK` with
-a well-formed body. The `alerts_supported` pattern, which keys off a 404, cannot
-be reused directly — support has to be inferred by inspecting the response.
-Segment count and the duration of the first segment are the discriminators: a
-handful of segments, the first of them hours long, means the nowcast is not
-really available.
+**Do not classify locations.** An earlier draft proposed probing the response,
+deciding supported versus degraded, latching a flag and suppressing the
+entities. There is nothing stable to latch: the same coordinates produce both
+shapes within hours. Read whatever arrived instead, and let each segment's own
+duration carry the precision — a two-minute segment gives genuine minute
+accuracy, a quarter-hour segment gives "some time in the quarter hour from
+03:15", a five-hour block gives "some time in the next few hours". One code
+path, honestly reported, no classification.
 
 **Always send a large explicit `pageSize`.** The parameter is honoured, and it
 decides whether a refresh costs one call or six:
@@ -76,24 +74,21 @@ decides whether a refresh costs one call or six:
 | 180 | 180 | 6h — the whole window | **empty** |
 | 500 | 180 | 6h | **empty** |
 
-The window is exactly 180 two-minute segments, and 180 is the exact threshold at
-which the page token disappears. Request the whole thing in one call rather than
-paging: each page is another billed call, and calls are the scarce resource
-here, whereas a larger response body costs nothing.
+Measured at a two-minute location, where the six-hour window is 180 segments. At
+a fifteen-minute location the same window is 24, which fits inside the default
+page — which is exactly why an early `pageSize` test against Australian
+coordinates appeared to show the parameter did nothing.
 
-**Ask for more than 180, not exactly 180.** The figure is a product of the
-current six-hour window and two-minute cadence, and both are undocumented
-behaviour of a pre-GA endpoint. A request pinned to exactly 180 silently returns
-a truncated forecast the day either changes. Send `pageSize=500` and treat a
-non-empty `nextPageToken` as a signal that the assumption has broken — log it
-rather than quietly acting on a partial window, because the polling design
-below trusts the span it was given.
+**Ask for more than you expect, never an exact count.** 180 is a product of the
+current window length and the current cadence, and both are undocumented
+behaviour of a pre-GA endpoint that already varies by region. A request pinned
+to 180 returns a silently truncated forecast the day either changes. Send
+`pageSize=500` and treat a non-empty `nextPageToken` as a broken assumption to
+log, not a partial window to act on — the polling design below trusts the span
+it was given.
 
-The default is a trap for the same reason. Thirty segments with a page token
-looks like a complete answer and is quietly one sixth of one. An earlier
-`pageSize` test in this project appeared to show the parameter had no effect —
-it was run against an Australian location, where six segments was everything
-available, so it demonstrated nothing.
+The default is a trap for the same reason: thirty segments with a page token
+looks like a complete answer and is one sixth of one.
 
 **Do not generalise this from the other endpoints, or to them.** `forecast/hours`
 caps at 24 results per page whatever `pageSize` asks for — `pageSize=300`
@@ -108,17 +103,19 @@ Other findings from the samples:
 
 - **`intensity` returned `MID_LIGHT`**, which is not among the documented values
   (`NO_INTENSITY`, `LIGHT`, `MODERATE`, `HEAVY`). The enum is open, and its
-  ordering is not what the names suggest: `MID_LIGHT` accompanied 0.2–0.4 mm/h
-  while `LIGHT` accompanied 1.0 mm/h, so **`MID_LIGHT` is lighter than
-  `LIGHT`** — `MID_` marks a step between named levels, not an intensification
-  of one. Do not rank these by name, and do not map them from a closed set.
-- **`type` is `RAIN` at 36–43% probability**, and at 20–22% in the Adelaide
-  sample. Treating any non-`NONE` segment as onset would announce rain on a
-  one-in-five chance. Onset needs a probability threshold, not a type check.
-- **Segments need not tile `overallPredictionTimeframe`.** In the degraded
-  responses the first began an hour in the past and the last ended twenty
-  minutes short of the declared window. Clamp to the present, and never read "no
-  wet segment found" as "dry for the whole window".
+  ordering is not what the names suggest: across two regions `MID_LIGHT`
+  accompanied 0.2–0.4 mm/h while `LIGHT` accompanied 1.0 mm/h, so **`MID_LIGHT`
+  is lighter than `LIGHT`** — `MID_` marks a step between named levels, not an
+  intensification of one. Do not rank these by name, and do not map them from a
+  closed set.
+- **`type` is `RAIN` at 25–43% probability** in every wet sample, including
+  while rain was actually falling. Treating any non-`NONE` segment as onset
+  would announce rain on a one-in-four chance. Onset needs a probability
+  threshold, not a type check.
+- **Segments need not tile `overallPredictionTimeframe`.** In several samples
+  the first began up to an hour in the *past* and the last ended short of the
+  declared window. Clamp to the present, and never read "no wet segment found"
+  as "dry for the whole window".
 
 The endpoint is **Experimental (pre-GA)**. It is absent from the versioned REST
 reference, the API FAQ still claims nowcasting is not offered at all, and both
@@ -126,29 +123,21 @@ the documented segment cadence and the intensity enum disagree with what the API
 returns. Treat the shape as unstable and guard every read, more strictly than
 for the GA endpoints.
 
-## Regional availability
+## Regional resolution
 
-The feature is worth building, but only where the real nowcast exists. Elsewhere
-the response supports nothing the daily forecast does not already provide — a
-flat 1.0 mm/h smear across four and a half hours, which is an absence of
-information rather than a coarse version of it.
+Resolution differs by region — two minutes in the US, fifteen in Australia —
+which is consistent with the US-and-Europe limit documented for weather maps,
+though where the boundary falls is untested beyond these two.
 
-So the endpoint needs a **runtime capability check**, in the spirit of
-`alerts_supported` but keyed on content rather than status: after the first
-fetch, judge whether segments are fine-grained enough to be useful, and if not,
-suppress the entities and stop polling. Getting this right matters more than
-usual, because a user in a degraded region who is not detected pays for calls
-that can never tell them anything.
+This affects how good the feature is, not whether it works. A quarter-hour
+onset time still answers the question this plan exists to answer; two-minute
+resolution answers it better. Since precision travels with each segment, both
+are served by the same implementation with no branching, and a region whose
+resolution improves later simply starts producing better answers.
 
-Two practical consequences to accept openly:
-
-- The maintainer cannot dogfood this. Development and support would be for a
-  feature that only functions in regions the maintainer cannot observe from, so
-  the capability check and the parser both need to be defensive by construction
-  rather than by testing.
-- Regional coverage is undocumented and will change. The check must re-evaluate
-  periodically rather than latching permanently, so that regions gaining support
-  later start working without user intervention.
+What must not happen is a coarse response being reported as though it were
+precise. That is handled where the entities are described, by publishing the
+segment duration alongside the onset time.
 
 ## Why sensors, not the weather entity
 
@@ -300,17 +289,21 @@ Gated on a new opt-in, defaulting to off because the endpoint is pre-GA:
 Derived values should be computed at fetch time in the coordinator and cached,
 following the existing 24-hour snow total, so the sensors stay simple lookups.
 
-Do not attach all the raw segments to a state attribute. Fetching the full
-window means 180 objects, and the recorder re-serialises attributes on every
-state change. Downsample to ten- or fifteen-minute buckets for display, or keep
+Do not attach all the raw segments to a state attribute. A two-minute region
+returns 180 objects per refresh and the recorder re-serialises attributes on
+every state change. Downsample to fifteen-minute buckets for display, or keep
 the segments out of the recorder entirely and expose only the derived scalars.
 
-Onset precision must not be overstated. The sensor's value comes from a
-segment's `startTime`. In a supported region that is a two-minute window and the
-precision is real; in a degraded one it may be five hours wide. Report the onset
-time as given and expose the segment's duration alongside it, so the resolution
-is visible rather than implied — and rely on the capability check to keep the
-degraded case from producing entities at all.
+**Onset precision must not be overstated, and this carries the whole
+regional-variation problem.** The sensor's value comes from a segment's
+`startTime`, and that segment may be two minutes wide, fifteen, or — in the
+transient block shape — several hours. Publish the segment's duration alongside
+the onset time so the resolution is visible rather than implied.
+
+Getting that right is what makes classification unnecessary. A coarse response
+then degrades the *answer* rather than breaking the feature, and there is no
+flag to latch, no region list to maintain, and nothing to go stale when Google
+changes coverage.
 
 ## Config flow
 
@@ -332,44 +325,42 @@ sees the previous tick's copy of whichever forecast it reads. At a one-minute
 tick against an hour of coverage that lag is harmless, but it should be a
 deliberate choice rather than an accident.
 
-Support is regional, and — unlike alerts — it is not signalled by a 404. The
-alerts handling is the right *shape* to copy: a tri-state supported flag, checked
-before the endpoint is polled and before entities are created. The test itself
-must be different, judging the response body rather than the status code. See
-[Regional availability](#regional-availability).
+Do not copy the `alerts_supported` pattern here. A tri-state supported flag
+suits a binary, stable condition; nowcast resolution is neither, since the same
+coordinates returned both a coarse and a fine response within hours. There is no
+capability to latch — parse what arrived and report its precision honestly. See
+[Regional resolution](#regional-resolution).
 
-Note also the bug that pattern currently has: `alerts_supported` suppresses the
-entities but is never consulted when building the endpoint list, so an
-unsupported location keeps paying for 404s. Do not reproduce that here — a
-degraded response must stop the polling, not just hide the sensors.
+Whether the endpoint should ever stop polling itself is a separate question from
+resolution, and there is no evidence yet of a response that justifies giving up.
+Leave it out until one is observed.
 
 The on-demand `get_forecast` service should gain a `minute` option — a natural
 fit for fetching a nowcast from an automation with polling turned down.
 
 ## Unknowns to settle first
 
-**Settled.** The real nowcast exists and is regional: US coordinates return
-uniform two-minute segments with genuine variation, Australian ones a degraded
-six-segment response over `200 OK`. Degradation is not signalled by status code.
+**Settled.** The endpoint returns a usable six-hour forecast in both sampled
+regions — two-minute segments in the US, fifteen-minute in Australia — with
+genuine variation in `qpf` and `probability` in each. Shape is not a stable
+property of a location, so nothing may be classified or latched. `pageSize=500`
+returns the whole window in one call with an empty page token, so a refresh is
+one billed call and the cost model above stands.
 
-`pageSize` is honoured at supported locations, and `pageSize=500` returns all
-180 segments of the six-hour window in one call with an empty page token — so a
-refresh is one billed call and the cost model above stands. Nothing blocks a
-first implementation.
+Nothing blocks a first implementation.
 
-**Still open.**
+**Still open, and none of it blocking.**
 
-- Whether the degraded response's structure is fixed or clock-quantised. The two
-  Australian samples were five minutes apart and cannot distinguish the two.
-  Sample again hours later — it decides how the capability check should be
-  written.
-- Where the boundary of the supported region actually falls. Europe is
-  documented as supported for weather maps and is untested here. The capability
-  check must be derived from the response rather than from any list of regions.
+- What produces the occasional one-block response. Both shapes have come from
+  the same Adelaide coordinates hours apart, so it is transient, but its cause
+  is unknown. Parsing must handle it; nothing needs to predict it.
+- Whether Europe matches the US resolution. Documented as covered for weather
+  maps, untested here. Costs nothing to find out and changes nothing structural,
+  since precision is read per segment.
 - The full `intensity` enum, given `MID_LIGHT` already sits outside the
   documented set. Collect values rather than guessing the pattern.
-- A sensible probability threshold for onset, given `RAIN` is reported at 20% in
-  one sample and 36–43% in another, in the latter case while rain was falling.
+- A sensible probability threshold for onset, given `RAIN` is reported between
+  25% and 43% across every wet sample, including while rain was falling.
 
 ## Not in scope
 
