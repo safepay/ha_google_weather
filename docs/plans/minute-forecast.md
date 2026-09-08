@@ -25,25 +25,31 @@ auth or request plumbing.
 
 Each segment carries a time frame, a precipitation `type` (`NONE`, `RAIN`,
 `SNOW`, `HAIL`), a `probability`, a `qpf` quantity, a `snowfallAmount` and an
-`intensity` (`NO_INTENSITY`, `LIGHT`, `MODERATE`, `HEAVY`). Onset is the first
-non-`NONE` segment; accumulation is the sum of `qpf` over a window.
+`intensity`. The documented `intensity` values are incomplete and `qpf` appears
+to be conditional on rain occurring; both are covered below, and both change how
+onset and accumulation must be derived.
 
 ### What a real response looks like
 
-Four live requests, September 2026, all returning `200 OK` with a well-formed
+Five live requests, September 2026, all returning `200 OK` with a well-formed
 body and all differing in ways that matter:
 
-| | Melbourne, dry | Adelaide, wet | Adelaide, wet, 3½h later | West Virginia, wet |
-| --- | --- | --- | --- | --- |
-| Segments | 6 | 6 | 24 | 180 at `pageSize=500` |
-| Cadence | 1 block of 5h30m + 5×15m | 1 block of 5h30m + 5×15m | uniform 15m | uniform 2m |
-| Coverage | 21:15 → 04:00 | 21:15 → 04:00 | 01:45 → 07:45, full 6h | full 6h |
-| Variation | none, all `NONE` | none, a flat 1.0 mm/h smear | real: qpf 0.05→0.1, prob 35→25 | real: qpf 0.0333→0.0067, prob 44→36 |
+| | Melbourne, dry | Adelaide 22:21Z | Adelaide 01:57Z | London | West Virginia |
+| --- | --- | --- | --- | --- | --- |
+| Cadence | block + 5×15m | block + 5×15m | uniform 15m | uniform 15m | uniform 2m |
+| Segments | 6 | 6 | 24 | 24 | 180 |
+| Coverage | partial | partial | full 6h | full 6h | full 6h |
+| Variation | none, all `NONE` | none, flat 1.0 mm/h | real | real | real |
 
-**The window is always six hours. The cadence is not fixed.** Two minutes in the
-US sample, fifteen in the Australian ones. Segment *count* therefore varies with
-region — 180 against 24 for the same six hours — so nothing may be hard-coded to
-a particular number of segments.
+**The window is always six hours. The cadence is not fixed.** Fifteen minutes in
+Australia and in London, two minutes in the US. Segment *count* therefore varies
+with region — 24 against 180 for the same six hours — so nothing may be
+hard-coded to a particular number of segments.
+
+Two-minute resolution appears to be US-only among everything sampled. An earlier
+draft expected Europe to match it, by analogy with the US-and-Europe coverage
+documented for weather maps; London disproves that. The analogy was never
+evidence, and no list of regions should be written into the integration.
 
 **The shape is not a stable property of a location.** The same Adelaide
 coordinates returned the one-big-block shape and, three and a half hours later,
@@ -99,19 +105,52 @@ Reasoning about one from the other gives the wrong answer in both directions,
 so the nowcast's one-call cost model must not be assumed to extend anywhere
 else.
 
-Other findings from the samples:
+### The intensity scale is larger than documented
 
-- **`intensity` returned `MID_LIGHT`**, which is not among the documented values
-  (`NO_INTENSITY`, `LIGHT`, `MODERATE`, `HEAVY`). The enum is open, and its
-  ordering is not what the names suggest: across two regions `MID_LIGHT`
-  accompanied 0.2–0.4 mm/h while `LIGHT` accompanied 1.0 mm/h, so **`MID_LIGHT`
-  is lighter than `LIGHT`** — `MID_` marks a step between named levels, not an
-  intensification of one. Do not rank these by name, and do not map them from a
-  closed set.
-- **`type` is `RAIN` at 25–43% probability** in every wet sample, including
-  while rain was actually falling. Treating any non-`NONE` segment as onset
-  would announce rain on a one-in-four chance. Onset needs a probability
-  threshold, not a type check.
+`MID_LIGHT` and `MID_MODERATE` both appear in live responses. Neither is among
+the four documented values (`NO_INTENSITY`, `LIGHT`, `MODERATE`, `HEAVY`).
+Normalising every sample to mm/h gives a mapping that holds across three regions
+and both cadences:
+
+| mm/h | `intensity` | Observed in |
+| --- | --- | --- |
+| 0.2 | `MID_LIGHT` | Adelaide, West Virginia |
+| 0.4 | `MID_LIGHT` | Adelaide, West Virginia, London |
+| 1.0 | `LIGHT` | Adelaide, West Virginia, London |
+| 1.6 | `LIGHT` | London |
+| 2.4 | `MID_MODERATE` | London |
+
+So `MID_` marks a step *between* the previous named level and this one, not an
+intensification of it: `MID_LIGHT` is lighter than `LIGHT`, and `MID_MODERATE`
+sits between `LIGHT` and `MODERATE`. The real ladder is therefore something like
+`NO_INTENSITY < MID_LIGHT < LIGHT < MID_MODERATE < MODERATE < MID_HEAVY <
+HEAVY` — seven values where four are documented, and the two not yet observed
+are inferred from the pattern rather than seen.
+
+Never rank these by name, never map from a closed set, and prefer `qpf` over
+`intensity` wherever a numeric comparison will do. `intensity` is for display.
+
+### Probability moves inversely to qpf
+
+In the London sample the heaviest segments (0.6 mm per quarter hour,
+`MID_MODERATE`) carry 10–13% probability, while the lightest (0.1 mm) carry
+38–46%. That is the signature of a conditional forecast: `qpf` is how much falls
+*if* it rains, and `probability` is whether it does.
+
+Two consequences, and the first is worth 6× on a user-facing number:
+
+- **Summing raw `qpf` may badly overstate accumulation.** Across London's six
+  hours the raw sum is 10.05 mm; weighting each segment by its own probability
+  gives 1.7 mm. That is the difference between a wet morning and drizzle, and
+  which one is correct is not documented. See the open questions.
+- **An onset threshold on probability must be low, or must not use probability
+  at all.** Nothing in the London sample exceeds 46%, so a `probability > 50%`
+  rule would report no rain across six continuous hours of it peaking at
+  2.4 mm/h. Across every wet sample `RAIN` appears between 10% and 46%,
+  including while rain was actually falling.
+
+### Other findings
+
 - **Segments need not tile `overallPredictionTimeframe`.** In several samples
   the first began up to an hour in the *past* and the last ended short of the
   declared window. Clamp to the present, and never read "no wet segment found"
@@ -125,9 +164,10 @@ for the GA endpoints.
 
 ## Regional resolution
 
-Resolution differs by region — two minutes in the US, fifteen in Australia —
-which is consistent with the US-and-Europe limit documented for weather maps,
-though where the boundary falls is untested beyond these two.
+Resolution differs by region: fifteen minutes in Australia and London, two
+minutes in the US. Only the US sample has shown the fine cadence, and the
+boundary is undocumented — the US-and-Europe coverage documented for weather
+maps does not apply, since London gets the coarse one.
 
 This affects how good the feature is, not whether it works. A quarter-hour
 onset time still answers the question this plan exists to answer; two-minute
@@ -282,7 +322,9 @@ too.
 Gated on a new opt-in, defaulting to off because the endpoint is pre-GA:
 
 - minutes until precipitation starts (duration)
-- expected precipitation over the next 60 minutes (precipitation depth)
+- expected precipitation over the next 60 minutes (precipitation depth) —
+  blocked on the `qpf` question in the open questions below, since a raw sum and
+  a probability-weighted one differ by around 6×
 - minutes until precipitation stops (duration)
 - a binary sensor for precipitation expected within the next hour
 
@@ -349,18 +391,35 @@ one billed call and the cost model above stands.
 
 Nothing blocks a first implementation.
 
+**Blocking one sensor, not the feature.** Is `qpf` conditional on rain
+occurring, or already an expected value? London's six hours sum to 10.05 mm raw
+and 1.7 mm probability-weighted, and the inverse relationship between the two
+fields says conditional — but that is inference, and the accumulation sensor
+would be wrong by 6× if it goes the other way.
+
+This is cheap to settle without waiting for rain to fall: the hourly forecast
+already carries `precipitation.qpf.quantity` and
+`precipitation.probability.percent` for the same location and period, and the
+coordinator already fetches it. Compare an hour of summed nowcast `qpf` against
+that hour's forecast `qpf`. If they agree, `qpf` is an expected value and a raw
+sum is right; if the nowcast sum is several times larger, it is conditional and
+must be weighted. Do this before writing the accumulation sensor. Onset and the
+"rain expected" binary sensor do not depend on the answer.
+
 **Still open, and none of it blocking.**
 
 - What produces the occasional one-block response. Both shapes have come from
   the same Adelaide coordinates hours apart, so it is transient, but its cause
   is unknown. Parsing must handle it; nothing needs to predict it.
-- Whether Europe matches the US resolution. Documented as covered for weather
-  maps, untested here. Costs nothing to find out and changes nothing structural,
+- Where fine resolution is actually available. Only the US has shown two-minute
+  segments; Australia and London both give fifteen. Changes nothing structural,
   since precision is read per segment.
-- The full `intensity` enum, given `MID_LIGHT` already sits outside the
-  documented set. Collect values rather than guessing the pattern.
-- A sensible probability threshold for onset, given `RAIN` is reported between
-  25% and 43% across every wet sample, including while rain was falling.
+- The rest of the `intensity` ladder. `MID_HEAVY` and `MODERATE` are inferred
+  from the observed pattern, not seen. Collect values rather than guessing.
+- The onset threshold, given `RAIN` appears between 10% and 46% across every wet
+  sample including while raining. Probability alone is a poor trigger; a
+  combination with `qpf` is likely better, and depends partly on the question
+  above.
 
 ## Not in scope
 
