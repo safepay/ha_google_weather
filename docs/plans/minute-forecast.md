@@ -107,8 +107,10 @@ else.
 
 ### The intensity scale is larger than documented
 
-`MID_LIGHT` and `MID_MODERATE` both appear in live responses. Neither is among
-the four documented values (`NO_INTENSITY`, `LIGHT`, `MODERATE`, `HEAVY`).
+The documented values are `PRECIPITATION_INTENSITY_UNSPECIFIED`,
+`NO_INTENSITY`, `LIGHT`, `MODERATE` and `HEAVY`. Live responses also return
+`MID_LIGHT` and `MID_MODERATE`, which are documented nowhere.
+
 Normalising every sample to mm/h gives a mapping that holds across three regions
 and both cadences:
 
@@ -122,13 +124,28 @@ and both cadences:
 
 So `MID_` marks a step *between* the previous named level and this one, not an
 intensification of it: `MID_LIGHT` is lighter than `LIGHT`, and `MID_MODERATE`
-sits between `LIGHT` and `MODERATE`. The real ladder is therefore something like
-`NO_INTENSITY < MID_LIGHT < LIGHT < MID_MODERATE < MODERATE < MID_HEAVY <
-HEAVY` — seven values where four are documented, and the two not yet observed
-are inferred from the pattern rather than seen.
+sits between `LIGHT` and `MODERATE`. The ordered ladder is therefore at least:
+
+```text
+NO_INTENSITY < MID_LIGHT < LIGHT < MID_MODERATE < MODERATE < [MID_HEAVY?] < HEAVY
+```
+
+`MID_HEAVY` is a guess from the pattern and has not been seen. A `MID_` variant
+exists only where there is a gap to sit in, so `MID_LIGHT`, `MID_MODERATE` and
+plausibly `MID_HEAVY` are the whole set — there is nothing below `NO_INTENSITY`
+for a `MID_NO_INTENSITY` to occupy.
+
+**`PRECIPITATION_INTENSITY_UNSPECIFIED` is not a rung on this ladder.** It is
+the protobuf zero value, meaning the field was never set, and it must not be
+conflated with `NO_INTENSITY`, which is a real reading of no precipitation.
+Treat it as unknown — neither dry nor wet — and fall back to `qpf` and `type`.
 
 Never rank these by name, never map from a closed set, and prefer `qpf` over
-`intensity` wherever a numeric comparison will do. `intensity` is for display.
+`intensity` wherever a numeric comparison will do. `intensity` is for display,
+and an unrecognised value must render as unknown rather than defaulting to
+either end of the scale. This is the same failure that produced the missing snow
+icons: a new condition needs both an icon and a state, or it renders as
+unknown.
 
 ### Probability moves inversely to qpf
 
@@ -414,8 +431,10 @@ must be weighted. Do this before writing the accumulation sensor. Onset and the
 - Where fine resolution is actually available. Only the US has shown two-minute
   segments; Australia and London both give fifteen. Changes nothing structural,
   since precision is read per segment.
-- The rest of the `intensity` ladder. `MID_HEAVY` and `MODERATE` are inferred
-  from the observed pattern, not seen. Collect values rather than guessing.
+- The rest of the `intensity` ladder. `MODERATE`, `HEAVY` and a plausible
+  `MID_HEAVY` are documented or inferred but unobserved — every sample so far
+  has been light rain. Collect values from heavier weather rather than guessing
+  the thresholds.
 - The onset threshold, given `RAIN` appears between 10% and 46% across every wet
   sample including while raining. Probability alone is a poor trigger; a
   combination with `qpf` is likely better, and depends partly on the question
