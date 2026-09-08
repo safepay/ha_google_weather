@@ -2,8 +2,8 @@
 
 **Status:** Proposed · **Last reviewed:** 2026-09-08
 
-> Live sampling across four cities shows the endpoint works everywhere tried, at
-> two-minute resolution in the US and fifteen-minute in Australia and the UK.
+> Live sampling across five cities shows the endpoint works everywhere tried, at
+> two-minute resolution in the US and fifteen-minute in Australia and Europe.
 > Response shape varies at the same location over hours, so the implementation
 > must read what arrived rather than classify the location; see
 > [Regional resolution](#regional-resolution). Always request `pageSize=500` —
@@ -33,25 +33,26 @@ are covered below.
 
 ### What a real response looks like
 
-Six live requests across four cities, September 2026, all returning `200 OK`
+Seven live requests across five cities, September 2026, all returning `200 OK`
 with a well-formed body and all differing in ways that matter:
 
-| | Melbourne, dry | Adelaide 22:21Z | Adelaide 01:57Z | London | West Virginia | Chicago |
-| --- | --- | --- | --- | --- | --- | --- |
-| Cadence | block + 5×15m | block + 5×15m | uniform 15m | uniform 15m | uniform 2m | uniform 2m |
-| Segments | 6 | 6 | 24 | 24 | 180 | 180 |
-| Coverage | partial | partial | full 6h | full 6h | full 6h | full 6h |
-| Variation | none, all `NONE` | none, flat 1.0 mm/h | real | real | real | real, full intensity range |
+| | Melbourne | Adelaide 22:21Z | Adelaide 01:57Z | London | Copenhagen | West Virginia | Chicago |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Cadence | block + 5×15m | block + 5×15m | uniform 15m | uniform 15m | uniform 15m | uniform 2m | uniform 2m |
+| Segments | 6 | 6 | 24 | 24 | 24 | 180 | 180 |
+| Coverage | partial | partial | full 6h | full 6h | full 6h | full 6h | full 6h |
+| Weather | dry throughout | raining | raining | raining | dry, rain arriving at the last segment | raining | shower tapering to dry |
 
 **The window is always six hours. The cadence is not fixed.** Fifteen minutes in
-Australia and in London, two minutes in the US. Segment *count* therefore varies
+Australia and Europe, two minutes in the US. Segment *count* therefore varies
 with region — 24 against 180 for the same six hours — so nothing may be
 hard-coded to a particular number of segments.
 
 Two-minute resolution is US-only across everything sampled. An earlier draft
 expected Europe to match it, by analogy with the US-and-Europe coverage
-documented for weather maps; London disproves that. The analogy was never
-evidence, and no list of regions should be written into the integration.
+documented for weather maps; London and Copenhagen both disprove that. The
+analogy was never evidence, and no list of regions should be written into the
+integration.
 
 **The shape is not a stable property of a location.** The same Adelaide
 coordinates returned the one-big-block shape and, three and a half hours later,
@@ -114,13 +115,13 @@ The documented `intensity` values are `PRECIPITATION_INTENSITY_UNSPECIFIED`,
 `MID_LIGHT`, `MID_MODERATE` and `MID_HEAVY`, none of which are documented.
 
 Converting every observed `qpf` to mm/h — multiply by 30 for two-minute
-segments, by 4 for fifteen-minute — gives a mapping that holds across four
+segments, by 4 for fifteen-minute — gives a mapping that holds across five
 cities and both cadences:
 
 | mm/h | `intensity` | Observed in |
 | --- | --- | --- |
 | 0 | `NO_INTENSITY` | all |
-| 0.2 | `MID_LIGHT` | Adelaide, West Virginia, Chicago |
+| 0.2 | `MID_LIGHT` | Adelaide, West Virginia, Chicago, Copenhagen |
 | 0.4 | `MID_LIGHT` | Adelaide, West Virginia, London, Chicago |
 | 1.0 | `LIGHT` | Adelaide, West Virginia, London, Chicago |
 | 1.6 | `LIGHT` | London, Chicago |
@@ -143,7 +144,7 @@ sit in, and there is nothing below `NO_INTENSITY` for a `MID_NO_INTENSITY` to
 occupy.
 
 **`qpf` is quantised.** Those mm/h figures are the only values seen anywhere —
-eight discrete rates with nothing in between, identical across four cities and
+eight discrete rates with nothing in between, identical across five cities and
 both cadences. `qpf` is not a continuous forecast quantity but a bucket.
 
 **`intensity` therefore carries no information that `qpf` does not.** It is a
@@ -225,6 +226,14 @@ Three rules follow:
   the first began up to an hour in the *past* and the last ended short of the
   declared window. Clamp to the present, and never read "no wet segment found"
   as "dry for the whole window".
+- **Rain can be cut off by the window edge, so onset does not imply duration.**
+  Copenhagen forecast rain beginning in its *final* segment, 12:45–13:00,
+  against a window ending 13:11. When the last segment is wet, the forecast says
+  when rain starts and nothing at all about when it stops — it may continue for
+  hours past the horizon. "Minutes until precipitation stops" must report
+  unknown in that case, never the window edge, which would claim the rain ends
+  at exactly the moment the data runs out. The same caution applies to any total
+  accumulated over the whole window.
 
 The endpoint is **Experimental (pre-GA)**. It is absent from the versioned REST
 reference, the API FAQ still claims nowcasting is not offered at all, and both
@@ -282,6 +291,12 @@ sleep = clamp(minutes_until_first_wet_segment / 2, floor, cap)
 
 with a floor of about 3 minutes and a cap that depends on whether rain is
 expected at all (below). Precipitation already falling pins it to the floor.
+
+The Copenhagen sample is a worked example. At 07:11 it forecast dry conditions
+until 12:45 — 334 minutes — so the formula gives `clamp(167, 3, 120)`, the full
+two-hour cap: one call, then nothing for two hours, with rain still more than
+three hours away when the next call is made. A fixed ten-minute interval would
+have spent twelve calls over the same period learning nothing.
 
 **The cap may never exceed the span the last response actually covered.** That
 is the invariant the whole design rests on, and it is why `pageSize` is a
@@ -484,7 +499,7 @@ no entity should read it. Both are set out above.
   makes a threshold easy to place if not, since 0.2 mm/h is the lowest non-zero
   bucket.
 - Whether the eight observed rates are the complete set. They are consistent
-  across four cities, but nothing above 15 mm/h has been seen and the buckets
+  across five cities, but nothing above 15 mm/h has been seen and the buckets
   may be wider than the observed values suggest.
 
 ## Not in scope
