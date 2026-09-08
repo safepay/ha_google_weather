@@ -408,12 +408,55 @@ Gated on a new opt-in, defaulting to off because the endpoint is pre-GA:
 
 - minutes until precipitation starts (duration), from the first segment whose
   `type` is not `NONE`
-- expected precipitation over the next 60 minutes (precipitation depth), the raw
-  sum of `qpf` across those segments
-- minutes until precipitation stops (duration)
+- minutes until precipitation stops (duration), `unknown` when the last segment
+  is wet and the forecast is truncated by the window edge
+- current precipitation rate (mm/h, `PRECIPITATION_INTENSITY`), the leading
+  segment's `qpf` normalised by its own duration
+- expected rain over the next 60 minutes (precipitation depth), the raw sum of
+  `qpf` across segments whose `type` is `RAIN`
+- expected rain across the rest of the window, a lower bound for the same reason
+  the cessation sensor can be unknown
 - a binary sensor for precipitation expected within the next hour
 
 None of these read `probability`, which does not mean what its name suggests.
+
+Other horizons — 15, 30, 120, 360 minutes — belong as **attributes on the onset
+sensor**, not as their own entities. They are nested sums of the same data, so
+five separate entities would write five correlated rows on every refresh, which
+during rain is every few minutes. Templating still reaches them.
+
+A fifteen-minute accumulation is a poor entity in particular. Where the cadence
+is fifteen minutes it is a single segment rather than an aggregate, so the same
+sensor would mean materially different things by region — and at that horizon
+the useful question is *when* rain arrives, which the onset sensor already
+answers, rather than how much. The rate sensor covers "how hard" better than a
+short sum can.
+
+### Snow
+
+The equivalent snow sensors are wanted and are not yet writable. Every segment
+carries `snowfallAmount` alongside `qpf`, and it has been zero in all eight
+samples — September is close to the global minimum for falling snow, and probing
+ski fields and ice sheets found none. Three things cannot be guessed:
+
+- whether `snowfallAmount` is liquid equivalent or snow depth, roughly a 10:1
+  difference
+- whether `qpf` also populates during snow, or stays zero
+- whether `intensity` follows the same ladder for snow, and if so which field it
+  keys on
+
+Note that the hourly path in the coordinator already falls back to reading `qpf`
+as the snow amount when the condition looks snowy, which implies a previous
+author concluded `qpf` is total precipitation rather than rain-only. That is an
+inference, not a verified fact, and this plan has already been wrong twice by
+inheriting one.
+
+**None of that blocks the rain sensors, because filtering on `type` is correct
+either way.** If `qpf` is rain-only the filter is a no-op; if it includes snow
+the filter is what stops a blizzard being reported as rainfall. So ship the rain
+sensors with the filter, and add the snow sensors — mirroring them field for
+field — once a sample exists. The rain sensors will already behave correctly
+when snow arrives: they report nothing rather than something wrong.
 
 Derived values should be computed at fetch time in the coordinator and cached,
 following the existing 24-hour snow total, so the sensors stay simple lookups.
@@ -501,6 +544,9 @@ no entity should read it. Both are set out above.
 - Whether the eight observed rates are the complete set. They are consistent
   across five cities, but nothing above 15 mm/h has been seen and the buckets
   may be wider than the observed values suggest.
+- Everything about snow, which needs one sample of falling snow and is
+  unobtainable in September. See the Snow heading under Entities. This blocks
+  the snow sensors only; the rain sensors are safe to build first.
 
 ## Not in scope
 
