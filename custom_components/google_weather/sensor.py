@@ -25,6 +25,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import slugify
 
 from .const import (
     CONF_INCLUDE_HOURLY_FORECAST,
@@ -390,6 +391,14 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
             "sw_version": VERSION,
             "via_device": (DOMAIN, entry.entry_id),
         }
+
+        # Home Assistant builds a new entity's id from the device name followed
+        # by the entity name, and drops the device name only when the entity
+        # name starts with it. That gives
+        # sensor.home_observational_sensors_home_temperature here, so ask for
+        # the id these have always had. It applies only when an entity is first
+        # created; one already in the registry keeps the id it has.
+        self.entity_id = f"sensor.{slugify(self._attr_name)}"
 
         # Read unit system from coordinator (auto-detected from HA config)
         self._unit_system = coordinator.unit_system

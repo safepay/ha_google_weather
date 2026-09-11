@@ -24,6 +24,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
+from homeassistant.util import slugify
 
 from .conditions import CONDITION_MAP
 from .const import (
@@ -90,6 +91,13 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
             "model": "Weather API",
             "sw_version": VERSION,
         }
+
+        # Home Assistant builds a new entity's id from the device name followed
+        # by the entity name, and drops the device name only when the entity
+        # name starts with it. That gives weather.home_weather_home here, so ask
+        # for the id these have always had. It applies only when an entity is
+        # first created; one already in the registry keeps the id it has.
+        self.entity_id = f"weather.{slugify(self._attr_name)}"
 
         # Set units based on unit system - API returns values in the requested unit system
         unit_system = coordinator.unit_system
