@@ -15,6 +15,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import slugify
 
 from .const import ALERT_SENSOR_KEYS, CONF_INCLUDE_ALERTS, CONF_LOCATION, DEFAULT_INCLUDE_ALERTS, DOMAIN, VERSION
 from .coordinator import GoogleWeatherCoordinator
@@ -250,6 +251,14 @@ class GoogleWeatherBinarySensor(
             "sw_version": VERSION,
             "via_device": (DOMAIN, entry.entry_id),
         }
+
+        # Home Assistant builds a new entity's id from the device name followed
+        # by the entity name, and drops the device name only when the entity
+        # name starts with it. That gives
+        # binary_sensor.home_binary_sensors_home_daytime here, so ask for the id
+        # these have always had. It applies only when an entity is first
+        # created; one already in the registry keeps the id it has.
+        self.entity_id = f"binary_sensor.{slugify(self._attr_name)}"
 
     @property
     def is_on(self) -> bool:
