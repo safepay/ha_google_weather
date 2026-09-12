@@ -133,6 +133,43 @@ def _default_min_interval(cadence: float | None) -> int:
     return max(DEFAULT_MINUTE_MIN_INTERVAL, matched)
 
 
+def _interval_choices(cadence: float | None) -> dict[int, str]:
+    """The intervals worth offering for a location of this segment width.
+
+    Polling faster than the segments are wide costs calls for no finer an
+    answer, so those options are not offered at all rather than left in the list
+    to be regretted. An unmeasured width offers everything.
+    """
+    options = [
+        option
+        for option in MINUTE_MIN_INTERVAL_OPTIONS
+        if not cadence or option >= cadence
+    ]
+    if not options:
+        # Segments wider than anything on the ladder: the coarsest is the best
+        # available match.
+        options = [MINUTE_MIN_INTERVAL_OPTIONS[-1]]
+
+    if len(options) == 1 and cadence:
+        width = int(round(cadence))
+        return {options[0]: f"{options[0]} minutes - matches this location's "
+                            f"{width}-minute segments"}
+
+    return {option: MINUTE_MIN_INTERVAL_LABELS[option] for option in options}
+
+
+def _clamp_to_choices(stored: int, cadence: float | None) -> int:
+    """Keep a stored interval selectable after the measured width coarsens.
+
+    A location that used to return fine segments may stop doing so, and a stored
+    value no longer on the list would fail form validation.
+    """
+    choices = _interval_choices(cadence)
+    if stored in choices:
+        return stored
+    return _default_min_interval(cadence)
+
+
 def _cadence_note(cadence: float | None, enabled: bool) -> str:
     """A line for the intervals step saying what this location actually returns."""
     if not enabled:
@@ -143,11 +180,13 @@ def _cadence_note(cadence: float | None, enabled: bool) -> str:
             "location. It will be shown here once a forecast has been fetched."
         )
     width = int(round(cadence))
-    return (
-        f"\n\nThis location returns {width}-minute minute-forecast segments. "
-        f"Polling faster than that gets revisions sooner, but onset times still "
-        f"move in {width}-minute steps."
-    )
+    note = f"\n\nThis location returns {width}-minute minute-forecast segments."
+    if len(_interval_choices(cadence)) < len(MINUTE_MIN_INTERVAL_OPTIONS):
+        note += (
+            " Shorter intervals are not offered: calling more often than the "
+            "forecast changes would cost calls without giving a finer answer."
+        )
+    return note
 
 
 def _describe_cadence(cadence: float | None, min_interval: int) -> str:
@@ -499,7 +538,7 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(
                     CONF_MINUTE_MIN_INTERVAL,
                     default=_default_min_interval(self.minute_cadence),
-                ): vol.In(MINUTE_MIN_INTERVAL_LABELS),
+                ): vol.In(_interval_choices(self.minute_cadence)),
                 vol.Optional(
                     CONF_MINUTE_RAIN_THRESHOLD,
                     default=DEFAULT_MINUTE_RAIN_THRESHOLD,
@@ -720,8 +759,11 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             schema_dict.update({
                 vol.Optional(
                     CONF_MINUTE_MIN_INTERVAL,
-                    default=current_data.get(CONF_MINUTE_MIN_INTERVAL, DEFAULT_MINUTE_MIN_INTERVAL),
-                ): vol.In(MINUTE_MIN_INTERVAL_LABELS),
+                    default=_clamp_to_choices(
+                        current_data.get(CONF_MINUTE_MIN_INTERVAL, DEFAULT_MINUTE_MIN_INTERVAL),
+                        self._observed_cadence(),
+                    ),
+                ): vol.In(_interval_choices(self._observed_cadence())),
                 vol.Optional(
                     CONF_MINUTE_RAIN_THRESHOLD,
                     default=current_data.get(CONF_MINUTE_RAIN_THRESHOLD, DEFAULT_MINUTE_RAIN_THRESHOLD),
