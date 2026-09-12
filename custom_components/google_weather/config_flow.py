@@ -24,7 +24,11 @@ from .const import (
     CONF_INCLUDE_ALERTS,
     CONF_INCLUDE_DAILY_FORECAST,
     CONF_INCLUDE_HOURLY_FORECAST,
+    CONF_INCLUDE_MINUTE_FORECAST,
     CONF_LOCATION,
+    CONF_MINUTE_MIN_INTERVAL,
+    CONF_MINUTE_MONTHLY_BUDGET,
+    CONF_MINUTE_RAIN_THRESHOLD,
     CONF_NIGHT_END,
     CONF_NIGHT_START,
     DEFAULT_ALERTS_DAY_INTERVAL,
@@ -38,9 +42,14 @@ from .const import (
     DEFAULT_INCLUDE_ALERTS,
     DEFAULT_INCLUDE_DAILY_FORECAST,
     DEFAULT_INCLUDE_HOURLY_FORECAST,
+    DEFAULT_INCLUDE_MINUTE_FORECAST,
+    DEFAULT_MINUTE_MIN_INTERVAL,
+    DEFAULT_MINUTE_MONTHLY_BUDGET,
+    DEFAULT_MINUTE_RAIN_THRESHOLD,
     DEFAULT_NIGHT_END,
     DEFAULT_NIGHT_START,
     DOMAIN,
+    MINUTE_MIN_INTERVAL_OPTIONS,
     API_BASE_URL,
 )
 
@@ -59,6 +68,16 @@ def _calculate_monthly_calls(
     night_calls = calls_per_hour_night * night_hours * days_per_month
 
     return int(day_calls + night_calls)
+
+
+# Simulated: ten rain days of four hours each, at each selectable interval.
+# See the table in const.py next to MINUTE_MIN_INTERVAL_OPTIONS.
+_MINUTE_TEMPERATE_ESTIMATE = {3: 1240, 5: 910, 10: 660, 15: 570}
+
+
+def _estimate_minute_calls(min_interval: int) -> int:
+    """Monthly nowcast calls in a temperate climate at this minimum interval."""
+    return _MINUTE_TEMPERATE_ESTIMATE.get(min_interval, 910)
 
 
 def _build_usage_description(
@@ -89,6 +108,15 @@ def _build_usage_description(
             interval_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
         )
 
+    # Cannot be worked out in advance: its cost is decided by how much it rains.
+    minute_enabled = forecast_data.get(
+        CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST
+    )
+    minute_budget = interval_data.get(
+        CONF_MINUTE_MONTHLY_BUDGET, DEFAULT_MINUTE_MONTHLY_BUDGET
+    )
+    # The nowcast is excluded: folding a guess into a figure presented as a
+    # calculation would be misleading. It is called out separately below.
     total_calls = current_calls + daily_calls + hourly_calls + alerts_calls
     headroom = 10000 - total_calls
     headroom_pct = (headroom / 10000) * 100
@@ -107,12 +135,24 @@ def _build_usage_description(
     else:
         alerts_line = "\u2022 Weather Alerts: 0 calls/month (disabled)\n"
 
+    if minute_enabled:
+        minute_interval = interval_data.get(
+            CONF_MINUTE_MIN_INTERVAL, DEFAULT_MINUTE_MIN_INTERVAL
+        )
+        minute_line = (
+            f"\u2022 Minute Forecast (alpha): depends on the weather \u2014 ~360/month if dry, "
+            f"~{_estimate_minute_calls(minute_interval):,} temperate, more if wet\n"
+        )
+    else:
+        minute_line = "\u2022 Minute Forecast: 0 calls/month (disabled)\n"
+
     description = (
         f"**Estimated Monthly API Usage:**\n\n"
         f"\u2022 Current Conditions: ~{current_calls:,} calls/month\n"
         f"{daily_line}"
         f"{hourly_line}"
-        f"{alerts_line}\n"
+        f"{alerts_line}"
+        f"{minute_line}\n"
         f"**Total: ~{total_calls:,} calls/month** {status}\n"
         f"Free tier limit: 10,000 calls/month\n"
     )
@@ -123,6 +163,18 @@ def _build_usage_description(
         excess = total_calls - 10000
         description += f"\n\u26a0\ufe0f **Warning:** Exceeds free tier by {excess:,} calls/month\n"
         description += "Consider reducing update intervals or expect charges."
+
+    if minute_enabled:
+        description += (
+            f"\n\n---\n"
+            f"\u26a0\ufe0f **The minute forecast can take you over the 10,000 free calls.**\n\n"
+            f"Its cost depends on the weather, so it is not included above. You have "
+            f"{headroom:,} calls of headroom.\n\n"
+            f"The ceiling of {minute_budget:,} slows polling to two-hourly, but it is "
+            f"not a guarantee: it resets when Home Assistant restarts and cannot see "
+            f"other users of your API key.\n\n"
+            f"Set a quota cap in the Google Cloud console if staying free matters."
+        )
 
     description += "\n\n---\n**Ready to proceed?** Click **Next** to complete setup."
 
@@ -250,6 +302,9 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_INCLUDE_DAILY_FORECAST: True,  # Always enabled
                 CONF_INCLUDE_HOURLY_FORECAST: user_input.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
                 CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
+                CONF_INCLUDE_MINUTE_FORECAST: user_input.get(
+                    CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST
+                ),
             }
             return await self.async_step_intervals()
 
@@ -264,6 +319,10 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(
                         CONF_INCLUDE_ALERTS,
                         default=DEFAULT_INCLUDE_ALERTS,
+                    ): bool,
+                    vol.Optional(
+                        CONF_INCLUDE_MINUTE_FORECAST,
+                        default=DEFAULT_INCLUDE_MINUTE_FORECAST,
                     ): bool,
                 }
             ),
@@ -324,6 +383,23 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_ALERTS_NIGHT_INTERVAL,
                     default=DEFAULT_ALERTS_NIGHT_INTERVAL,
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            })
+
+        # Self-scheduling, so no day/night pair: a floor, a gate and a ceiling.
+        if self.forecast_data.get(CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST):
+            schema_dict.update({
+                vol.Optional(
+                    CONF_MINUTE_MIN_INTERVAL,
+                    default=DEFAULT_MINUTE_MIN_INTERVAL,
+                ): vol.In(list(MINUTE_MIN_INTERVAL_OPTIONS)),
+                vol.Optional(
+                    CONF_MINUTE_RAIN_THRESHOLD,
+                    default=DEFAULT_MINUTE_RAIN_THRESHOLD,
+                ): vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
+                vol.Optional(
+                    CONF_MINUTE_MONTHLY_BUDGET,
+                    default=DEFAULT_MINUTE_MONTHLY_BUDGET,
+                ): vol.All(vol.Coerce(int), vol.Range(min=100, max=10000)),
             })
 
         # Night time period (always shown)
@@ -420,6 +496,9 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                     CONF_INCLUDE_DAILY_FORECAST: True,  # Always enabled
                     CONF_INCLUDE_HOURLY_FORECAST: user_input.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
                     CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
+                    CONF_INCLUDE_MINUTE_FORECAST: user_input.get(
+                        CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST
+                    ),
                 }
                 return await self.async_step_intervals()
 
@@ -442,6 +521,13 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             vol.Optional(
                 CONF_INCLUDE_ALERTS,
                 default=current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
+            ): bool,
+            # Minute forecast checkbox (alpha, off by default)
+            vol.Optional(
+                CONF_INCLUDE_MINUTE_FORECAST,
+                default=current_data.get(
+                    CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST
+                ),
             ): bool,
         }
 
@@ -509,6 +595,23 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                     CONF_ALERTS_NIGHT_INTERVAL,
                     default=current_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            })
+
+        # Minute forecast settings, shown only when enabled.
+        if self.forecast_options.get(CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST):
+            schema_dict.update({
+                vol.Optional(
+                    CONF_MINUTE_MIN_INTERVAL,
+                    default=current_data.get(CONF_MINUTE_MIN_INTERVAL, DEFAULT_MINUTE_MIN_INTERVAL),
+                ): vol.In(list(MINUTE_MIN_INTERVAL_OPTIONS)),
+                vol.Optional(
+                    CONF_MINUTE_RAIN_THRESHOLD,
+                    default=current_data.get(CONF_MINUTE_RAIN_THRESHOLD, DEFAULT_MINUTE_RAIN_THRESHOLD),
+                ): vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
+                vol.Optional(
+                    CONF_MINUTE_MONTHLY_BUDGET,
+                    default=current_data.get(CONF_MINUTE_MONTHLY_BUDGET, DEFAULT_MINUTE_MONTHLY_BUDGET),
+                ): vol.All(vol.Coerce(int), vol.Range(min=100, max=10000)),
             })
 
         # Night time period (always shown)

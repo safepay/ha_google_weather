@@ -17,7 +17,18 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
-from .const import ALERT_SENSOR_KEYS, CONF_INCLUDE_ALERTS, CONF_LOCATION, DEFAULT_INCLUDE_ALERTS, DOMAIN, VERSION
+from .const import (
+    ALERT_SENSOR_KEYS,
+    ALPHA_LABEL,
+    CONF_INCLUDE_ALERTS,
+    CONF_INCLUDE_MINUTE_FORECAST,
+    CONF_LOCATION,
+    DEFAULT_INCLUDE_ALERTS,
+    DEFAULT_INCLUDE_MINUTE_FORECAST,
+    DOMAIN,
+    MINUTE_BINARY_SENSOR_KEYS,
+    VERSION,
+)
 from .coordinator import GoogleWeatherCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,6 +40,8 @@ class GoogleWeatherBinarySensorDescription(BinarySensorEntityDescription):
 
     value_fn: Callable[[dict], bool] | None = None
     attributes_fn: Callable[[dict], dict[str, Any]] | None = None
+    # Minute forecast entities sit on their own device: see ALPHA_LABEL.
+    minute: bool = False
 
 
 # Severity levels for filtering
@@ -57,6 +70,15 @@ def has_urgent_alerts(data: dict) -> bool:
         alert.get("urgency") in URGENT_URGENCIES
         for alert in alerts
     )
+
+
+def precipitation_within_hour(data: dict) -> bool:
+    """Whether precipitation is forecast within the hour.
+
+    Reads the onset derived from type and qpf, never the nowcast's probability.
+    """
+    starts_in = (data.get("minute_forecast") or {}).get("starts_in")
+    return starts_in is not None and starts_in <= 60
 
 
 def get_alert_attributes(data: dict) -> dict[str, Any]:
@@ -168,6 +190,21 @@ BINARY_SENSOR_TYPES: tuple[GoogleWeatherBinarySensorDescription, ...] = (
             ]
         } if has_urgent_alerts(data) else {},
     ),
+    GoogleWeatherBinarySensorDescription(
+        key="precipitation_within_hour",
+        name="Precipitation Within The Hour",
+        device_class=BinarySensorDeviceClass.MOISTURE,
+        icon="mdi:weather-rainy",
+        minute=True,
+        value_fn=precipitation_within_hour,
+        attributes_fn=lambda data: {
+            "starts_in": (data.get("minute_forecast") or {}).get("starts_in"),
+            "precipitation_type": (data.get("minute_forecast") or {}).get("onset_type"),
+            "onset_precision_minutes": (data.get("minute_forecast") or {}).get(
+                "onset_precision_minutes"
+            ),
+        },
+    ),
 )
 
 
@@ -189,8 +226,17 @@ async def async_setup_entry(
     # Only include alert sensors if alerts are enabled AND supported
     sensors_to_add = []
 
+    include_minute = current_data.get(
+        CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST
+    )
+
     for description in BINARY_SENSOR_TYPES:
-        if description.key in ALERT_SENSOR_KEYS:
+        if description.key in MINUTE_BINARY_SENSOR_KEYS:
+            if include_minute:
+                sensors_to_add.append(
+                    GoogleWeatherBinarySensor(coordinator, entry, description, location)
+                )
+        elif description.key in ALERT_SENSOR_KEYS:
             # Only add alert sensors if alerts are enabled and supported
             if include_alerts and coordinator.alerts_supported:
                 sensors_to_add.append(
@@ -243,14 +289,24 @@ class GoogleWeatherBinarySensor(
         # Use separate device linked to weather device via via_device
         self._attr_unique_id = f"{location_slug}_{description.key}"
         self._attr_name = f"{location_name} {description.name}"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{entry.entry_id}_binary_sensors")},
-            "name": f"{location_name} Binary Sensors",
-            "manufacturer": "Google",
-            "model": "Weather API - Binary Sensors",
-            "sw_version": VERSION,
-            "via_device": (DOMAIN, entry.entry_id),
-        }
+        if description.minute:
+            self._attr_device_info = {
+                "identifiers": {(DOMAIN, f"{entry.entry_id}_minute")},
+                "name": f"{location_name} Minute Forecast ({ALPHA_LABEL})",
+                "manufacturer": "Google",
+                "model": "Weather API - Minute Forecast (Alpha)",
+                "sw_version": VERSION,
+                "via_device": (DOMAIN, entry.entry_id),
+            }
+        else:
+            self._attr_device_info = {
+                "identifiers": {(DOMAIN, f"{entry.entry_id}_binary_sensors")},
+                "name": f"{location_name} Binary Sensors",
+                "manufacturer": "Google",
+                "model": "Weather API - Binary Sensors",
+                "sw_version": VERSION,
+                "via_device": (DOMAIN, entry.entry_id),
+            }
 
         # Home Assistant builds a new entity's id from the device name followed
         # by the entity name, and drops the device name only when the entity
@@ -270,6 +326,10 @@ class GoogleWeatherBinarySensor(
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return additional state attributes."""
+        attrs: dict[str, Any] = {}
         if self.coordinator.data and self.entity_description.attributes_fn:
-            return self.entity_description.attributes_fn(self.coordinator.data)
-        return {}
+            attrs = dict(self.entity_description.attributes_fn(self.coordinator.data))
+            attrs = {k: v for k, v in attrs.items() if v is not None}
+        if self.entity_description.minute:
+            attrs["alpha"] = ALPHA_LABEL
+        return attrs

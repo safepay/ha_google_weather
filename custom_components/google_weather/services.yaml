@@ -14,7 +14,7 @@ get_forecast:
           integration: google_weather
     forecast_type:
       name: Forecast type
-      description: Type of forecast to fetch (daily or hourly).
+      description: Type of forecast to fetch (daily, hourly, or minute).
       required: true
       example: "daily"
       selector:
@@ -22,3 +22,4 @@ get_forecast:
           options:
             - "daily"
             - "hourly"
+            - "minute"

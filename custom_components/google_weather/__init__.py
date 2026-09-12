@@ -19,7 +19,18 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
-from .const import ALERT_SENSOR_KEYS, CONF_INCLUDE_ALERTS, DOMAIN, ENDPOINT_DAILY, ENDPOINT_HOURLY
+from .const import (
+    ALERT_SENSOR_KEYS,
+    CONF_INCLUDE_ALERTS,
+    CONF_INCLUDE_MINUTE_FORECAST,
+    DEFAULT_INCLUDE_MINUTE_FORECAST,
+    DOMAIN,
+    ENDPOINT_DAILY,
+    ENDPOINT_HOURLY,
+    ENDPOINT_MINUTE,
+    MINUTE_BINARY_SENSOR_KEYS,
+    MINUTE_SENSOR_KEYS,
+)
 from .coordinator import GoogleWeatherCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,7 +44,7 @@ ATTR_ENTITY_ID = "entity_id"
 SERVICE_GET_FORECAST_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Required(ATTR_FORECAST_TYPE): vol.In(["daily", "hourly"]),
+        vol.Required(ATTR_FORECAST_TYPE): vol.In(["daily", "hourly", "minute"]),
     }
 )
 
@@ -67,7 +78,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for entry_id, coord in hass.data[DOMAIN].items():
             if isinstance(coord, GoogleWeatherCoordinator):
                 # Fetch the forecast on demand
-                endpoint = ENDPOINT_DAILY if forecast_type == "daily" else ENDPOINT_HOURLY
+                endpoint = {
+                    "daily": ENDPOINT_DAILY,
+                    "hourly": ENDPOINT_HOURLY,
+                    "minute": ENDPOINT_MINUTE,
+                }[forecast_type]
                 forecast_data = await coord.async_fetch_forecast_on_demand(endpoint)
 
                 _LOGGER.info(
@@ -104,29 +119,47 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
         _LOGGER.info("Alerts disabled - removing orphaned alert binary sensor entities")
         await _remove_alert_entities(hass, entry)
 
+    if not current_config.get(CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST):
+        _LOGGER.info("Minute forecast disabled - removing its entities")
+        await _remove_entities(hass, entry, Platform.SENSOR, MINUTE_SENSOR_KEYS)
+        await _remove_entities(
+            hass, entry, Platform.BINARY_SENSOR, MINUTE_BINARY_SENSOR_KEYS
+        )
+
     # Reload the entry to apply changes
     await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def _remove_alert_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Remove alert binary sensor entities from the entity registry."""
+    await _remove_entities(hass, entry, Platform.BINARY_SENSOR, ALERT_SENSOR_KEYS)
+
+
+async def _remove_entities(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    platform: Platform,
+    sensor_keys: frozenset[str],
+) -> None:
+    """Remove entities for the given keys from the entity registry.
+
+    Unique ids are <location_slug>_<sensor_key>; changing either orphans them.
+    """
     from .const import CONF_LOCATION
 
     entity_registry = er.async_get(hass)
     location = entry.data.get(CONF_LOCATION, "home")
     location_slug = location.lower().replace(" ", "_")
 
-    for sensor_key in ALERT_SENSOR_KEYS:
+    for sensor_key in sensor_keys:
         unique_id = f"{location_slug}_{sensor_key}"
-        entity_id = entity_registry.async_get_entity_id(
-            Platform.BINARY_SENSOR, DOMAIN, unique_id
-        )
+        entity_id = entity_registry.async_get_entity_id(platform, DOMAIN, unique_id)
 
         if entity_id:
-            _LOGGER.info("Removing orphaned alert entity: %s (unique_id: %s)", entity_id, unique_id)
+            _LOGGER.info("Removing orphaned entity: %s (unique_id: %s)", entity_id, unique_id)
             entity_registry.async_remove(entity_id)
         else:
-            _LOGGER.debug("Alert entity not found in registry: %s", unique_id)
+            _LOGGER.debug("Entity not found in registry: %s", unique_id)
 
 
 @callback

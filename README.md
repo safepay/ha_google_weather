@@ -78,6 +78,44 @@ All alert sensors include detailed attributes with alert descriptions, instructi
 
 **Alert Availability**: The integration automatically detects if your location supports weather alerts during setup. If the API returns a 404 error, only the Daytime sensor is created. All weather data and forecasts continue to work normally. See [Supported Regions](#supported-regions) for alert coverage details.
 
+### Minute Forecast — Alpha, likely to change
+
+> ⚠️ **This feature can take you over the 10,000 free API calls per month.** Its cost depends on how much it rains, so it cannot be calculated in advance. Off by default.
+
+A six-hour rain nowcast answering *when will rain start* and *how much will fall*, on a separate device named "Minute Forecast (Alpha - likely to change)".
+
+| Entity | Notes |
+| --- | --- |
+| Precipitation Starts In | Minutes. Attributes carry 15/30/60/120/360-minute rain totals |
+| Precipitation Stops In | Minutes. **Unknown** when rain runs past the end of the forecast |
+| Precipitation Rate | mm/h |
+| Rain Next 60 Minutes | mm |
+| Rain Rest Of Forecast | mm, with a 15-minute timeline attribute |
+| Precipitation Within The Hour | Binary sensor |
+
+Every entity carries an `alpha` attribute. Google's endpoint is pre-GA, so entities and attributes may change or be withdrawn — hence the label. Entity IDs contain no "alpha" suffix, so nothing breaks when it graduates.
+
+**Resolution is regional and not a setting.** Two-minute segments in the US, fifteen-minute in Europe and Australia. The onset sensor publishes an `onset_precision_minutes` attribute so a coarse answer never reads as a precise one.
+
+**Snow is not covered yet.** Rain totals filter on precipitation type, so snow reports nothing rather than something wrong.
+
+#### Cost
+
+The nowcast schedules itself from the forecast it just received: a response showing no rain guarantees none can start for six hours, so it waits. As rain approaches it halves the gap, down to your chosen minimum.
+
+Approximate calls per month, by the **minimum time between calls** you pick during setup:
+
+| | 3 min | 5 min | 10 min | 15 min |
+| --- | --- | --- | --- | --- |
+| Dry month | 360 | 360 | 360 | 360 |
+| 10 rain days | 1,240 | 910 | 660 | 570 |
+| 20 rain days | 2,960 | 1,980 | 1,240 | 980 |
+| 30 rain days | 5,520 | 3,570 | 2,100 | 1,590 |
+
+Default headroom on the free tier is about 1,360 calls, so 5 minutes suits a temperate climate and 10 or more suits a wet one. This is not the forecast's resolution — every call returns the full six hours, so a longer interval only delays noticing a *change*.
+
+A monthly ceiling (default 1,500) slows polling to two-hourly once reached. **It is a safeguard, not a guarantee**: it resets when Home Assistant restarts and cannot see calls made by anything else using your API key. Set a quota cap in the Google Cloud console if staying inside the free tier matters.
+
 ## Prerequisites
 
 1. **Google Cloud Project**: Create a project at [Google Cloud Console](https://console.cloud.google.com/)
