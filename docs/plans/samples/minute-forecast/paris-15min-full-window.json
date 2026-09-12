@@ -1,0 +1,421 @@
+{
+  "overallPredictionTimeframe": {
+    "startTime": "2026-09-12T06:11:00Z",
+    "endTime": "2026-09-12T12:11:00Z"
+  },
+  "timeZone": {
+    "id": "Europe/Paris",
+    "version": ""
+  },
+  "nextPageToken": "",
+  "segments": [
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T06:00:00Z",
+        "endTime": "2026-09-12T06:15:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T06:15:00Z",
+        "endTime": "2026-09-12T06:30:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T06:30:00Z",
+        "endTime": "2026-09-12T06:45:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T06:45:00Z",
+        "endTime": "2026-09-12T07:00:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T07:00:00Z",
+        "endTime": "2026-09-12T07:15:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T07:15:00Z",
+        "endTime": "2026-09-12T07:30:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T07:30:00Z",
+        "endTime": "2026-09-12T07:45:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T07:45:00Z",
+        "endTime": "2026-09-12T08:00:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T08:00:00Z",
+        "endTime": "2026-09-12T08:15:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T08:15:00Z",
+        "endTime": "2026-09-12T08:30:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T08:30:00Z",
+        "endTime": "2026-09-12T08:45:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T08:45:00Z",
+        "endTime": "2026-09-12T09:00:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T09:00:00Z",
+        "endTime": "2026-09-12T09:15:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T09:15:00Z",
+        "endTime": "2026-09-12T09:30:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T09:30:00Z",
+        "endTime": "2026-09-12T09:45:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T09:45:00Z",
+        "endTime": "2026-09-12T10:00:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T10:00:00Z",
+        "endTime": "2026-09-12T10:15:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T10:15:00Z",
+        "endTime": "2026-09-12T10:30:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T10:30:00Z",
+        "endTime": "2026-09-12T10:45:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T10:45:00Z",
+        "endTime": "2026-09-12T11:00:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T11:00:00Z",
+        "endTime": "2026-09-12T11:15:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T11:15:00Z",
+        "endTime": "2026-09-12T11:30:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T11:30:00Z",
+        "endTime": "2026-09-12T11:45:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    },
+    {
+      "timeFrame": {
+        "startTime": "2026-09-12T11:45:00Z",
+        "endTime": "2026-09-12T12:00:00Z"
+      },
+      "type": "NONE",
+      "probability": 0,
+      "qpf": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "snowfallAmount": {
+        "unit": "MILLIMETERS",
+        "quantity": 0
+      },
+      "intensity": "NO_INTENSITY"
+    }
+  ]
+}
