@@ -95,9 +95,11 @@ A six-hour rain nowcast answering *when will rain start* and *how much will fall
 
 Every entity carries an `alpha` attribute. Google's endpoint is pre-GA, so entities and attributes may change or be withdrawn — hence the label. Entity IDs contain no "alpha" suffix, so nothing breaks when it graduates.
 
-**Resolution is regional and not a setting.** Google returns two-minute segments in the US and fifteen-minute ones in Europe and Australia. You cannot change this, and the minimum polling interval below is a separate thing — polling every 2 minutes at a 15-minute location gets you revisions sooner, but onset times still move in 15-minute steps.
+**Resolution is set by Google, varies by location, and is not a setting.** The integration never assumes which width you get — enabling the feature makes one call during setup to measure it, then defaults the polling interval to match. If your location later starts returning finer segments, the options flow reports the new width and you can poll faster.
 
-The onset sensor publishes `onset_precision_minutes` so a coarse answer never reads as a precise one, and once the integration has fetched once, the options flow tells you which width your location returns.
+The minimum polling interval is a separate thing from resolution: polling every 2 minutes where segments are 15 minutes wide gets you revisions sooner, but onset times still move in 15-minute steps.
+
+Every onset reading publishes `onset_precision_minutes` alongside it, so a coarse answer never reads as a precise one.
 
 **Snow is not covered yet.** Rain totals filter on precipitation type, so snow reports nothing rather than something wrong.
 
@@ -122,7 +124,7 @@ Approximate calls per month, by the **minimum time between calls** you pick duri
 | 20 rain days | 4,080 | 2,880 | 1,900 | 1,160 | 900 |
 | 30 rain days | 7,920 | 5,520 | 3,570 | 2,100 | 1,590 |
 
-Two minutes matches the finest segments Google returns anywhere, so nothing is gained by going lower — and outside the US, where segments are 15 minutes, the useful floor is higher still. Default headroom on the free tier is about 1,360 calls, so **5 minutes is the default** as the most detail that still fits a temperate month; 10 or more suits a wet climate, and 2 is for anyone happy to watch their usage.
+Two minutes is the finest segment width the endpoint has been seen to return, so nothing is gained by going lower. Where segments are wider, setup raises the default to match them. Default headroom on the free tier is about 1,360 calls, so **5 minutes is the default** as the most detail that still fits a temperate month; 10 or more suits a wet climate, and 2 is for anyone happy to watch their usage.
 
 This is not the forecast's resolution — every call returns the full six hours, so a longer interval only delays noticing a *change*.
 

@@ -11,6 +11,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from . import nowcast
 from .const import (
     CONF_ALERTS_DAY_INTERVAL,
     CONF_ALERTS_NIGHT_INTERVAL,
@@ -50,6 +51,8 @@ from .const import (
     DEFAULT_NIGHT_START,
     DOMAIN,
     MINUTE_MIN_INTERVAL_LABELS,
+    MINUTE_MIN_INTERVAL_OPTIONS,
+    MINUTE_PROBE_PAGE_SIZE,
     API_BASE_URL,
 )
 
@@ -80,19 +83,81 @@ def _estimate_minute_calls(min_interval: int) -> int:
     return _MINUTE_TEMPERATE_ESTIMATE.get(min_interval, 910)
 
 
+def _probe_minute_cadence(
+    api_key: str, latitude: float, longitude: float
+) -> float | None:
+    """Learn this location's segment width with one small call.
+
+    Segment width varies by location and nothing but a response reveals it, so
+    it is read rather than predicted. Returns None on any failure: the endpoint
+    is pre-GA and must never block setup.
+    """
+    try:
+        response = requests.get(
+            f"{API_BASE_URL}/forecast/minutes:lookup",
+            params={
+                "key": api_key,
+                "location.latitude": latitude,
+                "location.longitude": longitude,
+                "pageSize": MINUTE_PROBE_PAGE_SIZE,
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
+        segments = nowcast.parse_segments(response.json())
+    except (requests.RequestException, ValueError) as err:
+        _LOGGER.debug("Minute forecast probe failed: %s", err)
+        return None
+
+    if not segments:
+        _LOGGER.debug("Minute forecast probe returned no usable segments")
+        return None
+    return segments[0].duration_minutes
+
+
+def _default_min_interval(cadence: float | None) -> int:
+    """Pick the interval default for a location of this segment width.
+
+    Never faster than the data changes shape, and never below the cost-balanced
+    default - so a two-minute region keeps 5 rather than dropping to 2.
+    """
+    if not cadence:
+        return DEFAULT_MINUTE_MIN_INTERVAL
+    matched = next(
+        (option for option in MINUTE_MIN_INTERVAL_OPTIONS if option >= cadence),
+        MINUTE_MIN_INTERVAL_OPTIONS[-1],
+    )
+    return max(DEFAULT_MINUTE_MIN_INTERVAL, matched)
+
+
+def _cadence_note(cadence: float | None, enabled: bool) -> str:
+    """A line for the intervals step saying what this location actually returns."""
+    if not enabled:
+        return ""
+    if not cadence:
+        return (
+            "\n\nThe minute forecast's segment width could not be read for this "
+            "location. It will be shown here once a forecast has been fetched."
+        )
+    width = int(round(cadence))
+    return (
+        f"\n\nThis location returns {width}-minute minute-forecast segments. "
+        f"Polling faster than that gets revisions sooner, but onset times still "
+        f"move in {width}-minute steps."
+    )
+
+
 def _describe_cadence(cadence: float | None, min_interval: int) -> str:
     """Explain what segment width this location returns, if it is known yet.
 
-    Resolution is regional - two-minute segments in the US, fifteen-minute
-    elsewhere so far - and is not a setting. Polling faster than the segment
-    width still gets revisions sooner, but no finer an answer, so say so rather
-    than let the interval choice imply detail the region cannot give.
+    Segment width is set by Google, varies by location and is not a setting.
+    Polling faster than it still gets revisions sooner, but no finer an answer,
+    so say so rather than let the interval choice imply detail that is not there.
     """
     if not cadence:
         return (
-            "\n\u2139\ufe0f Segment width varies by region: 2 minutes in the US, "
-            "15 minutes elsewhere so far. Polling faster than your region's "
-            "segments gets revisions sooner but no finer an answer.\n"
+            "\n\u2139\ufe0f This location's segment width is not known yet. Polling "
+            "faster than it gets revisions sooner but no finer an answer.\n"
         )
 
     width = int(round(cadence))
@@ -222,6 +287,7 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.user_data: dict[str, Any] = {}
         self.forecast_data: dict[str, Any] = {}
         self.interval_data: dict[str, Any] = {}
+        self.minute_cadence: float | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -336,6 +402,15 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST
                 ),
             }
+            if self.forecast_data[CONF_INCLUDE_MINUTE_FORECAST]:
+                # One call, so the interval step can offer a default that suits
+                # this region rather than warning about it afterwards.
+                self.minute_cadence = await self.hass.async_add_executor_job(
+                    _probe_minute_cadence,
+                    self.api_key,
+                    self.user_data[CONF_LATITUDE],
+                    self.user_data[CONF_LONGITUDE],
+                )
             return await self.async_step_intervals()
 
         return self.async_show_form(
@@ -420,7 +495,7 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             schema_dict.update({
                 vol.Optional(
                     CONF_MINUTE_MIN_INTERVAL,
-                    default=DEFAULT_MINUTE_MIN_INTERVAL,
+                    default=_default_min_interval(self.minute_cadence),
                 ): vol.In(MINUTE_MIN_INTERVAL_LABELS),
                 vol.Optional(
                     CONF_MINUTE_RAIN_THRESHOLD,
@@ -447,6 +522,14 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="intervals",
             data_schema=vol.Schema(schema_dict),
+            description_placeholders={
+                "minute_note": _cadence_note(
+                    self.minute_cadence,
+                    self.forecast_data.get(
+                        CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST
+                    ),
+                )
+            },
         )
 
     async def async_step_confirm(
@@ -468,7 +551,9 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data=final_data,
             )
 
-        description = _build_usage_description(self.forecast_data, self.interval_data)
+        description = _build_usage_description(
+            self.forecast_data, self.interval_data, self.minute_cadence
+        )
 
         return self.async_show_form(
             step_id="confirm",
@@ -659,6 +744,14 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="intervals",
             data_schema=vol.Schema(schema_dict),
+            description_placeholders={
+                "minute_note": _cadence_note(
+                    self._observed_cadence(),
+                    self.forecast_options.get(
+                        CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST
+                    ),
+                )
+            },
         )
 
     def _observed_cadence(self) -> float | None:

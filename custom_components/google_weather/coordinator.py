@@ -230,6 +230,7 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # so it carries its own next-call time instead of an entry in intervals.
         self.minute_next_poll: datetime | None = None
         self.minute_failures = 0
+        self.minute_cadence: float | None = None
         self.minute_calls = 0
         self.minute_calls_month: tuple[int, int] | None = None
 
@@ -314,6 +315,18 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return
 
         self.minute_failures = 0
+
+        # Segment width is read, never assumed, and is not stable: say so when it
+        # moves, since it changes how precise an answer the entities can give.
+        cadence = derived.get("cadence_minutes")
+        if cadence and cadence != self.minute_cadence:
+            if self.minute_cadence is not None:
+                _LOGGER.info(
+                    "Minute forecast segment width changed from %s to %s minutes",
+                    self.minute_cadence,
+                    cadence,
+                )
+            self.minute_cadence = cadence
 
         if self._minute_budget_exhausted():
             # Degrade rather than go dark: two-hourly still answers "is rain

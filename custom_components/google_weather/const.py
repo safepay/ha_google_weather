@@ -104,11 +104,11 @@ MINUTE_DORMANT_LOOKAHEAD_HOURS = 6
 #   20 rain days  4,080   2,880   1,900   1,160     900
 #   30 rain days  7,920   5,520   3,570   2,100   1,590
 #
-# Two matches the finest segment cadence Google returns, so nothing is gained by
-# going below it. Five is the default: the most detail that still fits a
-# temperate month inside the default headroom.
+# Two is the finest segment width seen from the endpoint, so nothing is gained
+# by going below it. Five is the fallback default; setup probes the location and
+# raises it to match a coarser segment width rather than assuming one.
 #
-# Not the segment cadence: every call returns all six hours either way. A longer
+# Not the segment width: every call returns all six hours either way. A longer
 # floor only delays noticing a change.
 MINUTE_MIN_INTERVAL_OPTIONS = (2, 3, 5, 10, 15)
 DEFAULT_MINUTE_MIN_INTERVAL = 5
@@ -138,6 +138,10 @@ DEFAULT_MINUTE_MONTHLY_BUDGET = 1500
 # expected back, never an exact count: 500 returns the whole window in one call
 # at both observed cadences.
 MINUTE_PAGE_SIZE = 500
+
+# Segment width is regional and cannot be known before calling, so setup spends
+# one small call to learn it. Two segments is enough to read a width from.
+MINUTE_PROBE_PAGE_SIZE = 2
 
 # Published as attributes on the onset sensor, not as entities: nested sums of
 # the same data would write correlated rows on every refresh.
