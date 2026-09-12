@@ -1,0 +1,15 @@
+# Line endings are LF everywhere, in the repository and in the working tree.
+#
+# Every blob in this repo is already stored with LF. Without this file that is
+# only true by accident of each contributor's core.autocrlf: on Windows the
+# default checks files out as CRLF, so the working tree stops matching the blob
+# and diff viewers show a stray CR on every changed line.
+* text=auto eol=lf
+
+# Binary, so never touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary

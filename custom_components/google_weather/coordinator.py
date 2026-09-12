@@ -337,7 +337,7 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     "days": 10,  # Get 10 days of forecast
                     "pageSize": 10,  # Get 10 days in single API request
                 }
-                
+
                 daily_response = requests.get(
                     f"{API_BASE_URL}/forecast/days:lookup",
                     params=daily_params,
