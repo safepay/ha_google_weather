@@ -19,6 +19,7 @@ Captured 2026-09-12.
 | `new-york-2min-default-pagesize.json` | 06:09 | 2 min | 30 | dry | present |
 | `paris-15min-full-window.json` | 06:11 | 15 min | 24 | dry | empty |
 | `adelaide-15min-uniform-dry.json` | 06:08 | 15 min | 24 | dry | empty |
+| `adelaide-15min-repeat-probe-dry.json` | 07:21 | 15 min | 24 | dry | empty |
 
 All times UTC. The three Chicago files are the same location across an hour and
 are best read together — see [The Chicago sequence](#the-chicago-sequence).
@@ -74,13 +75,16 @@ run 06:00 to 12:00, overhanging at the start and falling short at the end. Any
 code that reads the declared window as the span it actually holds data for is
 wrong in both directions.
 
-**`adelaide-15min-uniform-dry.json`** is the same uniform quarter-hour shape
-from the third sampled region, and overhangs its window the same way. Worth
-being clear about what it is not: the plan records Adelaide returning one big
-block plus five quarter-hour segments, and this is not that capture. It is
-consistent with the block shape being transient — the same coordinates,
-returning the ordinary shape on another day — but a dry uniform response is weak
-evidence for that on its own.
+**The two Adelaide files** are the same coordinates probed at 06:08 and 07:21,
+and both return the ordinary uniform quarter-hour shape, dry, overhanging the
+declared window at both ends. Together with Melbourne in the plan they put
+Australia firmly at fifteen-minute resolution: no Australian probe has ever
+returned the two-minute cadence, which remains US-only across everything sampled.
+
+Worth being clear about what they are not. The plan records Adelaide once
+returning one big block plus five quarter-hour segments, and neither of these is
+that capture. Two ordinary responses hours apart are consistent with the block
+shape being transient, but they are not proof of it.
 
 **`chicago-2min-full-window-dry.json`** is the only capture retained whole, and
 the one that settles `pageSize` outright: 180 two-minute segments, a full six
