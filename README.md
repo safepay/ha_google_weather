@@ -95,7 +95,9 @@ A six-hour rain nowcast answering *when will rain start* and *how much will fall
 
 Every entity carries an `alpha` attribute. Google's endpoint is pre-GA, so entities and attributes may change or be withdrawn — hence the label. Entity IDs contain no "alpha" suffix, so nothing breaks when it graduates.
 
-**Resolution is regional and not a setting.** Two-minute segments in the US, fifteen-minute in Europe and Australia. The onset sensor publishes an `onset_precision_minutes` attribute so a coarse answer never reads as a precise one.
+**Resolution is regional and not a setting.** Google returns two-minute segments in the US and fifteen-minute ones in Europe and Australia. You cannot change this, and the minimum polling interval below is a separate thing — polling every 2 minutes at a 15-minute location gets you revisions sooner, but onset times still move in 15-minute steps.
+
+The onset sensor publishes `onset_precision_minutes` so a coarse answer never reads as a precise one, and once the integration has fetched once, the options flow tells you which width your location returns.
 
 **Snow is not covered yet.** Rain totals filter on precipitation type, so snow reports nothing rather than something wrong.
 
@@ -120,7 +122,7 @@ Approximate calls per month, by the **minimum time between calls** you pick duri
 | 20 rain days | 4,080 | 2,880 | 1,900 | 1,160 | 900 |
 | 30 rain days | 7,920 | 5,520 | 3,570 | 2,100 | 1,590 |
 
-Two minutes matches the finest segments Google returns, so nothing is gained by going lower. Default headroom on the free tier is about 1,360 calls, so **5 minutes is the default** as the most detail that still fits a temperate month; 10 or more suits a wet climate, and 2 is for anyone happy to watch their usage.
+Two minutes matches the finest segments Google returns anywhere, so nothing is gained by going lower — and outside the US, where segments are 15 minutes, the useful floor is higher still. Default headroom on the free tier is about 1,360 calls, so **5 minutes is the default** as the most detail that still fits a temperate month; 10 or more suits a wet climate, and 2 is for anyone happy to watch their usage.
 
 This is not the forecast's resolution — every call returns the full six hours, so a longer interval only delays noticing a *change*.
 

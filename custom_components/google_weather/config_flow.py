@@ -80,8 +80,37 @@ def _estimate_minute_calls(min_interval: int) -> int:
     return _MINUTE_TEMPERATE_ESTIMATE.get(min_interval, 910)
 
 
+def _describe_cadence(cadence: float | None, min_interval: int) -> str:
+    """Explain what segment width this location returns, if it is known yet.
+
+    Resolution is regional - two-minute segments in the US, fifteen-minute
+    elsewhere so far - and is not a setting. Polling faster than the segment
+    width still gets revisions sooner, but no finer an answer, so say so rather
+    than let the interval choice imply detail the region cannot give.
+    """
+    if not cadence:
+        return (
+            "\n\u2139\ufe0f Segment width varies by region: 2 minutes in the US, "
+            "15 minutes elsewhere so far. Polling faster than your region's "
+            "segments gets revisions sooner but no finer an answer.\n"
+        )
+
+    width = int(round(cadence))
+    note = f"\n\u2139\ufe0f This location returns {width}-minute segments.\n"
+    if min_interval < width:
+        note += (
+            f"Polling every {min_interval} minutes is faster than the data "
+            f"changes shape. You will hear about revisions sooner, but onset "
+            f"times still move in {width}-minute steps. Consider {width} "
+            f"minutes unless you want the earlier warning.\n"
+        )
+    return note
+
+
 def _build_usage_description(
-    forecast_data: dict[str, Any], interval_data: dict[str, Any]
+    forecast_data: dict[str, Any],
+    interval_data: dict[str, Any],
+    cadence: float | None = None,
 ) -> str:
     """Build API usage description string from forecast and interval data."""
     current_calls = _calculate_monthly_calls(
@@ -173,7 +202,8 @@ def _build_usage_description(
             f"The ceiling of {minute_budget:,} slows polling to two-hourly, but it is "
             f"not a guarantee: it resets when Home Assistant restarts and cannot see "
             f"other users of your API key.\n\n"
-            f"Set a quota cap in the Google Cloud console if staying free matters."
+            f"Set a quota cap in the Google Cloud console if staying free matters.\n"
+            + _describe_cadence(cadence, minute_interval)
         )
 
     description += "\n\n---\n**Ready to proceed?** Click **Next** to complete setup."
@@ -631,6 +661,12 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema(schema_dict),
         )
 
+    def _observed_cadence(self) -> float | None:
+        """Segment width from the last nowcast response, if one has arrived."""
+        coordinator = (self.hass.data.get(DOMAIN) or {}).get(self.config_entry.entry_id)
+        endpoint_data = getattr(coordinator, "endpoint_data", None) or {}
+        return (endpoint_data.get("minute_forecast") or {}).get("cadence_minutes")
+
     async def async_step_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -644,7 +680,9 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             }
             return self.async_create_entry(title="", data=final_data)
 
-        description = _build_usage_description(self.forecast_options, self.interval_data)
+        description = _build_usage_description(
+            self.forecast_options, self.interval_data, self._observed_cadence()
+        )
 
         return self.async_show_form(
             step_id="confirm",

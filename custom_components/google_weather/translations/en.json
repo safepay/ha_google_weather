@@ -68,7 +68,7 @@
           "alerts_night_interval": "How often to check weather alerts at night (default: 30 min)",
           "night_start": "When nighttime update schedule begins (e.g., 22:00 for 10 PM)",
           "night_end": "When nighttime update schedule ends (e.g., 06:00 for 6 AM)",
-          "minute_min_interval": "Shortest gap between calls, used while rain falls. Not the forecast's resolution - every call returns all six hours. Biggest influence on cost: in a temperate climate roughly 1,480 calls/month at 2, 750 at 5, 500 at 10. 5 is balanced; pick 10 or more in a wet climate.",
+          "minute_min_interval": "Shortest gap between calls, used while rain falls. This is not the forecast's resolution, which is regional and fixed by Google: 2-minute segments in the US, 15-minute elsewhere so far. Polling faster than your region's segments gets revisions sooner but no finer an answer. Biggest influence on cost: in a temperate climate roughly 1,480 calls/month at 2, 750 at 5, 500 at 10. 5 is balanced; pick 10 or more in a wet climate, or match your region's segments.",
           "minute_rain_threshold": "Rain probability at which the nowcast starts polling, read from the hourly forecast or the daily blocks when hourly is off. Below it the nowcast goes quiet and only checks every few hours. Unrelated to the nowcast's own probability field.",
           "minute_monthly_budget": "Past this many calls in a month, the nowcast slows to two-hourly. A safeguard, not a guarantee: it resets on restart and cannot see other users of your API key."
         }
@@ -137,7 +137,7 @@
           "alerts_night_interval": "How often to check weather alerts at night (1-1440 minutes)",
           "night_start": "When nighttime update schedule begins (e.g., 22:00)",
           "night_end": "When nighttime update schedule ends (e.g., 06:00)",
-          "minute_min_interval": "Shortest gap between calls, used while rain falls. Not the forecast's resolution - every call returns all six hours. Biggest influence on cost: in a temperate climate roughly 1,480 calls/month at 2, 750 at 5, 500 at 10. 5 is balanced; pick 10 or more in a wet climate.",
+          "minute_min_interval": "Shortest gap between calls, used while rain falls. This is not the forecast's resolution, which is regional and fixed by Google: 2-minute segments in the US, 15-minute elsewhere so far. Polling faster than your region's segments gets revisions sooner but no finer an answer. Biggest influence on cost: in a temperate climate roughly 1,480 calls/month at 2, 750 at 5, 500 at 10. 5 is balanced; pick 10 or more in a wet climate, or match your region's segments.",
           "minute_rain_threshold": "Rain probability at which the nowcast starts polling, read from the hourly forecast or the daily blocks when hourly is off. Below it the nowcast goes quiet and only checks every few hours. Unrelated to the nowcast's own probability field.",
           "minute_monthly_budget": "Past this many calls in a month, the nowcast slows to two-hourly. A safeguard, not a guarantee: it resets on restart and cannot see other users of your API key."
         }
