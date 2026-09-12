@@ -242,8 +242,14 @@ def derive(payload: dict[str, Any], now: datetime) -> dict[str, Any]:
     last = upcoming[-1]
     coverage_minutes = (last.end - now).total_seconds() / 60
 
+    # The narrowest segment, not the leading one, for the same reason the
+    # setup probe measures it that way: a response that leads with a
+    # multi-hour block would otherwise report this location as hours wide,
+    # and the options flow reads this to decide which intervals to offer.
+    cadence_minutes = min(segment.duration_minutes for segment in upcoming)
+
     derived["coverage_minutes"] = round(coverage_minutes, 1)
-    derived["cadence_minutes"] = round(leading.duration_minutes, 1)
+    derived["cadence_minutes"] = round(cadence_minutes, 1)
     derived["window_end"] = last.end.isoformat().replace("+00:00", "Z")
     derived["precipitating_now"] = leading.is_wet
     derived["intensity"] = leading.intensity
