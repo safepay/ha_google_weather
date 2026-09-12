@@ -113,6 +113,11 @@ MINUTE_DORMANT_LOOKAHEAD_HOURS = 6
 # by going below it. Five is the fallback default; setup probes the location and
 # raises it to match a coarser segment width rather than assuming one.
 #
+# Three earns its rung on cost rather than on detail: it is the finest interval
+# whose temperate month still fits the default headroom, where two exceeds it
+# and lands within twenty calls of the default ceiling. Without it the step from
+# two is a halving of resolution.
+#
 # Not the segment width: every call returns all six hours either way. A longer
 # floor only delays noticing a change.
 MINUTE_MIN_INTERVAL_OPTIONS = (2, 3, 5, 10, 15)

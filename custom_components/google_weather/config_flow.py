@@ -73,14 +73,17 @@ def _calculate_monthly_calls(
     return int(day_calls + night_calls)
 
 
-# Simulated: ten rain days of four hours each, at each selectable interval.
-# See the table in const.py next to MINUTE_MIN_INTERVAL_OPTIONS.
+# Simulated: ten rain days of four hours each, at each selectable interval. This
+# is the "10 rain days" row of the table in const.py next to
+# MINUTE_MIN_INTERVAL_OPTIONS, and has to be changed with it.
 _MINUTE_TEMPERATE_ESTIMATE = {2: 1480, 3: 1080, 5: 750, 10: 500, 15: 410}
 
 
 def _estimate_minute_calls(min_interval: int) -> int:
     """Monthly nowcast calls in a temperate climate at this minimum interval."""
-    return _MINUTE_TEMPERATE_ESTIMATE.get(min_interval, 910)
+    return _MINUTE_TEMPERATE_ESTIMATE.get(
+        min_interval, _MINUTE_TEMPERATE_ESTIMATE[DEFAULT_MINUTE_MIN_INTERVAL]
+    )
 
 
 def _probe_minute_cadence(
