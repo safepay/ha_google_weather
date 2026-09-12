@@ -10,13 +10,18 @@ Captured 2026-09-12.
 
 ## What each one shows
 
-| File | Cadence | Segments | Weather | `nextPageToken` |
-| --- | --- | --- | --- | --- |
-| `rome-15min-rain-onset-and-cessation.json` | 15 min | 24 | dry, rain 06:30–10:00, dry | empty |
-| `chicago-2min-rain-tapering-truncated.json` | 2 min | 132 of 180 | raining, tapering to dry | empty |
-| `new-york-2min-default-pagesize.json` | 2 min | 30 | dry | present |
-| `paris-15min-full-window.json` | 15 min | 24 | dry | empty |
-| `adelaide-15min-uniform-dry.json` | 15 min | 24 | dry | empty |
+| File | Taken | Cadence | Segments | Weather | `nextPageToken` |
+| --- | --- | --- | --- | --- | --- |
+| `rome-15min-rain-onset-and-cessation.json` | 06:17 | 15 min | 24 | dry, rain 06:30–10:00, dry | empty |
+| `chicago-2min-rain-tapering-truncated.json` | 06:16 | 2 min | 132 of 180 | raining, tapering to dry | empty |
+| `chicago-2min-revised-dry-truncated.json` | 06:38 | 2 min | 132 of 180 | dry | empty |
+| `chicago-2min-full-window-dry.json` | 07:18 | 2 min | **180** | dry | empty |
+| `new-york-2min-default-pagesize.json` | 06:09 | 2 min | 30 | dry | present |
+| `paris-15min-full-window.json` | 06:11 | 15 min | 24 | dry | empty |
+| `adelaide-15min-uniform-dry.json` | 06:08 | 15 min | 24 | dry | empty |
+
+All times UTC. The three Chicago files are the same location across an hour and
+are best read together — see [The Chicago sequence](#the-chicago-sequence).
 
 **`rome-15min-rain-onset-and-cessation.json`** is the most useful file here. A
 complete window with a dry leading segment, rain from 06:30 to 10:00 and dry
@@ -50,9 +55,10 @@ rain is *actually falling*, and in Rome it falls as the rate climbs — lowest a
 the `MODERATE` peak. Further evidence, from the wet case this time, that the
 field is not the chance of rain and that no entity should read it.
 
-**Caveat on Chicago:** truncated. The response declared a window to 12:16 and
-only the segments to 10:40 were received. Everything present is the capture; the
-missing tail is simply absent rather than filled in.
+**Caveat on the two truncated Chicago files:** the 06:16 capture declared a
+window to 12:16 and only segments to 10:40 were received; the 06:38 one declared
+12:38 and reached 11:02. Everything present is the capture and the missing tails
+are simply absent, not filled in. The 07:18 capture is complete.
 
 **`new-york-2min-default-pagesize.json`** is the `pageSize` trap. No explicit
 page size was sent, so the response covers one hour — 06:08 to 07:08 of a
@@ -75,6 +81,38 @@ block plus five quarter-hour segments, and this is not that capture. It is
 consistent with the block shape being transient — the same coordinates,
 returning the ordinary shape on another day — but a dry uniform response is weak
 evidence for that on its own.
+
+**`chicago-2min-full-window-dry.json`** is the only capture retained whole, and
+the one that settles `pageSize` outright: 180 two-minute segments, a full six
+hours, and an empty page token in a single billed call. It is 70 KB, which is
+also why the others are partial — a 180-segment response does not survive being
+pasted into a terminal, so capture to a file.
+
+It differs from the quarter-hour captures in one respect worth noting: its
+segments tile `overallPredictionTimeframe` exactly, 07:18 to 13:18 with no
+overhang at either end. Paris and Adelaide overhang at the start and fall short
+at the end. So the mismatch is real but not universal, and code still must not
+assume either behaviour.
+
+## The Chicago sequence
+
+Three captures from the same coordinates, 06:16, 06:38 and 07:18, and together
+they show something no single response can: **the nowcast revises materially
+within the window it has already forecast.**
+
+At 06:16 it forecast rain continuing to 06:48, the last three segments at
+0.2 mm/h. At 06:38 — inside that same forecast period, with twenty-two minutes
+of it still to run — the segments from 06:38 onward read `NONE`. The rain it had
+predicted for the following ten minutes was gone. By 07:18 the whole six hours
+were dry.
+
+This is the evidence behind polling harder as rain approaches rather than
+trusting one response for its full six hours. A dry window is a reliable
+guarantee that nothing can *start* soon; a wet one is a current best guess that
+can be withdrawn. The schedule treats them asymmetrically for that reason.
+
+It is also a caution for anything that would cache an onset time and act on it
+later without re-reading.
 
 ## Field shape
 
@@ -101,8 +139,8 @@ Still wanted, in rough order of value:
   not substitute for it.
 - **Rain running to the window edge.** Copenhagen forecast rain beginning in its
   final segment, which is the case where cessation must report unknown rather
-  than the edge. The Chicago shower stops cleanly inside the window, so nothing
-  here covers it.
+  than the edge. Both wet captures here stop cleanly inside the window, so
+  nothing covers it.
 - **Anything above 4.0 mm/h.** The captures reach `MODERATE`; `MID_HEAVY` and
   `HEAVY`, the top two rungs of the plan's table, rest on readings no longer in
   hand. Nothing here shows whether the buckets continue or the scale is open.
