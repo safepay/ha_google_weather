@@ -49,7 +49,7 @@ from .const import (
     DEFAULT_NIGHT_END,
     DEFAULT_NIGHT_START,
     DOMAIN,
-    MINUTE_MIN_INTERVAL_OPTIONS,
+    MINUTE_MIN_INTERVAL_LABELS,
     API_BASE_URL,
 )
 
@@ -72,7 +72,7 @@ def _calculate_monthly_calls(
 
 # Simulated: ten rain days of four hours each, at each selectable interval.
 # See the table in const.py next to MINUTE_MIN_INTERVAL_OPTIONS.
-_MINUTE_TEMPERATE_ESTIMATE = {3: 1240, 5: 910, 10: 660, 15: 570}
+_MINUTE_TEMPERATE_ESTIMATE = {2: 1480, 3: 1080, 5: 750, 10: 500, 15: 410}
 
 
 def _estimate_minute_calls(min_interval: int) -> int:
@@ -140,7 +140,7 @@ def _build_usage_description(
             CONF_MINUTE_MIN_INTERVAL, DEFAULT_MINUTE_MIN_INTERVAL
         )
         minute_line = (
-            f"\u2022 Minute Forecast (alpha): depends on the weather \u2014 ~360/month if dry, "
+            f"\u2022 Minute Forecast (alpha): depends on the weather \u2014 ~120/month if dry, "
             f"~{_estimate_minute_calls(minute_interval):,} temperate, more if wet\n"
         )
     else:
@@ -391,7 +391,7 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(
                     CONF_MINUTE_MIN_INTERVAL,
                     default=DEFAULT_MINUTE_MIN_INTERVAL,
-                ): vol.In(list(MINUTE_MIN_INTERVAL_OPTIONS)),
+                ): vol.In(MINUTE_MIN_INTERVAL_LABELS),
                 vol.Optional(
                     CONF_MINUTE_RAIN_THRESHOLD,
                     default=DEFAULT_MINUTE_RAIN_THRESHOLD,
@@ -603,7 +603,7 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_MINUTE_MIN_INTERVAL,
                     default=current_data.get(CONF_MINUTE_MIN_INTERVAL, DEFAULT_MINUTE_MIN_INTERVAL),
-                ): vol.In(list(MINUTE_MIN_INTERVAL_OPTIONS)),
+                ): vol.In(MINUTE_MIN_INTERVAL_LABELS),
                 vol.Optional(
                     CONF_MINUTE_RAIN_THRESHOLD,
                     default=current_data.get(CONF_MINUTE_RAIN_THRESHOLD, DEFAULT_MINUTE_RAIN_THRESHOLD),

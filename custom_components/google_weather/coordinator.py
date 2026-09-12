@@ -326,7 +326,7 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Read after the cache update, so the gate sees this tick's forecast when
         # one was fetched alongside.
-        tighten = nowcast.rain_expected(
+        outlook = nowcast.forecast_outlook(
             current=self.endpoint_data.get("current"),
             hourly=self.endpoint_data.get("hourly_forecast"),
             daily=self.endpoint_data.get("daily_forecast"),
@@ -335,11 +335,11 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             threshold=self.minute_rain_threshold,
         )
         delay = nowcast.next_poll_minutes(
-            derived, tighten=tighten, floor=self.minute_min_interval
+            derived, outlook=outlook, floor=self.minute_min_interval
         )
         self._schedule_minute_forecast(
             delay,
-            f"onset={derived.get('starts_in')} tighten={tighten} "
+            f"onset={derived.get('starts_in')} outlook={outlook} "
             f"calls={self.minute_calls}/{self.minute_monthly_budget}",
         )
 

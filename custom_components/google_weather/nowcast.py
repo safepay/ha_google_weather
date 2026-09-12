@@ -16,12 +16,20 @@ import logging
 from typing import Any
 
 from .const import (
+    MINUTE_CAP_DORMANT,
     MINUTE_CAP_RELAXED,
     MINUTE_CAP_TIGHTENED,
     MINUTE_COVERAGE_FRACTION,
+    MINUTE_DORMANT_LOOKAHEAD_HOURS,
     MINUTE_FLOOR_INTERVAL,
+    MINUTE_GATE_HOURS,
     MINUTE_HORIZONS,
 )
+
+# What the already-fetched forecast says about the hours ahead.
+OUTLOOK_WET = "wet"
+OUTLOOK_DRY = "dry"
+OUTLOOK_UNKNOWN = "unknown"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -299,7 +307,7 @@ def derive(payload: dict[str, Any], now: datetime) -> dict[str, Any]:
     return derived
 
 
-def rain_expected(
+def forecast_outlook(
     *,
     current: dict[str, Any] | None,
     hourly: list[dict[str, Any]] | None,
@@ -307,21 +315,35 @@ def rain_expected(
     now: datetime,
     is_night: bool,
     threshold: int,
-) -> bool:
-    """Whether the polling cap should tighten.
+) -> str:
+    """What the already-fetched forecast says: wet, dry, or unknown.
 
-    One predicate, two sources: hourly where enabled, daily otherwise. Both are
-    already fetched, so the gate is free - and since turning hourly off is what
-    frees the headroom this feature needs, an hourly-only gate would be
-    unavailable to its own audience. Never reads the nowcast's probability.
+    This is what starts and stops nowcast polling. One predicate, two sources:
+    hourly where enabled, daily otherwise. Both are already fetched, so the gate
+    is free - and since turning hourly off is what frees the headroom this
+    feature needs, an hourly-only gate would be unavailable to its own audience.
+
+    "dry" requires forecast data actually saying so; absent data is "unknown",
+    which polls normally rather than going quiet on no evidence. Never reads the
+    nowcast's own probability.
     """
     if _currently_precipitating(current):
-        return True
+        return OUTLOOK_WET
 
     if hourly:
-        return _hourly_gate(hourly, now, threshold)
+        if _hourly_gate(hourly, now, threshold, MINUTE_GATE_HOURS):
+            return OUTLOOK_WET
+        # Dormancy spans longer than the tighten window, so it has to be clear
+        # across the whole of it, and only counts if the hours are really there.
+        covered, wet = _hourly_span(hourly, now, MINUTE_DORMANT_LOOKAHEAD_HOURS, threshold)
+        if covered and not wet:
+            return OUTLOOK_DRY
+        return OUTLOOK_UNKNOWN
 
-    return _daily_gate(daily, is_night, threshold)
+    block = _daily_block(daily, is_night)
+    if block is None:
+        return OUTLOOK_UNKNOWN
+    return OUTLOOK_WET if _block_exceeds(block, threshold) else OUTLOOK_DRY
 
 
 def _currently_precipitating(current: dict[str, Any] | None) -> bool:
@@ -352,37 +374,55 @@ def _block_exceeds(block: Any, threshold: int) -> bool:
     return thunderstorm is not None and thunderstorm > 0
 
 
-def _hourly_gate(hourly: list[dict[str, Any]], now: datetime, threshold: int) -> bool:
-    """Read the next couple of hours, roughly what a nowcast page covers."""
-    cutoff = now + timedelta(hours=2)
+def _hourly_gate(
+    hourly: list[dict[str, Any]], now: datetime, threshold: int, hours: int
+) -> bool:
+    """Whether any hour in the next `hours` clears the gate."""
+    return _hourly_span(hourly, now, hours, threshold)[1]
+
+
+def _hourly_span(
+    hourly: list[dict[str, Any]], now: datetime, hours: int, threshold: int
+) -> tuple[bool, bool]:
+    """Return (the span is actually covered, any hour in it clears the gate)."""
+    cutoff = now + timedelta(hours=hours)
+    latest: datetime | None = None
+    wet = False
+
     for hour in hourly:
         start = _parse_time((hour.get("interval") or {}).get("startTime"))
         if start is None or start >= cutoff or start + timedelta(hours=1) <= now:
             continue
+        if latest is None or start > latest:
+            latest = start
         if _block_exceeds(hour, threshold):
-            return True
-    return False
+            wet = True
+
+    # One hour short of the cutoff still counts: the last entry covers the hour
+    # that follows it.
+    covered = latest is not None and latest + timedelta(hours=1) >= cutoff
+    return covered, wet
 
 
-def _daily_gate(daily: list[dict[str, Any]] | None, is_night: bool, threshold: int) -> bool:
-    """Fall back to today's day or night block.
+def _daily_block(daily: list[dict[str, Any]] | None, is_night: bool) -> dict[str, Any] | None:
+    """Today's day or night block, when hourly forecasts are unavailable.
 
-    Coarser by construction: 40% across a sixteen-hour block holds the cap tight
-    all day for evening rain. Degrading is the point.
+    Coarser by construction: 40% across a sixteen-hour block keeps the nowcast
+    awake all day for evening rain. Degrading is the point.
     """
     if not daily:
-        return False
+        return None
     today = daily[0]
     if not isinstance(today, dict):
-        return False
+        return None
     block = today.get("nighttimeForecast" if is_night else "daytimeForecast")
-    return _block_exceeds(block, threshold)
+    return block if isinstance(block, dict) else None
 
 
 def next_poll_minutes(
     derived: dict[str, Any],
     *,
-    tighten: bool,
+    outlook: str = OUTLOOK_UNKNOWN,
     floor: int = MINUTE_FLOOR_INTERVAL,
 ) -> int:
     """Minutes to wait before the next nowcast call.
@@ -392,13 +432,27 @@ def next_poll_minutes(
     A dry response guarantees no rain for the span it covers, so it is a licence
     not to poll. Rain already falling gives an onset of zero and pins the
     interval to the floor. See MINUTE_MIN_INTERVAL_OPTIONS in const.py.
+
+    `outlook` comes from the daily or hourly forecast and decides whether the
+    nowcast polls at all: "dry" stops it until its window expires.
     """
-    cap = MINUTE_CAP_TIGHTENED if tighten else MINUTE_CAP_RELAXED
     floor = max(1, floor)
+    coverage = derived.get("coverage_minutes")
+
+    # Dormant: the forecast says no rain and the nowcast agrees, so stop polling
+    # until the window it guaranteed runs out. The nowcast's own data wins - an
+    # onset it can see keeps polling regardless of what the forecast said.
+    if (
+        outlook == OUTLOOK_DRY
+        and derived.get("starts_in") is None
+        and not derived.get("precipitating_now")
+    ):
+        return int(min(MINUTE_CAP_DORMANT, coverage) if coverage else MINUTE_CAP_DORMANT)
+
+    cap = MINUTE_CAP_TIGHTENED if outlook == OUTLOOK_WET else MINUTE_CAP_RELAXED
 
     # Never promise longer than the last response covered. At a full window this
     # changes nothing; on a short page it tightens rather than overpromising.
-    coverage = derived.get("coverage_minutes")
     if coverage:
         cap = min(cap, max(floor, coverage * MINUTE_COVERAGE_FRACTION))
 

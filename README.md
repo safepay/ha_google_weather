@@ -101,18 +101,28 @@ Every entity carries an `alpha` attribute. Google's endpoint is pre-GA, so entit
 
 #### Cost
 
-The nowcast schedules itself from the forecast it just received: a response showing no rain guarantees none can start for six hours, so it waits. As rain approaches it halves the gap, down to your chosen minimum.
+**The daily or hourly forecast you already fetch is what starts and stops nowcast polling.** Those calls are already paid for, so the gate costs nothing:
+
+- **Forecast shows no rain** → the nowcast stops polling and only checks as its six-hour window expires, about four calls a day.
+- **Forecast shows rain above your threshold** → it wakes up and watches closely.
+- **Rain actually on the way** → the nowcast's own data takes over and it polls at your chosen minimum, *whatever the forecast said*. A shower the forecast missed is never ignored once the nowcast can see it.
+
+Between those, it schedules itself from the response it just received: no rain in the window guarantees none can start for six hours, so it waits, and as rain approaches it halves the gap down to your minimum.
+
+Hourly forecasts give the sharper gate; with them disabled it falls back to the daily day/night blocks, which is coarser but never breaks.
 
 Approximate calls per month, by the **minimum time between calls** you pick during setup:
 
-| | 3 min | 5 min | 10 min | 15 min |
-| --- | --- | --- | --- | --- |
-| Dry month | 360 | 360 | 360 | 360 |
-| 10 rain days | 1,240 | 910 | 660 | 570 |
-| 20 rain days | 2,960 | 1,980 | 1,240 | 980 |
-| 30 rain days | 5,520 | 3,570 | 2,100 | 1,590 |
+| | 2 min | 3 min | 5 min | 10 min | 15 min |
+| --- | --- | --- | --- | --- | --- |
+| Dry month | 120 | 120 | 120 | 120 | 120 |
+| 10 rain days | 1,480 | 1,080 | 750 | 500 | 410 |
+| 20 rain days | 4,080 | 2,880 | 1,900 | 1,160 | 900 |
+| 30 rain days | 7,920 | 5,520 | 3,570 | 2,100 | 1,590 |
 
-Default headroom on the free tier is about 1,360 calls, so 5 minutes suits a temperate climate and 10 or more suits a wet one. This is not the forecast's resolution — every call returns the full six hours, so a longer interval only delays noticing a *change*.
+Two minutes matches the finest segments Google returns, so nothing is gained by going lower. Default headroom on the free tier is about 1,360 calls, so **5 minutes is the default** as the most detail that still fits a temperate month; 10 or more suits a wet climate, and 2 is for anyone happy to watch their usage.
+
+This is not the forecast's resolution — every call returns the full six hours, so a longer interval only delays noticing a *change*.
 
 A monthly ceiling (default 1,500) slows polling to two-hourly once reached. **It is a safeguard, not a guarantee**: it resets when Home Assistant restarts and cannot see calls made by anything else using your API key. Set a quota cap in the Google Cloud console if staying inside the free tier matters.
 

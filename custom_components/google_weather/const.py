@@ -80,23 +80,47 @@ DEFAULT_MINUTE_RAIN_THRESHOLD = 30
 #
 # Rain already falling gives an onset of zero and pins it to the floor. The cap
 # tightens when the gate above expects rain, to catch showers forming mid-window.
-MINUTE_FLOOR_INTERVAL = 3
+MINUTE_FLOOR_INTERVAL = 2
 MINUTE_CAP_RELAXED = 120
 MINUTE_CAP_TIGHTENED = 30
+
+# Dormant: the forecast already paid for shows no rain worth watching, so the
+# nowcast stops polling and only checks as its guaranteed-dry window expires.
+# That is roughly 4 calls a day against 12 at the relaxed cap.
+MINUTE_CAP_DORMANT = 360
+
+# Hours of forecast read for each decision. Tightening looks only at the near
+# term, so it reacts to what is imminent. Going dormant has to look across the
+# whole dormancy, or it would sleep through rain forecast beyond the near term.
+MINUTE_GATE_HOURS = 2
+MINUTE_DORMANT_LOOKAHEAD_HOURS = 6
 
 # The floor is the biggest lever on cost, since time at it during rain dominates.
 # Simulated calls/month, against a default headroom of 1,360:
 #
-#                         3 min   5 min  10 min  15 min
-#   Dry month               360     360     360     360
-#   10 rain days          1,240     910     660     570
-#   20 rain days          2,960   1,980   1,240     980
-#   30 rain days          5,520   3,570   2,100   1,590
+#                 2 min   3 min   5 min  10 min  15 min
+#   Dry month       120     120     120     120     120
+#   10 rain days  1,480   1,080     750     500     410
+#   20 rain days  4,080   2,880   1,900   1,160     900
+#   30 rain days  7,920   5,520   3,570   2,100   1,590
+#
+# Two matches the finest segment cadence Google returns, so nothing is gained by
+# going below it. Five is the default: the most detail that still fits a
+# temperate month inside the default headroom.
 #
 # Not the segment cadence: every call returns all six hours either way. A longer
 # floor only delays noticing a change.
-MINUTE_MIN_INTERVAL_OPTIONS = (3, 5, 10, 15)
+MINUTE_MIN_INTERVAL_OPTIONS = (2, 3, 5, 10, 15)
 DEFAULT_MINUTE_MIN_INTERVAL = 5
+
+# Shown in the dropdown so the trade-off is visible at the point of choosing.
+MINUTE_MIN_INTERVAL_LABELS = {
+    2: "2 minutes - maximum detail, highest usage",
+    3: "3 minutes - more detail",
+    5: "5 minutes - balanced (default)",
+    10: "10 minutes - low usage, suits wet climates",
+    15: "15 minutes - lowest usage",
+}
 
 # The cap may never promise longer than the span the last response covered.
 MINUTE_COVERAGE_FRACTION = 0.5
