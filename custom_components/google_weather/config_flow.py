@@ -133,12 +133,16 @@ def _default_min_interval(cadence: float | None) -> int:
     return max(DEFAULT_MINUTE_MIN_INTERVAL, matched)
 
 
-def _interval_choices(cadence: float | None) -> dict[int, str]:
+def _interval_choices(cadence: float | None) -> dict[str, str]:
     """The intervals worth offering for a location of this segment width.
 
     Polling faster than the segments are wide costs calls for no finer an
     answer, so those options are not offered at all rather than left in the list
     to be regretted. An unmeasured width offers everything.
+
+    Keyed by string, because a form schema reaches the frontend as JSON and
+    object keys are strings there. An integer default against string options
+    matches nothing and the field renders with no selection.
     """
     options = [
         option
@@ -152,22 +156,39 @@ def _interval_choices(cadence: float | None) -> dict[int, str]:
 
     if len(options) == 1 and cadence:
         width = int(round(cadence))
-        return {options[0]: f"{options[0]} minutes - matches this location's "
-                            f"{width}-minute segments"}
+        return {
+            str(options[0]): f"{options[0]} minutes - matches this location's "
+                             f"{width}-minute segments"
+        }
 
-    return {option: MINUTE_MIN_INTERVAL_LABELS[option] for option in options}
+    return {str(option): MINUTE_MIN_INTERVAL_LABELS[option] for option in options}
 
 
-def _clamp_to_choices(stored: int, cadence: float | None) -> int:
+def _coerce_min_interval(user_input: dict[str, Any]) -> dict[str, Any]:
+    """Store the polling interval as a number, whatever the form returned.
+
+    The select hands back a string, and everything downstream does arithmetic
+    with it.
+    """
+    if CONF_MINUTE_MIN_INTERVAL not in user_input:
+        return user_input
+    data = dict(user_input)
+    try:
+        data[CONF_MINUTE_MIN_INTERVAL] = int(data[CONF_MINUTE_MIN_INTERVAL])
+    except (TypeError, ValueError):
+        data[CONF_MINUTE_MIN_INTERVAL] = DEFAULT_MINUTE_MIN_INTERVAL
+    return data
+
+
+def _clamp_to_choices(stored: int, cadence: float | None) -> str:
     """Keep a stored interval selectable after the measured width coarsens.
 
     A location that used to return fine segments may stop doing so, and a stored
-    value no longer on the list would fail form validation.
+    value no longer on the list would render unselected and fail validation.
     """
-    choices = _interval_choices(cadence)
-    if stored in choices:
-        return stored
-    return _default_min_interval(cadence)
+    if str(stored) in _interval_choices(cadence):
+        return str(stored)
+    return str(_default_min_interval(cadence))
 
 
 def _cadence_note(cadence: float | None, enabled: bool) -> str:
@@ -481,7 +502,7 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Configure update intervals for API endpoints."""
         if user_input is not None:
             # Store interval data and show confirmation
-            self.interval_data = user_input
+            self.interval_data = _coerce_min_interval(user_input)
             return await self.async_step_confirm()
 
         # Build schema based on selected forecasts
@@ -535,9 +556,11 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Self-scheduling, so no day/night pair: a floor, a gate and a ceiling.
         if self.forecast_data.get(CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST):
             schema_dict.update({
-                vol.Optional(
+                # Required so the default renders selected: an Optional select
+                # is drawn with nothing chosen.
+                vol.Required(
                     CONF_MINUTE_MIN_INTERVAL,
-                    default=_default_min_interval(self.minute_cadence),
+                    default=str(_default_min_interval(self.minute_cadence)),
                 ): vol.In(_interval_choices(self.minute_cadence)),
                 vol.Optional(
                     CONF_MINUTE_RAIN_THRESHOLD,
@@ -700,7 +723,7 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
         """Configure update intervals for API endpoints."""
         if user_input is not None:
             # Store interval data and show confirmation
-            self.interval_data = user_input
+            self.interval_data = _coerce_min_interval(user_input)
             return await self.async_step_confirm()
 
         # Get current values from config_entry (data or options)
@@ -757,7 +780,7 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
         # Minute forecast settings, shown only when enabled.
         if self.forecast_options.get(CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST):
             schema_dict.update({
-                vol.Optional(
+                vol.Required(
                     CONF_MINUTE_MIN_INTERVAL,
                     default=_clamp_to_choices(
                         current_data.get(CONF_MINUTE_MIN_INTERVAL, DEFAULT_MINUTE_MIN_INTERVAL),
