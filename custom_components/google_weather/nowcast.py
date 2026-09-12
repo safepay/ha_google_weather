@@ -38,10 +38,8 @@ _LOGGER = logging.getLogger(__name__)
 WET_TYPES = frozenset({"RAIN", "SNOW", "HAIL"})
 RAIN_TYPES = frozenset({"RAIN"})
 
-# Protobuf zero value: the field was never set. A segment can still carry a real
-# qpf with the type unset, and reading that as dry would miss the onset
-# entirely, so it counts as precipitation of unknown kind. Accumulation still
-# requires RAIN - guessing the type is what would report a blizzard as rainfall.
+# Protobuf zero value. A segment can still carry a real qpf with the type unset,
+# so it counts as precipitation of unknown kind rather than as dry.
 TYPE_UNSET = "DOMINANT_PRECIPITATION_TYPE_UNSPECIFIED"
 
 # MID_ marks a step between the previous named level and this one, so MID_LIGHT
@@ -117,9 +115,7 @@ class Segment:
     def is_wet(self) -> bool:
         """Read from type and qpf together, never from probability."""
         if self.precipitation_type in WET_TYPES:
-            # A named type is evidence on its own: trust it when qpf is absent.
             return self.qpf is None or self.qpf > 0
-        # Type unset, but a quantity still says something is falling.
         return self.precipitation_type == TYPE_UNSET and bool(self.qpf)
 
     @property
@@ -231,8 +227,6 @@ def derive(payload: dict[str, Any], now: datetime) -> dict[str, Any]:
     to latch. Precision travels with each segment.
     """
     if not isinstance(payload, dict):
-        # A 200 that decodes to something other than an object. Nothing to read,
-        # and raising here would fail the whole tick rather than this endpoint.
         payload = {}
 
     segments = parse_segments(payload)
@@ -298,8 +292,7 @@ def derive(payload: dict[str, Any], now: datetime) -> dict[str, Any]:
         # The onset segment may be 2 minutes wide or several hours. Publishing
         # the width keeps a coarse answer from reading as a precise one.
         derived["onset_precision_minutes"] = round(onset.duration_minutes, 1)
-        # The protobuf zero value is not a kind of weather: publish nothing
-        # rather than the raw enum name. starts_in still says rain is coming.
+        # Publish nothing rather than the raw enum name; starts_in still fires.
         derived["onset_type"] = (
             None if onset.precipitation_type == TYPE_UNSET else onset.precipitation_type
         )

@@ -391,8 +391,6 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if ENDPOINT_MINUTE in updating:
                 # Book before the call, not after: last_update is only stamped on
                 # success, so a failing endpoint would otherwise retry every tick.
-                # The call itself is counted where it is made, since an earlier
-                # endpoint can raise and abort the fetch before it happens.
                 self._schedule_minute_forecast(self.minute_min_interval, "attempt booked")
 
             # Fetch data from endpoints that need updating

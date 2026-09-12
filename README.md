@@ -68,12 +68,12 @@ Snow is not covered yet: rain totals filter on precipitation type, so snow repor
 
 The daily or hourly forecast you already fetch is what starts and stops polling, so the gate is free. No rain forecast and it drops to about four calls a day; rain forecast and it watches closely; rain actually coming and it polls at your minimum whatever the forecast said, halving the gap as onset approaches.
 
-| | 2 min | 3 min | 5 min | 10 min | 15 min |
-| --- | --- | --- | --- | --- | --- |
-| Dry month | 120 | 120 | 120 | 120 | 120 |
-| 10 rain days | 1,480 | 1,080 | 750 | 500 | 410 |
-| 20 rain days | 4,080 | 2,880 | 1,900 | 1,160 | 900 |
-| 30 rain days | 7,920 | 5,520 | 3,570 | 2,100 | 1,590 |
+| | 2 min | 3 min | 5 min | 15 min |
+| --- | --- | --- | --- | --- |
+| Dry month | 120 | 120 | 120 | 120 |
+| 10 rain days | 1,480 | 1,080 | 750 | 410 |
+| 20 rain days | 4,080 | 2,880 | 1,900 | 900 |
+| 30 rain days | 7,920 | 5,520 | 3,570 | 1,590 |
 
 A longer interval does not coarsen the forecast — every call returns all six hours — it only delays noticing a change.
 

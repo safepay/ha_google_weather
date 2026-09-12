@@ -103,24 +103,19 @@ MINUTE_DORMANT_LOOKAHEAD_HOURS = 6
 # imperfect, as a real forecast is, which is what keeps these above what the
 # scheduler spends when it reads the weather exactly right:
 #
-#                 2 min   3 min   5 min  10 min  15 min
-#   Dry month       120     120     120     120     120
-#   10 rain days  1,480   1,080     750     500     410
-#   20 rain days  4,080   2,880   1,900   1,160     900
-#   30 rain days  7,920   5,520   3,570   2,100   1,590
+#                 2 min   3 min   5 min  15 min
+#   Dry month       120     120     120     120
+#   10 rain days  1,480   1,080     750     410
+#   20 rain days  4,080   2,880   1,900     900
+#   30 rain days  7,920   5,520   3,570   1,590
 #
-# Two is the finest segment width seen from the endpoint, so nothing is gained
-# by going below it. Five is the fallback default; setup probes the location and
-# raises it to match a coarser segment width rather than assuming one.
-#
-# Three earns its rung on cost rather than on detail: it is the finest interval
-# whose temperate month still fits the default headroom, where two exceeds it
-# and lands within twenty calls of the default ceiling. Without it the step from
-# two is a halving of resolution.
+# Two and fifteen are the segment widths the endpoint returns, so they bound the
+# ladder. The rungs between are spaced so each step saves a similar number of
+# calls; ten sat within ninety of fifteen and did not earn one.
 #
 # Not the segment width: every call returns all six hours either way. A longer
 # floor only delays noticing a change.
-MINUTE_MIN_INTERVAL_OPTIONS = (2, 3, 5, 10, 15)
+MINUTE_MIN_INTERVAL_OPTIONS = (2, 3, 5, 15)
 DEFAULT_MINUTE_MIN_INTERVAL = 5
 
 # Shown in the dropdown so the trade-off is visible at the point of choosing.
@@ -128,8 +123,7 @@ MINUTE_MIN_INTERVAL_LABELS = {
     2: "2 minutes - maximum detail, highest usage",
     3: "3 minutes - more detail",
     5: "5 minutes - balanced (default)",
-    10: "10 minutes - low usage, suits wet climates",
-    15: "15 minutes - lowest usage",
+    15: "15 minutes - lowest usage, suits wet climates",
 }
 
 # The cap may never promise longer than the span the last response covered.
