@@ -38,6 +38,12 @@ _LOGGER = logging.getLogger(__name__)
 WET_TYPES = frozenset({"RAIN", "SNOW", "HAIL"})
 RAIN_TYPES = frozenset({"RAIN"})
 
+# Protobuf zero value: the field was never set. A segment can still carry a real
+# qpf with the type unset, and reading that as dry would miss the onset
+# entirely, so it counts as precipitation of unknown kind. Accumulation still
+# requires RAIN - guessing the type is what would report a blizzard as rainfall.
+TYPE_UNSET = "DOMINANT_PRECIPITATION_TYPE_UNSPECIFIED"
+
 # MID_ marks a step between the previous named level and this one, so MID_LIGHT
 # is lighter than LIGHT. Display only: intensity labels a quantised qpf bucket
 # and carries nothing qpf does not, so an unrecognised value costs nothing.
@@ -110,9 +116,11 @@ class Segment:
     @property
     def is_wet(self) -> bool:
         """Read from type and qpf together, never from probability."""
-        if self.precipitation_type not in WET_TYPES:
-            return False
-        return self.qpf is None or self.qpf > 0
+        if self.precipitation_type in WET_TYPES:
+            # A named type is evidence on its own: trust it when qpf is absent.
+            return self.qpf is None or self.qpf > 0
+        # Type unset, but a quantity still says something is falling.
+        return self.precipitation_type == TYPE_UNSET and bool(self.qpf)
 
     @property
     def is_rain(self) -> bool:
@@ -122,6 +130,9 @@ class Segment:
 
 def parse_segments(payload: dict[str, Any]) -> list[Segment]:
     """Parse the segments out of a response, skipping anything unusable."""
+    if not isinstance(payload, dict):
+        return []
+
     raw = payload.get("segments")
     if not isinstance(raw, list):
         return []
@@ -219,6 +230,11 @@ def derive(payload: dict[str, Any], now: datetime) -> dict[str, Any]:
     coordinates have returned different shapes hours apart, so there is nothing
     to latch. Precision travels with each segment.
     """
+    if not isinstance(payload, dict):
+        # A 200 that decodes to something other than an object. Nothing to read,
+        # and raising here would fail the whole tick rather than this endpoint.
+        payload = {}
+
     segments = parse_segments(payload)
 
     # Segments do not tile overallPredictionTimeframe - captures overhang at the
@@ -282,7 +298,11 @@ def derive(payload: dict[str, Any], now: datetime) -> dict[str, Any]:
         # The onset segment may be 2 minutes wide or several hours. Publishing
         # the width keeps a coarse answer from reading as a precise one.
         derived["onset_precision_minutes"] = round(onset.duration_minutes, 1)
-        derived["onset_type"] = onset.precipitation_type
+        # The protobuf zero value is not a kind of weather: publish nothing
+        # rather than the raw enum name. starts_in still says rain is coming.
+        derived["onset_type"] = (
+            None if onset.precipitation_type == TYPE_UNSET else onset.precipitation_type
+        )
 
         dry_index = next(
             (

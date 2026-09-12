@@ -391,7 +391,8 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if ENDPOINT_MINUTE in updating:
                 # Book before the call, not after: last_update is only stamped on
                 # success, so a failing endpoint would otherwise retry every tick.
-                self._count_minute_call()
+                # The call itself is counted where it is made, since an earlier
+                # endpoint can raise and abort the fetch before it happens.
                 self._schedule_minute_forecast(self.minute_min_interval, "attempt booked")
 
             # Fetch data from endpoints that need updating
@@ -499,6 +500,9 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if endpoints_to_update.get(ENDPOINT_MINUTE):
                 _LOGGER.debug("Fetching minute forecast")
                 try:
+                    # Counted here rather than at scheduling time: this is the
+                    # point past which a call is actually spent.
+                    self._count_minute_call()
                     minute_response = requests.get(
                         f"{API_BASE_URL}/forecast/minutes:lookup",
                         params={
@@ -512,6 +516,8 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     )
                     minute_response.raise_for_status()
                     minute_data = minute_response.json()
+                    if not isinstance(minute_data, dict):
+                        minute_data = {}
 
                     if minute_data.get("nextPageToken"):
                         # A broken assumption to log. derive() measures coverage
@@ -528,9 +534,10 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     updated_data["minute_forecast"] = nowcast.derive(
                         minute_data, dt_util.utcnow()
                     )
-                except requests.RequestException as err:
+                except (requests.RequestException, ValueError) as err:
                     # Kept out of the shared error path so a pre-GA endpoint
                     # cannot take the rest of the integration down with it.
+                    # ValueError covers a body that does not decode as JSON.
                     _LOGGER.warning("Minute forecast unavailable: %s", err)
                     updated_data["minute_forecast_error"] = str(err)
 
@@ -581,10 +588,9 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Fetch a specific forecast endpoint on demand (for manual service calls)."""
         _LOGGER.debug("Fetching %s on demand", endpoint)
         try:
-            # Fetch the specific endpoint
+            # Fetch the specific endpoint. The minute call is counted where it
+            # is made, so an on-demand fetch books itself.
             endpoints_to_update = {endpoint: True}
-            if endpoint == ENDPOINT_MINUTE:
-                self._count_minute_call()
 
             updated_data = await self.hass.async_add_executor_job(
                 self._fetch_weather_data,

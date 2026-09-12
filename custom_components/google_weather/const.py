@@ -96,7 +96,12 @@ MINUTE_GATE_HOURS = 2
 MINUTE_DORMANT_LOOKAHEAD_HOURS = 6
 
 # The floor is the biggest lever on cost, since time at it during rain dominates.
-# Simulated calls/month, against a default headroom of 1,360:
+# Simulated calls/month, against a default headroom of 1,360. A wetter month is
+# modelled as longer rain each day as well as more days of it - about four hours
+# a day at ten days, rising towards ten hours at thirty - so the rows deliberately
+# do not scale with the day count alone. The gate below is assumed to be
+# imperfect, as a real forecast is, which is what keeps these above what the
+# scheduler spends when it reads the weather exactly right:
 #
 #                 2 min   3 min   5 min  10 min  15 min
 #   Dry month       120     120     120     120     120
@@ -146,8 +151,9 @@ MINUTE_PAGE_SIZE = 500
 # costs the same one call and leaves margin if more than one leads.
 MINUTE_PROBE_PAGE_SIZE = 5
 
-# Published as attributes on the onset sensor, not as entities: nested sums of
-# the same data would write correlated rows on every refresh.
+# Published as attributes on the onset sensor. Only the 60-minute horizon is
+# also an entity, being the one worth graphing; promoting the rest would write
+# correlated rows of the same data on every refresh.
 MINUTE_HORIZONS = (15, 30, 60, 120, 360)
 
 # Unit systems
