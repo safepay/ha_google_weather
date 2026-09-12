@@ -112,7 +112,10 @@ def _probe_minute_cadence(
     if not segments:
         _LOGGER.debug("Minute forecast probe returned no usable segments")
         return None
-    return segments[0].duration_minutes
+
+    # The narrowest segment, not the first: a response that leads with a
+    # multi-hour block would otherwise be measured as hours wide.
+    return min(segment.duration_minutes for segment in segments)
 
 
 def _default_min_interval(cadence: float | None) -> int:

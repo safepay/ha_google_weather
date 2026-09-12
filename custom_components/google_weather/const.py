@@ -139,9 +139,12 @@ DEFAULT_MINUTE_MONTHLY_BUDGET = 1500
 # at both observed cadences.
 MINUTE_PAGE_SIZE = 500
 
-# Segment width is regional and cannot be known before calling, so setup spends
-# one small call to learn it. Two segments is enough to read a width from.
-MINUTE_PROBE_PAGE_SIZE = 2
+# Segment width cannot be known before calling, so setup spends one small call to
+# measure it, taking the narrowest segment on the page. Taking the narrowest is
+# what matters: a response occasionally leads with a single multi-hour block, and
+# reading only the first segment would measure that block. Five rather than two
+# costs the same one call and leaves margin if more than one leads.
+MINUTE_PROBE_PAGE_SIZE = 5
 
 # Published as attributes on the onset sensor, not as entities: nested sums of
 # the same data would write correlated rows on every refresh.
