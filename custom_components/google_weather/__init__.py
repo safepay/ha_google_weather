@@ -8,8 +8,15 @@ import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
+from homeassistant.core import (
+    HomeAssistant,
+    ServiceCall,
+    ServiceResponse,
+    SupportsResponse,
+    callback,
+)
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
 from .const import ALERT_SENSOR_KEYS, CONF_INCLUDE_ALERTS, DOMAIN, ENDPOINT_DAILY, ENDPOINT_HOURLY
@@ -42,6 +49,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Runs after the platforms have registered their entities, so it sees the
+    # full picture. Also catches devices emptied by an earlier options change.
+    _remove_empty_devices(hass, entry)
 
     # Register update listener for options
     entry.async_on_unload(entry.add_update_listener(async_update_options))
@@ -116,6 +127,62 @@ async def _remove_alert_entities(hass: HomeAssistant, entry: ConfigEntry) -> Non
             entity_registry.async_remove(entity_id)
         else:
             _LOGGER.debug("Alert entity not found in registry: %s", unique_id)
+
+
+@callback
+def _device_identifiers(entry: ConfigEntry) -> set[tuple[str, str]]:
+    """Identifiers of every device this entry currently provides.
+
+    Keep in step with the device_info blocks in weather.py, sensor.py and
+    binary_sensor.py; a device missing from here reads as stale and becomes
+    deletable while it is still in use.
+    """
+    return {
+        (DOMAIN, entry.entry_id),
+        (DOMAIN, f"{entry.entry_id}_sensors"),
+        (DOMAIN, f"{entry.entry_id}_binary_sensors"),
+    }
+
+
+@callback
+def _remove_empty_devices(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove devices belonging to this entry that have no entities left.
+
+    The entry spreads its entities over several devices, so turning an option
+    off can empty one of them completely. Home Assistant will not clear that up
+    on its own: it prunes a device only when nothing references it, and a device
+    still attached to a loaded config entry counts as referenced whether or not
+    any entity points at it.
+    """
+    device_registry = dr.async_get(hass)
+    entity_registry = er.async_get(hass)
+
+    for device in dr.async_entries_for_config_entry(device_registry, entry.entry_id):
+        # Disabled entities still belong to their device; only a device with
+        # nothing left at all goes.
+        if er.async_entries_for_device(
+            entity_registry, device.id, include_disabled_entities=True
+        ):
+            continue
+
+        _LOGGER.info("Removing device with no entities left: %s", device.name)
+        # Detaches the entry rather than deleting outright, so a device shared
+        # with another entry survives. The registry deletes the last one.
+        device_registry.async_update_device(
+            device.id, remove_config_entry_id=entry.entry_id
+        )
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, entry: ConfigEntry, device: dr.DeviceEntry
+) -> bool:
+    """Allow deleting a device the entry no longer provides.
+
+    Refusing the devices still in use leaves the button for ones left behind by
+    a renamed identifier, which keep their old entities and so survive the sweep
+    above.
+    """
+    return not device.identifiers & _device_identifiers(entry)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
