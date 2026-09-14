@@ -170,11 +170,18 @@ def _device_identifiers(entry: ConfigEntry) -> set[tuple[str, str]]:
     binary_sensor.py; a device missing from here reads as stale and becomes
     deletable while it is still in use.
     """
-    return {
+    identifiers = {
         (DOMAIN, entry.entry_id),
         (DOMAIN, f"{entry.entry_id}_sensors"),
         (DOMAIN, f"{entry.entry_id}_binary_sensors"),
     }
+
+    # Only while the option is on. Off, the sweep has already taken the device.
+    current_config = {**entry.data, **entry.options}
+    if current_config.get(CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST):
+        identifiers.add((DOMAIN, f"{entry.entry_id}_minute"))
+
+    return identifiers
 
 
 @callback
