@@ -5,369 +5,112 @@
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.11.0+-blue.svg)](https://www.home-assistant.io/)
 
-A comprehensive Home Assistant integration that provides weather data from the Google Weather API with current conditions, forecasts, and alerts.
+Current conditions, forecasts and weather alerts from the Google Weather API, with polling tuned to stay inside Google's free tier.
 
-## Features
+## What You Get
 
-- **Complete Weather Data**: Current conditions, daily forecast (up to 10 days), hourly forecast (up to 240 hours)
-- **Weather Alerts**: Real-time weather warnings and alerts from authoritative agencies worldwide
-- **Comprehensive Sensors**: 25+ observational sensors including temperature, wind, precipitation, snow, UV index, and more
-- **Binary Sensors**: Day/night detection and weather alerts (when supported)
-- **Configurable Location**: Set custom coordinates via config and options flow
-- **API Key Authentication**: Simple setup using Google Maps API key
-- **HACS Compatible**: Easy installation and updates
+A weather entity with a 10-day daily and 240-hour hourly forecast, plus sensors split across linked devices:
 
-## What You'll Get
+- **Observational sensors** (25+): temperature, feels-like, dew point, heat index, wind chill; wind speed, gust, direction, cardinal, degrees; humidity, pressure, visibility, cloud cover, UV index; precipitation probability and amount, snow amount, 24-hour snow forecast, thunderstorm probability; 24-hour history for temperature change, max/min, precipitation and snow; and a weather condition description.
+- **Binary sensors**: Daytime, plus Weather Alert, Severe Weather Alert and Urgent Weather Alert where your region supports them.
+- **[Minute Forecast](#minute-forecast--alpha-likely-to-change)** (alpha, off by default): a six-hour rain nowcast.
 
-### Weather Entity
-- **Current Conditions**: Temperature, feels-like, humidity, pressure, wind speed/direction, visibility, cloud cover, UV index, and more
-- **Daily Forecast**: Up to 10 days with high/low temperatures, conditions, precipitation probability, and more
-- **Hourly Forecast**: Up to 240 hours (10 days) of detailed hourly forecasts
+## Requirements
 
-### Observational Sensors (25+ sensors)
-**Temperature:**
-- Current Temperature
-- Feels Like Temperature
-- Dew Point
-- Heat Index
-- Wind Chill
+- Home Assistant 2024.11.0 or later
+- A Google Cloud project with the **Weather API** enabled and an API key
 
-**Wind:**
-- Wind Speed
-- Wind Gust
-- Wind Direction (full cardinal)
-- Wind Cardinal (abbreviated: N, NE, E, etc.)
-- Wind Degrees (0-360°)
-
-**Atmospheric:**
-- Humidity
-- Pressure
-- Visibility
-- Cloud Cover
-- UV Index
-
-**Precipitation & Snow:**
-- Precipitation Probability
-- Precipitation Amount
-- Snow Amount
-- Snow Forecast (next 24h, requires hourly forecast)
-- Thunderstorm Probability
-
-**24-Hour Historical:**
-- Temperature Change
-- Max Temperature
-- Min Temperature
-- Total Precipitation
-- Total Snow
-
-**Other:**
-- Weather Condition (text description)
-
-### Binary Sensors
-The integration creates a "Binary Sensors" device linked to the weather device:
-
-**Always Available:**
-- **Daytime**: Indicates if it's currently daytime (based on sunrise/sunset)
-
-**Weather Alerts** (only if your region supports alerts):
-- **Weather Alert**: Any active weather alerts
-- **Severe Weather Alert**: Extreme or severe alerts only
-- **Urgent Weather Alert**: Immediate or expected urgency alerts
-
-All alert sensors include detailed attributes with alert descriptions, instructions, severity levels, and more.
-
-**Alert Availability**: The integration automatically detects if your location supports weather alerts during setup. If the API returns a 404 error, only the Daytime sensor is created. All weather data and forecasts continue to work normally. See [Supported Regions](#supported-regions) for alert coverage details.
-
-## Prerequisites
-
-1. **Google Cloud Project**: Create a project at [Google Cloud Console](https://console.cloud.google.com/)
-2. **Google Weather API**: Enable the Weather API in your project
-3. **API Key**: Create a Google Maps API key in Google Cloud
-4. **Home Assistant**: Version 2024.11.0 or later
+Billing info may be required on the Google Cloud project even for free-tier use. An existing Google Maps Platform key works if the Weather API is enabled on its project.
 
 ## Installation
 
-### Via HACS (Recommended)
+**HACS**: HACS → Integrations → ⋮ → Custom repositories → add `https://github.com/safepay/ha_google_weather` as an Integration → Install → restart.
 
-1. Open HACS in Home Assistant
-2. Click on "Integrations"
-3. Click the three dots in the top right corner and select "Custom repositories"
-4. Add this repository URL: `https://github.com/safepay/ha_google_weather`
-5. Select "Integration" as the category
-6. Click "Install"
-7. Restart Home Assistant
+**Manual**: copy `custom_components/google_weather` into your Home Assistant `config/custom_components/` directory and restart.
 
-### Manual Installation
+## Setup
 
-1. Download or clone this repository
-2. Copy the `custom_components/google_weather` folder to your Home Assistant `config/custom_components/` directory
-3. Your directory structure should look like:
-   ```
-   config/
-   └── custom_components/
-       └── google_weather/
-           ├── __init__.py
-           ├── manifest.json
-           ├── config_flow.py
-           ├── coordinator.py
-           ├── const.py
-           ├── weather.py
-           ├── sensor.py
-           ├── binary_sensor.py
-           ├── application_credentials.py
-           ├── strings.json
-           └── translations/
-               └── en.json
-   ```
-4. Restart Home Assistant
-5. The integration will appear in Settings → Devices & Services → Add Integration
+1. In Google Cloud Console, enable the **Weather API** under APIs & Services → Library, then create an API key under Credentials.
+2. In Home Assistant, go to Settings → Devices & Services → **+ Add Integration** → "Google Weather".
+3. Enter the API key, then set:
+   - **Location** — the entity ID prefix, default `home`
+   - **Latitude / Longitude** — default to your Home Assistant location
+4. Choose which forecasts to include, set update intervals, and confirm the estimated API usage.
 
-## Configuration
+Everything is reconfigurable later via **Configure** on the integration. Changes apply on reload; disabling an option removes its entities.
 
-### Step 1: Get Your Google Maps API Key
+## Entities
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Select your project (or create a new one)
-3. Navigate to "APIs & Services" → "Library"
-4. Search for "Weather API" and click "Enable"
-5. Go to "APIs & Services" → "Credentials"
-6. Click "Create Credentials" → "API key"
-7. Copy your Google Maps API key (you can add restrictions for better security)
+Entity IDs use the location prefix you chose, so a location of `home` gives `weather.home_weather`, `sensor.home_temperature`, `binary_sensor.home_daytime`, and so on. A location of `office` gives `sensor.office_temperature` instead. Friendly names are the same, title-cased.
 
-💡 **Tip**: If you already have a Google Maps Platform API key, you can reuse it! Just make sure the Weather API is enabled for your project.
+Entities are grouped into devices linked to a parent "Home Weather" device: Observational Sensors, Binary Sensors, and Minute Forecast when enabled.
 
-### Step 2: Add the Integration
+## Minute Forecast — Alpha, likely to change
 
-1. Go to Settings → Devices & Services
-2. Click "+ Add Integration"
-3. Search for "Google Weather"
-4. Enter your Google Maps API key from Step 1
-5. Configure your location:
-   - **Location**: Entity ID prefix (default: "home")
-     Examples: "home", "office", "weather_station"
-   - **Latitude**: Location latitude (defaults to Home Assistant location)
-   - **Longitude**: Location longitude (defaults to Home Assistant location)
-6. Choose forecast and alert options:
-   - **Include Daily Forecasts**: Enable automatic fetching of daily forecasts (enabled by default)
-   - **Include Hourly Forecasts**: Enable automatic fetching of hourly forecasts (enabled by default)
-   - **Include Weather Alerts**: Enable automatic fetching of weather alerts (enabled by default)
-   - **Tip**: Disable forecasts you don't need to save API calls. You can still access them manually via the `weather.get_forecasts` action.
-7. Configure update intervals:
-   - Set how often each enabled endpoint updates during day/night
-   - Only enabled forecasts/alerts will show interval configuration
-   - Defaults are optimized for the free tier (10,000 calls/month)
+> ⚠️ **Can take you over the 10,000 free API calls per month.** Cost depends on how much it rains, so it cannot be calculated in advance. Off by default.
 
-That's it! Your weather data will start flowing immediately.
+A six-hour rain nowcast — when rain starts, when it stops, how much — on its own device. Google's endpoint is pre-GA, so the entities may change; each carries an `alpha` attribute.
 
-## Entity Naming
+| Entity | |
+| --- | --- |
+| Precipitation Starts In | minutes; attributes hold 15/30/60/120/360-minute rain totals |
+| Precipitation Stops In | minutes; **unknown** when rain runs past the end of the forecast |
+| Precipitation Rate | mm/h |
+| Rain Next 60 Minutes | mm |
+| Rain Rest Of Forecast | mm, plus a 15-minute timeline attribute |
+| Precipitation Within The Hour | binary sensor |
 
-The integration creates simple, clean entity IDs and friendly names. Entities are organized into three separate devices linked via device hierarchy (`via_device`):
+Snow is not covered yet: rain totals filter on precipitation type, so snow reports nothing rather than something wrong.
 
-**Example: Location = "home"**
+**Resolution is Google's, not a setting.** Setup makes one call to measure your location's segment width, then offers only polling intervals that match it. Every onset reading publishes `onset_precision_minutes`, so a coarse answer never reads as a precise one.
 
-### Device: "Home Weather" (Parent Device)
-**Weather Entity:**
-- `weather.home_weather` → Friendly name: "Home"
+### Cost
 
-### Device: "Home Observational Sensors" (Child Device)
-Linked to parent device via `via_device`. Contains 25+ sensor entities:
+The daily or hourly forecast you already fetch is what starts and stops polling, so the gate is free. No rain forecast and it drops to about four calls a day; rain forecast and it watches closely; rain actually coming and it polls at your minimum whatever the forecast said, halving the gap as onset approaches.
 
-- `sensor.home_temperature` → "Home Temperature"
-- `sensor.home_feels_like` → "Home Feels Like Temperature"
-- `sensor.home_dew_point` → "Home Dew Point"
-- `sensor.home_wind_speed` → "Home Wind Speed"
-- `sensor.home_wind_cardinal` → "Home Wind Cardinal"
-- `sensor.home_wind_degrees` → "Home Wind Degrees"
-- `sensor.home_humidity` → "Home Humidity"
-- `sensor.home_pressure` → "Home Pressure"
-- `sensor.home_visibility` → "Home Visibility"
-- `sensor.home_uv_index` → "Home UV Index"
-- `sensor.home_snow_amount` → "Home Snow Amount"
-- `sensor.home_snow_24h` → "Home Snow (24h)"
-- ...and 13+ more sensors
+| | 2 min | 3 min | 5 min | 15 min |
+| --- | --- | --- | --- | --- |
+| Dry month | 120 | 120 | 120 | 120 |
+| 10 rain days | 1,480 | 1,080 | 750 | 410 |
+| 20 rain days | 4,080 | 2,880 | 1,900 | 900 |
+| 30 rain days | 7,920 | 5,520 | 3,570 | 1,590 |
 
-### Device: "Home Binary Sensors" (Child Device)
-Linked to parent device via `via_device`.
+A longer interval does not coarsen the forecast — every call returns all six hours — it only delays noticing a change.
 
-**Always available:**
-- `binary_sensor.home_is_daytime` → "Home Daytime"
+A monthly ceiling (default 1,500) drops polling to two-hourly once reached. **A safeguard, not a guarantee:** it resets when Home Assistant restarts and cannot see other users of your API key. Set a quota cap in the Google Cloud console if staying inside the free tier matters.
 
-**If region supports alerts:**
-- `binary_sensor.home_weather_alert` → "Home Weather Alert"
-- `binary_sensor.home_severe_weather_alert` → "Home Severe Weather Alert"
-- `binary_sensor.home_urgent_weather_alert` → "Home Urgent Weather Alert"
+## API Usage
 
-**Note**: The "Binary Sensors" device is always created with at least the Daytime sensor. Weather alert sensors are only added if your location supports alerts (see [Supported Regions](#supported-regions)).
+Google allows **10,000 free calls per month** across all endpoints, then charges about $6.00 per 1,000. The coordinator ticks every minute but only calls an endpoint when its interval has elapsed, and serves cached data otherwise — including if the API errors.
 
-## Smart Polling & API Optimization
+Each endpoint has separate daytime and nighttime intervals. Nighttime defaults to 22:00–06:00 and is configurable.
 
-### Overview
+| Endpoint | Day | Night | Calls/month |
+| --- | --- | --- | --- |
+| Current Conditions | 10 min | 30 min | ~3,360 |
+| Daily Forecast | 30 min | 60 min | ~1,200 |
+| Hourly Forecast | 20 min | 60 min | ~1,680 |
+| Weather Alerts | 15 min | 30 min | ~2,400 |
+| **Total** | | | **~8,640** |
 
-The integration uses **smart polling** to optimize API usage and stay within Google's free tier limits. Google provides **10,000 free API calls per month**, and this integration is designed to make efficient use of this limit.
+Daily forecasts are always on. Hourly forecasts, alerts and the minute forecast are optional — disabling hourly saves ~1,680 calls/month and disabling alerts ~2,400.
 
-### Forecast & Alert Options
+The setup and options flows show an estimate before you commit, so adjust intervals there. If you need to cut usage, lengthen nighttime intervals first and daily forecasts second; both change little of value. Google Cloud Console → APIs & Services → Dashboard is the authoritative usage figure.
 
-You can choose which optional forecasts and alerts to include during setup:
+### Fetching a forecast on demand
 
-- **Daily Forecasts**: Always enabled - up to 10-day forecasts (not configurable, maximum available always fetched, number of days available is region-dependent)
-- **Hourly Forecasts**: Optional - Enable/disable automatic fetching of up to 240-hour forecasts (maximum available always fetched, number of hours available is region-dependent)
-- **Weather Alerts**: Optional - Enable/disable automatic fetching of weather alerts (checkbox always shown, but alert entities only created if supported in your region)
+`google_weather.get_forecast` fetches one forecast with a single call, so you can leave an endpoint disabled and still reach it from an automation:
 
-**Benefits of disabling optional forecasts:**
-- **Reduces API calls**: Disabled endpoints are never fetched automatically, saving API calls
-- **Flexible API management**: Only fetch what you actually use regularly
-
-**Example API savings** (with defaults):
-- Disabling hourly forecasts: Saves ~1,680 calls/month
-- Disabling weather alerts: Saves ~2,400 calls/month
-- Disabling both: Saves ~4,080 calls/month
-
-**Note:** Daily forecasts are always enabled because they're the most commonly used forecast type and update less frequently than hourly forecasts, making them efficient in terms of API usage.
-
-### Manual Forecast Fetching
-
-The integration includes a custom service for fetching forecasts on demand:
-
-**Service**: `google_weather.get_forecast`
-
-**Parameters**:
-- `entity_id`: Your weather entity (e.g., `weather.home`)
-- `forecast_type`: Either `daily` or `hourly`
-
-**Example service call**:
 ```yaml
-service: google_weather.get_forecast
+action: google_weather.get_forecast
 data:
   entity_id: weather.home
-  forecast_type: hourly
+  forecast_type: hourly   # daily, hourly or minute
 ```
 
-This makes a single API call to fetch the requested forecast and returns the raw data from the Google Weather API.
+## Examples
 
-**Use cases**:
-- You have hourly forecasts disabled but want to fetch them on-demand via an automation
-- You want to fetch a forecast only when you explicitly need it (e.g., via a dashboard button)
-- You're using the free tier and want maximum control over API usage
-
-### How It Works
-
-Instead of fetching all weather data at once, the integration checks each enabled API endpoint individually and only fetches when needed:
-
-- **Current Conditions**: Always enabled - updates frequently (default: every 10 min during day, 30 min at night)
-- **Daily Forecast**: Always enabled - updates less frequently as it changes slowly (default: every 30 min during day, 60 min at night)
-- **Hourly Forecast**: Optional - moderate update frequency (default: every 20 min during day, 60 min at night)
-- **Weather Alerts**: Optional - important but checked moderately (default: every 15 min during day, 30 min at night)
-
-The coordinator runs every minute to check which enabled endpoints need updating, but **only calls the Google API when an endpoint's interval has elapsed**.
-
-### Default Configuration
-
-The default settings are optimized to stay within the 10,000 free calls/month limit with a healthy buffer:
-
-| Endpoint | Daytime Interval | Nighttime Interval | Approx. Calls/Month |
-|----------|-----------------|-------------------|---------------------|
-| Current Conditions | 10 minutes | 30 minutes | ~3,360 |
-| Daily Forecast | 30 minutes | 60 minutes | ~1,200 |
-| Hourly Forecast | 20 minutes | 60 minutes | ~1,680 |
-| Weather Alerts | 15 minutes | 30 minutes | ~2,400 |
-
-**Total: ~8,640 calls/month** (13.6% under the 10,000/month free tier limit, providing a comfortable buffer)
-
-### Configuring Update Intervals
-
-During setup (Step 2 of configuration), you can customize update intervals for each endpoint:
-
-1. **Current Conditions** - How often to fetch current weather (temperature, humidity, wind, etc.)
-2. **Daily Forecast** - How often to update the 10-day forecast
-3. **Hourly Forecast** - How often to update the 240-hour forecast
-4. **Weather Alerts** - How often to check for new weather alerts
-
-Each endpoint has separate settings for:
-- **Daytime interval**: When you want more frequent updates (e.g., 06:00 - 22:00)
-- **Nighttime interval**: When less frequent updates are acceptable (e.g., 22:00 - 06:00)
-
-### Nighttime Configuration
-
-You can configure when "nighttime" begins and ends:
-- **Night Start**: When to switch to nighttime intervals (default: 22:00 / 10 PM)
-- **Night End**: When to switch back to daytime intervals (default: 06:00 / 6 AM)
-
-This automatically reduces API calls during nighttime hours when weather changes less and you're less likely to check the weather.
-
-### Example Configurations
-
-**Power User (Maximum Updates)**
-- Current: 5 min day / 10 min night = ~7,200 calls/month
-- Daily: 15 min day / 30 min night = ~2,400 calls/month
-- Hourly: 10 min day / 20 min night = ~3,600 calls/month
-- Alerts: 10 min day / 20 min night = ~3,600 calls/month
-- **Total**: ~16,800 calls/month (requires paid plan)
-
-**Conservative (Minimal Updates)**
-- Current: 30 min day / 60 min night = ~1,200 calls/month
-- Daily: 60 min day / 120 min night = ~600 calls/month
-- Hourly: 30 min day / 90 min night = ~1,120 calls/month
-- Alerts: 30 min day / 60 min night = ~1,200 calls/month
-- **Total**: ~4,120 calls/month (well within free tier)
-
-**Alerts Priority (Emergency Notifications)**
-- Current: 30 min day / 60 min night = ~1,200 calls/month
-- Daily: 60 min day / 120 min night = ~600 calls/month
-- Hourly: 30 min day / 90 min night = ~1,120 calls/month
-- Alerts: 10 min day / 15 min night = ~3,840 calls/month
-- **Total**: ~6,760 calls/month (prioritizes alerts, within free tier)
-
-### Tips for Staying Within Free Tier
-
-1. **Use defaults**: The default settings are optimized for the free tier
-2. **Increase nighttime intervals**: You probably don't need updates every 5 minutes at 3 AM
-3. **Adjust by importance**: Set longer intervals for daily forecasts (they change slowly)
-4. **Monitor usage**: Check your Google Cloud Console for API usage
-5. **Consider your needs**: Most users don't need sub-5-minute updates
-
-### Location Configuration
-
-The location field serves as the entity ID prefix and friendly name:
-- **Location**: Identifier used in entity IDs (default: "home")
-- **Coordinates**: Default to your Home Assistant location but can be customized
-- **Friendly Names**: Auto-generated from location using title case
-
-Examples:
-- Location: "home" → Entity IDs: `weather.home`, `sensor.home_temperature`
-- Location: "office" → Entity IDs: `weather.office`, `sensor.office_temperature`
-- Location: "gw_home" → Entity IDs: `weather.gw_home`, `sensor.gw_home_temperature`
-
-## Updating Configuration
-
-You can update location coordinates, unit system, forecast options, and update intervals at any time:
-
-1. Go to Settings → Devices & Services
-2. Find the Google Weather integration
-3. Click "Configure"
-4. Update any of the following:
-   - Location coordinates (latitude/longitude)
-   - Forecast and alert inclusion (enable/disable daily forecasts, hourly forecasts, weather alerts)
-   - Update intervals for enabled endpoints (daytime and nighttime)
-   - Nighttime schedule (start and end times)
-5. Click "Submit"
-
-The integration will automatically reload with the new settings. Changes to forecast options and update intervals take effect immediately.
-
-**Note**: When you disable a forecast or alert option, the corresponding binary sensors will not be created on reload. Re-enabling them will restore the sensors.
-
-**API Behavior**: The Google Weather API automatically converts most values based on your selected unit system. However, air pressure is always returned in millibars regardless of the unit system setting.
-
-## Usage Examples
-
-### Display Weather on Dashboard
-
-```yaml
-type: weather-forecast
-entity: weather.home
-forecast_type: daily
-```
-
-### Weather Warning Automation
+Notify on a severe weather alert, using the alert attributes:
 
 ```yaml
 automation:
@@ -379,193 +122,37 @@ automation:
     action:
       - service: notify.mobile_app
         data:
+          title: "⚠️ Severe Weather Alert"
           message: >
             {% set alerts = state_attr('binary_sensor.home_severe_weather_alert', 'alerts') %}
             {% for alert in alerts %}
             {{ alert.title }}: {{ alert.instruction }}
             {% endfor %}
-          title: "⚠️ Severe Weather Alert"
 ```
 
-### UV Index Notification
+Each alert in that `alerts` list carries `alert_id`, `title`, `event_type`, `area`, `severity`, `certainty`, `urgency`, `start_time`, `expiration_time`, `description` and `instruction`. The sensor itself also has `alert_count`, `max_severity` and `data_source`.
 
-```yaml
-automation:
-  - alias: "High UV Index Alert"
-    trigger:
-      - platform: numeric_state
-        entity_id: sensor.home_uv_index
-        above: 7
-    condition:
-      - condition: time
-        after: "09:00:00"
-        before: "16:00:00"
-    action:
-      - service: notify.family
-        data:
-          message: "UV index is {{ states('sensor.home_uv_index') }}. Remember sunscreen!"
-```
+## Weather Alerts Coverage
 
-### Temperature Trend
+Weather data works worldwide. Alerts do not: coverage varies by country, and the integration detects support on first setup. If the API returns a 404 for your location, only the Daytime binary sensor is created rather than three alert sensors that could never fire, and the log says so. Everything else works normally. See [Google's coverage list](https://developers.google.com/maps/documentation/weather/weather-alerts#data_sources).
 
-```yaml
-# Track temperature changes over 24 hours
-sensor:
-  - platform: template
-    sensors:
-      temperature_trend:
-        friendly_name: "Temperature Trend"
-        value_template: >
-          {% set change = states('sensor.home_temp_change_24h') | float %}
-          {% if change > 5 %}
-            Rising significantly
-          {% elif change > 0 %}
-            Rising slightly
-          {% elif change < -5 %}
-            Falling significantly
-          {% else %}
-            Falling slightly
-          {% endif %}
-```
-
-## Weather Alert Attributes
-
-The weather alert binary sensors include comprehensive attributes:
-
-```yaml
-# Example attributes on binary_sensor.home_weather_alert
-alert_count: 2
-max_severity: "SEVERE"
-data_source: "National Weather Service"
-alerts:
-  - alert_id: "urn:oid:..."
-    title: "Flash Flood Warning"
-    event_type: "FLASH_FLOOD"
-    area: "Franklin County"
-    severity: "SEVERE"
-    certainty: "LIKELY"
-    urgency: "IMMEDIATE"
-    start_time: "2025-08-06T18:24:00Z"
-    expiration_time: "2025-08-06T21:30:00Z"
-    description: "Flash flooding in progress..."
-    instruction: "Turn around, don't drown..."
-```
-
-## Data Updates
-
-The integration uses **smart polling** with configurable intervals for each endpoint:
-
-- **Current Conditions**: Default 10 min (day) / 30 min (night) - real-time weather updates
-- **Daily Forecast**: Default 30 min (day) / 60 min (night) - 10-day forecast
-- **Hourly Forecast**: Default 20 min (day) / 60 min (night) - 240-hour forecast
-- **Weather Alerts**: Default 15 min (day) / 30 min (night) - real-time alerts
-
-The coordinator checks every minute to see if any endpoint needs updating, but only makes API calls when necessary. This provides responsive updates while staying within API limits.
-
-**Nighttime Mode**: Automatically reduces update frequency during configured nighttime hours (default: 22:00 - 06:00).
+Alert sensors sitting at "off" simply mean no alerts are currently active.
 
 ## Troubleshooting
 
-### "Missing credentials" error
-- Ensure you've added Google Application Credentials in Settings → Application Credentials
-- Verify your API key is correct and has the Weather API enabled
-- Check that API key restrictions allow access from your Home Assistant instance
-
-### API errors
-- Check that the Google Weather API is enabled in your Google Cloud Console
-- Verify your Google Cloud project has billing enabled (Weather API requires billing)
-- Check Home Assistant logs for detailed error messages: Settings → System → Logs
-
-### Entities not appearing
-- Check that the integration loaded successfully in Settings → Devices & Services
-- Verify the coordinator is fetching data (check logs)
-- Try reloading the integration or restarting Home Assistant
-
-### Wrong units
-- Check the unit system setting in the integration options
-- Reload the integration after changing the unit system
-
-### No weather alert sensors (only Daytime sensor)
-- **If you only see the Daytime binary sensor**, your region does not support weather alerts through the Google Weather API
-- The integration automatically detects alert support on first setup - if the API returns a 404 error, only the Daytime sensor is created
-- Check the integration logs for the message: "Weather alerts not supported for this location - only creating non-alert binary sensors"
-- This is normal and expected for unsupported regions - the integration will continue to work perfectly with all weather data and forecasts
-- Not all regions have weather alert support through Google's API (see [Supported Regions](#supported-regions) for details)
-
-### No active weather alerts (sensors exist but show "off")
-- Weather alerts depend on whether there are currently active alerts in your area
-- Binary sensors will be in the "off" state when there are no active alerts
-- This is normal - alerts only activate when severe weather is occurring or expected
-
-## Supported Regions
-
-### Weather Data (Current Conditions, Forecasts)
-Available **worldwide** for any latitude/longitude coordinates.
-
-### Weather Alerts Coverage
-
-Weather alerts are available in many countries, but coverage varies by region. **The integration automatically detects whether your location supports alerts** during initial setup.
-
-**How Alert Detection Works:**
-- On first setup, the integration checks if the Google Weather API supports alerts for your location
-- If supported (HTTP 200): All binary sensors are created (Daytime + 3 alert sensors)
-- If not supported (HTTP 404): Only the Daytime sensor is created - this prevents misleading empty alert sensors
-- This detection happens once during initial setup and the result is cached
-
-**Alert Availability:**
-- Weather alert coverage varies significantly by country and region
-- Some countries have full national coverage, while others have limited regional support
-- The Google Weather API aggregates alerts from official government agencies worldwide
-- See the [Google Weather API documentation](https://developers.google.com/maps/documentation/weather/weather-alerts#data_sources) for specific coverage in your region
-
-**What Happens in Unsupported Regions:**
-If alerts are not available for your location:
-- You'll see a log message: "Weather alerts not supported for this location - only creating non-alert binary sensors"
-- The "Binary Sensors" device is still created with the Daytime sensor
-- The three weather alert binary sensors will NOT be created
-- All other weather data and forecasts will work perfectly
-- This is the expected behavior and prevents cluttering your UI with sensors that can never have data
-
-## API Limitations & Pricing
-
-### Free Tier
-- **10,000 free API calls per month** (total across all endpoints combined)
-- No credit card required for free tier
-- Default configuration uses ~8,640 calls/month (13.6% under the limit)
-
-### Smart Polling Benefits
-- Each endpoint is polled independently at different intervals
-- Nighttime mode automatically reduces API usage by 40-60%
-- Cached data is returned when endpoints don't need updating
-- Graceful fallback to cached data if API errors occur
-
-### Billing
-- Weather API requires a Google Cloud project (billing info may be required)
-- Free tier resets monthly
-- Charges apply only if you exceed 10,000 calls/month total
-- Current pricing: $6.00 per 1,000 calls after free tier
-
-### Recommendations
-1. **Start with defaults**: Optimized for ~8,640 calls/month (13.6% under the 10,000 limit)
-2. **Monitor usage**: Check Google Cloud Console → APIs & Services → Dashboard
-3. **Adjust as needed**: Reduce intervals if approaching limits
-4. **Use nighttime mode**: Significant savings with minimal impact
-5. **Set billing alerts**: Get notified if approaching free tier limit
-
-### Forecast Data Limits
-- Daily forecast: Up to 10 days
-- Hourly forecast: Up to 240 hours (10 days)
-- Current conditions: Real-time
-- Weather alerts: Real-time from 50+ countries
+- **API errors** — confirm the Weather API is enabled and the project has billing set up, then check Settings → System → Logs.
+- **Entities missing** — check the integration loaded, then reload it or restart.
+- **Only the Daytime binary sensor** — your region has no alert coverage; see above.
+- **Wrong units** — units follow your Home Assistant setting; reload after changing it. Air pressure is always millibars, which is what the API returns regardless.
 
 ## Support
 
-For issues and feature requests, please use the [GitHub issue tracker](https://github.com/safepay/ha_google_weather/issues).
+Issues and feature requests: [GitHub issue tracker](https://github.com/safepay/ha_google_weather/issues).
 
 ## License
 
-MIT License - See LICENSE file for details
+MIT — see LICENSE.
 
 ## Credits
 
-This integration uses the [Google Weather API](https://developers.google.com/maps/documentation/weather) provided by Google Maps Platform.
+Uses the [Google Weather API](https://developers.google.com/maps/documentation/weather) from Google Maps Platform.

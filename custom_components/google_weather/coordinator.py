@@ -13,6 +13,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_system import METRIC_SYSTEM
 
+from . import nowcast
 from .conditions import SNOW_CONDITION_TYPES
 from .const import (
     API_BASE_URL,
@@ -28,6 +29,10 @@ from .const import (
     CONF_INCLUDE_ALERTS,
     CONF_INCLUDE_DAILY_FORECAST,
     CONF_INCLUDE_HOURLY_FORECAST,
+    CONF_INCLUDE_MINUTE_FORECAST,
+    CONF_MINUTE_MIN_INTERVAL,
+    CONF_MINUTE_MONTHLY_BUDGET,
+    CONF_MINUTE_RAIN_THRESHOLD,
     CONF_NIGHT_END,
     CONF_NIGHT_START,
     DEFAULT_ALERTS_DAY_INTERVAL,
@@ -41,6 +46,10 @@ from .const import (
     DEFAULT_INCLUDE_ALERTS,
     DEFAULT_INCLUDE_DAILY_FORECAST,
     DEFAULT_INCLUDE_HOURLY_FORECAST,
+    DEFAULT_INCLUDE_MINUTE_FORECAST,
+    DEFAULT_MINUTE_MIN_INTERVAL,
+    DEFAULT_MINUTE_MONTHLY_BUDGET,
+    DEFAULT_MINUTE_RAIN_THRESHOLD,
     DEFAULT_NIGHT_END,
     DEFAULT_NIGHT_START,
     DOMAIN,
@@ -48,6 +57,9 @@ from .const import (
     ENDPOINT_CURRENT,
     ENDPOINT_DAILY,
     ENDPOINT_HOURLY,
+    ENDPOINT_MINUTE,
+    MINUTE_CAP_RELAXED,
+    MINUTE_PAGE_SIZE,
     UNIT_SYSTEM_IMPERIAL,
     UNIT_SYSTEM_METRIC,
 )
@@ -162,6 +174,18 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.include_daily_forecast = current_data.get(CONF_INCLUDE_DAILY_FORECAST, DEFAULT_INCLUDE_DAILY_FORECAST)
         self.include_hourly_forecast = current_data.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST)
         self.include_alerts = current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS)
+        self.include_minute_forecast = current_data.get(
+            CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST
+        )
+        self.minute_rain_threshold = current_data.get(
+            CONF_MINUTE_RAIN_THRESHOLD, DEFAULT_MINUTE_RAIN_THRESHOLD
+        )
+        self.minute_monthly_budget = current_data.get(
+            CONF_MINUTE_MONTHLY_BUDGET, DEFAULT_MINUTE_MONTHLY_BUDGET
+        )
+        self.minute_min_interval = current_data.get(
+            CONF_MINUTE_MIN_INTERVAL, DEFAULT_MINUTE_MIN_INTERVAL
+        )
 
         # Get update intervals
         self.intervals = {
@@ -193,6 +217,7 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ENDPOINT_DAILY: None,
             ENDPOINT_HOURLY: None,
             ENDPOINT_ALERTS: None,
+            ENDPOINT_MINUTE: None,
         }
 
         # Cache data for each endpoint
@@ -200,6 +225,14 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Track whether alerts are supported for this location
         self.alerts_supported: bool | None = None  # None = not checked yet
+
+        # The nowcast schedules itself rather than running on a fixed interval,
+        # so it carries its own next-call time instead of an entry in intervals.
+        self.minute_next_poll: datetime | None = None
+        self.minute_failures = 0
+        self.minute_cadence: float | None = None
+        self.minute_calls = 0
+        self.minute_calls_month: tuple[int, int] | None = None
 
         # Use 1 minute update interval - checks frequently but only fetches when needed
         super().__init__(
@@ -228,6 +261,11 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _should_update_endpoint(self, endpoint: str) -> bool:
         """Check if an endpoint should be updated based on configured intervals."""
+        if endpoint == ENDPOINT_MINUTE:
+            # Scheduled from the last response, not a day/night pair: calls are
+            # only worth making as rain approaches.
+            return self.minute_next_poll is None or dt_util.now() >= self.minute_next_poll
+
         last_update = self.last_update.get(endpoint)
 
         # If never updated, update now
@@ -242,6 +280,82 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         time_since_update = (dt_util.now() - last_update).total_seconds() / 60
         return time_since_update >= interval_minutes
 
+    def _schedule_minute_forecast(self, minutes: float, reason: str) -> None:
+        """Book the next nowcast call."""
+        self.minute_next_poll = dt_util.now() + timedelta(minutes=minutes)
+        _LOGGER.debug("Next minute forecast in %d min (%s)", minutes, reason)
+
+    def _count_minute_call(self) -> None:
+        """Record a nowcast call against this calendar month's ceiling."""
+        now = dt_util.now()
+        month = (now.year, now.month)
+        if self.minute_calls_month != month:
+            self.minute_calls_month = month
+            self.minute_calls = 0
+        self.minute_calls += 1
+
+    def _minute_budget_exhausted(self) -> bool:
+        """Whether this month's nowcast ceiling has been reached."""
+        return bool(self.minute_monthly_budget) and self.minute_calls >= self.minute_monthly_budget
+
+    def _apply_minute_schedule(self, updated_data: dict[str, Any]) -> None:
+        """Set the next nowcast call from the response just received."""
+        if "minute_forecast_error" in updated_data:
+            # Escalating backoff, not a capability latch: it slows retries
+            # without ever deciding a location is unsupported.
+            self.minute_failures = min(self.minute_failures + 1, 8)
+            delay = min(
+                MINUTE_CAP_RELAXED, self.minute_min_interval * 2**self.minute_failures
+            )
+            self._schedule_minute_forecast(delay, f"failure {self.minute_failures}")
+            return
+
+        derived = updated_data.get("minute_forecast")
+        if not derived:
+            return
+
+        self.minute_failures = 0
+
+        # Segment width is read, never assumed, and is not stable: say so when it
+        # moves, since it changes how precise an answer the entities can give.
+        cadence = derived.get("cadence_minutes")
+        if cadence and cadence != self.minute_cadence:
+            if self.minute_cadence is not None:
+                _LOGGER.info(
+                    "Minute forecast segment width changed from %s to %s minutes",
+                    self.minute_cadence,
+                    cadence,
+                )
+            self.minute_cadence = cadence
+
+        if self._minute_budget_exhausted():
+            # Degrade rather than go dark: two-hourly still answers "is rain
+            # coming at all".
+            self._schedule_minute_forecast(
+                MINUTE_CAP_RELAXED,
+                f"monthly ceiling reached ({self.minute_calls}/{self.minute_monthly_budget})",
+            )
+            return
+
+        # Read after the cache update, so the gate sees this tick's forecast when
+        # one was fetched alongside.
+        outlook = nowcast.forecast_outlook(
+            current=self.endpoint_data.get("current"),
+            hourly=self.endpoint_data.get("hourly_forecast"),
+            daily=self.endpoint_data.get("daily_forecast"),
+            now=dt_util.utcnow(),
+            is_night=self._is_night_time(),
+            threshold=self.minute_rain_threshold,
+        )
+        delay = nowcast.next_poll_minutes(
+            derived, outlook=outlook, floor=self.minute_min_interval
+        )
+        self._schedule_minute_forecast(
+            delay,
+            f"onset={derived.get('starts_in')} outlook={outlook} "
+            f"calls={self.minute_calls}/{self.minute_monthly_budget}",
+        )
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Google Weather API using smart polling."""
         try:
@@ -252,6 +366,8 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 enabled_endpoints.append(ENDPOINT_HOURLY)
             if self.include_alerts:
                 enabled_endpoints.append(ENDPOINT_ALERTS)
+            if self.include_minute_forecast:
+                enabled_endpoints.append(ENDPOINT_MINUTE)
 
             # Check which enabled endpoints need updating
             endpoints_to_update = {
@@ -272,6 +388,11 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._is_night_time(),
             )
 
+            if ENDPOINT_MINUTE in updating:
+                # Book before the call, not after: last_update is only stamped on
+                # success, so a failing endpoint would otherwise retry every tick.
+                self._schedule_minute_forecast(self.minute_min_interval, "attempt booked")
+
             # Fetch data from endpoints that need updating
             updated_data = await self.hass.async_add_executor_job(
                 self._fetch_weather_data,
@@ -284,6 +405,9 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             now = dt_util.now()
             for endpoint in updating:
                 self.last_update[endpoint] = now
+
+            if ENDPOINT_MINUTE in updating:
+                self._apply_minute_schedule(updated_data)
 
             return self.endpoint_data
 
@@ -370,6 +494,51 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 else:
                     updated_data["snow_forecast_24h"] = None
 
+            # Fetch the minute forecast (nowcast) if needed
+            if endpoints_to_update.get(ENDPOINT_MINUTE):
+                _LOGGER.debug("Fetching minute forecast")
+                try:
+                    # Counted here rather than at scheduling time: this is the
+                    # point past which a call is actually spent.
+                    self._count_minute_call()
+                    minute_response = requests.get(
+                        f"{API_BASE_URL}/forecast/minutes:lookup",
+                        params={
+                            **weather_params,
+                            # Never an exact count: the segment count is a
+                            # product of window length and cadence, both
+                            # undocumented and region-dependent.
+                            "pageSize": MINUTE_PAGE_SIZE,
+                        },
+                        timeout=10,
+                    )
+                    minute_response.raise_for_status()
+                    minute_data = minute_response.json()
+                    if not isinstance(minute_data, dict):
+                        minute_data = {}
+
+                    if minute_data.get("nextPageToken"):
+                        # A broken assumption to log. derive() measures coverage
+                        # from the segments, so a short page slows polling rather
+                        # than overpromising.
+                        _LOGGER.warning(
+                            "Minute forecast returned a page token at pageSize=%d; "
+                            "the window is larger than one page and the forecast "
+                            "is incomplete",
+                            MINUTE_PAGE_SIZE,
+                        )
+
+                    updated_data["minute_segments"] = minute_data.get("segments") or []
+                    updated_data["minute_forecast"] = nowcast.derive(
+                        minute_data, dt_util.utcnow()
+                    )
+                except (requests.RequestException, ValueError) as err:
+                    # Kept out of the shared error path so a pre-GA endpoint
+                    # cannot take the rest of the integration down with it.
+                    # ValueError covers a body that does not decode as JSON.
+                    _LOGGER.warning("Minute forecast unavailable: %s", err)
+                    updated_data["minute_forecast_error"] = str(err)
+
             # Fetch weather alerts if needed
             if endpoints_to_update.get(ENDPOINT_ALERTS):
                 _LOGGER.debug("Fetching weather alerts")
@@ -417,8 +586,10 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Fetch a specific forecast endpoint on demand (for manual service calls)."""
         _LOGGER.debug("Fetching %s on demand", endpoint)
         try:
-            # Fetch the specific endpoint
+            # Fetch the specific endpoint. The minute call is counted where it
+            # is made, so an on-demand fetch books itself.
             endpoints_to_update = {endpoint: True}
+
             updated_data = await self.hass.async_add_executor_job(
                 self._fetch_weather_data,
                 endpoints_to_update,
@@ -433,6 +604,10 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 return updated_data.get("daily_forecast", [])
             elif endpoint == ENDPOINT_HOURLY:
                 return updated_data.get("hourly_forecast", [])
+            elif endpoint == ENDPOINT_MINUTE:
+                # A real call, so it resets the schedule too.
+                self._apply_minute_schedule(updated_data)
+                return updated_data.get("minute_segments", [])
             else:
                 return []
 

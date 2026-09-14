@@ -22,6 +22,10 @@ CONF_NIGHT_END = "night_end"
 CONF_INCLUDE_DAILY_FORECAST = "include_daily_forecast"
 CONF_INCLUDE_HOURLY_FORECAST = "include_hourly_forecast"
 CONF_INCLUDE_ALERTS = "include_alerts"
+CONF_INCLUDE_MINUTE_FORECAST = "include_minute_forecast"
+CONF_MINUTE_RAIN_THRESHOLD = "minute_rain_threshold"
+CONF_MINUTE_MONTHLY_BUDGET = "minute_monthly_budget"
+CONF_MINUTE_MIN_INTERVAL = "minute_min_interval"
 
 # Defaults
 
@@ -59,6 +63,98 @@ DEFAULT_INCLUDE_DAILY_FORECAST = True
 DEFAULT_INCLUDE_HOURLY_FORECAST = True
 DEFAULT_INCLUDE_ALERTS = True
 
+# Minute forecast (nowcast). Opt in, off by default: the endpoint is pre-GA.
+# Reasoning and API findings: docs/plans/minute-forecast.md
+DEFAULT_INCLUDE_MINUTE_FORECAST = False
+
+# Rain probability above which the nowcast polls more often. Read from the
+# hourly forecast, or the daily blocks when hourly is disabled - both already
+# fetched, so the gate is free. Not the nowcast's own probability field, which
+# sits on a different scale and is not the chance of rain.
+DEFAULT_MINUTE_RAIN_THRESHOLD = 30
+
+# A response is a six-hour lookahead, not a snapshot, so "no rain" is a licence
+# not to poll until near the end of it:
+#
+#     sleep = clamp(minutes_until_first_wet_segment / 2, floor, cap)
+#
+# Rain already falling gives an onset of zero and pins it to the floor. The cap
+# tightens when the gate above expects rain, to catch showers forming mid-window.
+MINUTE_FLOOR_INTERVAL = 2
+MINUTE_CAP_RELAXED = 120
+MINUTE_CAP_TIGHTENED = 30
+
+# Dormant: the forecast already paid for shows no rain worth watching, so the
+# nowcast stops polling and only checks as its guaranteed-dry window expires.
+# That is roughly 4 calls a day against 12 at the relaxed cap.
+MINUTE_CAP_DORMANT = 360
+
+# Hours of forecast read for each decision. Tightening looks only at the near
+# term, so it reacts to what is imminent. Going dormant has to look across the
+# whole dormancy, or it would sleep through rain forecast beyond the near term.
+MINUTE_GATE_HOURS = 2
+MINUTE_DORMANT_LOOKAHEAD_HOURS = 6
+
+# The floor is the biggest lever on cost, since time at it during rain dominates.
+# Simulated calls/month, against a default headroom of 1,360. A wetter month is
+# modelled as longer rain each day as well as more days of it - about four hours
+# a day at ten days, rising towards ten hours at thirty - so the rows deliberately
+# do not scale with the day count alone. The gate below is assumed to be
+# imperfect, as a real forecast is, which is what keeps these above what the
+# scheduler spends when it reads the weather exactly right:
+#
+#                 2 min   3 min   5 min  15 min
+#   Dry month       120     120     120     120
+#   10 rain days  1,480   1,080     750     410
+#   20 rain days  4,080   2,880   1,900     900
+#   30 rain days  7,920   5,520   3,570   1,590
+#
+# Two and fifteen are the segment widths the endpoint returns, so they bound the
+# ladder. The rungs between are spaced so each step saves a similar number of
+# calls; ten sat within ninety of fifteen and did not earn one.
+#
+# Not the segment width: every call returns all six hours either way. A longer
+# floor only delays noticing a change.
+MINUTE_MIN_INTERVAL_OPTIONS = (2, 3, 5, 15)
+DEFAULT_MINUTE_MIN_INTERVAL = 5
+
+# Shown in the dropdown so the trade-off is visible at the point of choosing.
+MINUTE_MIN_INTERVAL_LABELS = {
+    2: "2 minutes - maximum detail, highest usage",
+    3: "3 minutes - more detail",
+    5: "5 minutes - balanced (default)",
+    15: "15 minutes - lowest usage, suits wet climates",
+}
+
+# The cap may never promise longer than the span the last response covered.
+MINUTE_COVERAGE_FRACTION = 0.5
+
+# Past this many calls in a month, polling drops to the relaxed cap.
+#
+# A safeguard, not a guarantee: it counts only this entry's calls since Home
+# Assistant last started, so it resets on restart and cannot see anything else
+# using the same API key. Only Google's usage figures are authoritative, and the
+# config flow says so rather than letting this number imply otherwise.
+DEFAULT_MINUTE_MONTHLY_BUDGET = 1500
+
+# The default page is 30 segments - one hour, one sixth of the window - and
+# arrives with a page token that makes it look complete. Ask for more than is
+# expected back, never an exact count: 500 returns the whole window in one call
+# at both observed cadences.
+MINUTE_PAGE_SIZE = 500
+
+# Segment width cannot be known before calling, so setup spends one small call to
+# measure it, taking the narrowest segment on the page. Taking the narrowest is
+# what matters: a response occasionally leads with a single multi-hour block, and
+# reading only the first segment would measure that block. Five rather than two
+# costs the same one call and leaves margin if more than one leads.
+MINUTE_PROBE_PAGE_SIZE = 5
+
+# Published as attributes on the onset sensor. Only the 60-minute horizon is
+# also an entity, being the one worth graphing; promoting the rest would write
+# correlated rows of the same data on every refresh.
+MINUTE_HORIZONS = (15, 30, 60, 120, 360)
+
 # Unit systems
 UNIT_SYSTEM_METRIC = "METRIC"
 UNIT_SYSTEM_IMPERIAL = "IMPERIAL"
@@ -71,6 +167,24 @@ ENDPOINT_CURRENT = "current"
 ENDPOINT_DAILY = "daily"
 ENDPOINT_HOURLY = "hourly"
 ENDPOINT_ALERTS = "alerts"
+ENDPOINT_MINUTE = "minute"
 
 # Alert sensor keys (used in binary_sensor.py and __init__.py)
 ALERT_SENSOR_KEYS = frozenset({"weather_alert", "severe_weather_alert", "urgent_weather_alert"})
+
+# Pruned from the registry when the option is turned off, as the alert keys are.
+MINUTE_SENSOR_KEYS = frozenset(
+    {
+        "precipitation_starts_in",
+        "precipitation_stops_in",
+        "precipitation_rate",
+        "rain_next_60min",
+        "rain_rest_of_window",
+    }
+)
+MINUTE_BINARY_SENSOR_KEYS = frozenset({"precipitation_within_hour"})
+
+# On the device name and as a state attribute, never in an entity name: Home
+# Assistant derives entity ids from names on first creation, and those ids must
+# outlive the alpha.
+ALPHA_LABEL = "Alpha - likely to change"

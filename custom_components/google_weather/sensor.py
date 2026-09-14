@@ -20,6 +20,7 @@ from homeassistant.const import (
     UnitOfPressure,
     UnitOfSpeed,
     UnitOfTemperature,
+    UnitOfTime,
     UV_INDEX,
 )
 from homeassistant.core import HomeAssistant
@@ -28,10 +29,14 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
 from .const import (
+    ALPHA_LABEL,
     CONF_INCLUDE_HOURLY_FORECAST,
+    CONF_INCLUDE_MINUTE_FORECAST,
     CONF_LOCATION,
     DEFAULT_INCLUDE_HOURLY_FORECAST,
+    DEFAULT_INCLUDE_MINUTE_FORECAST,
     DOMAIN,
+    MINUTE_HORIZONS,
     UNIT_SYSTEM_IMPERIAL,
     VERSION,
 )
@@ -46,6 +51,8 @@ class GoogleWeatherSensorDescription(SensorEntityDescription):
 
     value_fn: Callable[[dict], Any] | None = None
     attributes_fn: Callable[[dict], dict[str, Any]] | None = None
+    # Minute forecast entities sit on their own device: see ALPHA_LABEL.
+    minute: bool = False
 
 
 def get_current_value(data: dict, *keys: str) -> Any:
@@ -62,6 +69,102 @@ def get_current_value(data: dict, *keys: str) -> Any:
 def get_snow_forecast_next_24h(data: dict) -> float | None:
     """Return cached 24-hour snow forecast total from coordinator data."""
     return data.get("snow_forecast_24h")
+
+
+def get_minute_value(data: dict, key: str) -> Any:
+    """Read a derived nowcast value, computed once at fetch time."""
+    return (data.get("minute_forecast") or {}).get(key)
+
+
+def get_onset_attributes(data: dict) -> dict[str, Any]:
+    """Attributes for the onset sensor, including the shorter horizons."""
+    derived = data.get("minute_forecast") or {}
+    attributes: dict[str, Any] = {
+        # Publishing the segment width stops a coarse answer reading as precise.
+        "onset_precision_minutes": derived.get("onset_precision_minutes"),
+        "precipitation_type": derived.get("onset_type"),
+        "starts_at": derived.get("starts_at"),
+        "segment_minutes": derived.get("cadence_minutes"),
+        "forecast_covers_minutes": derived.get("coverage_minutes"),
+        "window_end": derived.get("window_end"),
+    }
+    for horizon in MINUTE_HORIZONS:
+        attributes[f"rain_next_{horizon}min"] = derived.get(f"rain_{horizon}min")
+    if derived.get("page_truncated"):
+        attributes["incomplete_forecast"] = True
+    return attributes
+
+
+MINUTE_SENSOR_TYPES: tuple[GoogleWeatherSensorDescription, ...] = (
+    GoogleWeatherSensorDescription(
+        key="precipitation_starts_in",
+        name="Precipitation Starts In",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=SensorDeviceClass.DURATION,
+        icon="mdi:weather-rainy",
+        minute=True,
+        value_fn=lambda data: get_minute_value(data, "starts_in"),
+        attributes_fn=get_onset_attributes,
+    ),
+    GoogleWeatherSensorDescription(
+        key="precipitation_stops_in",
+        name="Precipitation Stops In",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=SensorDeviceClass.DURATION,
+        icon="mdi:weather-sunny",
+        minute=True,
+        # Unknown, never the window edge: the data runs out, the rain does not.
+        value_fn=lambda data: get_minute_value(data, "stops_in"),
+        attributes_fn=lambda data: {
+            "truncated_by_window": get_minute_value(data, "truncated_by_window"),
+        },
+    ),
+    GoogleWeatherSensorDescription(
+        key="precipitation_rate",
+        name="Precipitation Rate",
+        native_unit_of_measurement="mm/h",
+        device_class=SensorDeviceClass.PRECIPITATION_INTENSITY,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:weather-pouring",
+        suggested_display_precision=2,
+        minute=True,
+        value_fn=lambda data: get_minute_value(data, "precipitation_rate"),
+        attributes_fn=lambda data: {
+            # Display only; never rank these by name.
+            "intensity": get_minute_value(data, "intensity"),
+            # Not the chance of rain. Surfaced for inspection, read by nothing.
+            "nowcast_probability": get_minute_value(data, "probability"),
+        },
+    ),
+    GoogleWeatherSensorDescription(
+        key="rain_next_60min",
+        name="Rain Next 60 Minutes",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:weather-rainy",
+        suggested_display_precision=2,
+        minute=True,
+        value_fn=lambda data: get_minute_value(data, "rain_60min"),
+    ),
+    GoogleWeatherSensorDescription(
+        key="rain_rest_of_window",
+        name="Rain Rest Of Forecast",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:weather-pouring",
+        suggested_display_precision=2,
+        minute=True,
+        value_fn=lambda data: get_minute_value(data, "rain_rest_of_window"),
+        attributes_fn=lambda data: {
+            # A lower bound whenever precipitation runs to the window edge.
+            "lower_bound": get_minute_value(data, "truncated_by_window"),
+            # Downsampled; the raw segments are never published.
+            "timeline": get_minute_value(data, "timeline"),
+        },
+    ),
+)
 
 
 # Mapping of full cardinal directions to abbreviations
@@ -350,6 +453,9 @@ async def async_setup_entry(
         else tuple(description for description in SENSOR_TYPES if description.key != "snow_forecast_24h")
     )
 
+    if current_data.get(CONF_INCLUDE_MINUTE_FORECAST, DEFAULT_INCLUDE_MINUTE_FORECAST):
+        sensor_descriptions += MINUTE_SENSOR_TYPES
+
     async_add_entities(
         GoogleWeatherSensor(coordinator, entry, description, location)
         for description in sensor_descriptions
@@ -383,14 +489,24 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
         # Use separate device linked to weather device via via_device
         self._attr_unique_id = f"{location_slug}_{description.key}"
         self._attr_name = f"{location_name} {description.name}"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{entry.entry_id}_sensors")},
-            "name": f"{location_name} Observational Sensors",
-            "manufacturer": "Google",
-            "model": "Weather API - Sensors",
-            "sw_version": VERSION,
-            "via_device": (DOMAIN, entry.entry_id),
-        }
+        if description.minute:
+            self._attr_device_info = {
+                "identifiers": {(DOMAIN, f"{entry.entry_id}_minute")},
+                "name": f"{location_name} Minute Forecast ({ALPHA_LABEL})",
+                "manufacturer": "Google",
+                "model": "Weather API - Minute Forecast (Alpha)",
+                "sw_version": VERSION,
+                "via_device": (DOMAIN, entry.entry_id),
+            }
+        else:
+            self._attr_device_info = {
+                "identifiers": {(DOMAIN, f"{entry.entry_id}_sensors")},
+                "name": f"{location_name} Observational Sensors",
+                "manufacturer": "Google",
+                "model": "Weather API - Sensors",
+                "sw_version": VERSION,
+                "via_device": (DOMAIN, entry.entry_id),
+            }
 
         # Home Assistant builds a new entity's id from the device name followed
         # by the entity name, and drops the device name only when the entity
@@ -424,6 +540,9 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
             # Override precipitation units to Inches
             elif self.entity_description.device_class == SensorDeviceClass.PRECIPITATION:
                 unit = UnitOfPrecipitationDepth.INCHES
+            # The API returns the requested unit system already.
+            elif self.entity_description.device_class == SensorDeviceClass.PRECIPITATION_INTENSITY:
+                unit = "in/h"
 
         # Use default unit from entity description for metric
         if unit is None:
@@ -441,8 +560,11 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return additional state attributes."""
+        attrs: dict[str, Any] = {}
         if self.coordinator.data and self.entity_description.attributes_fn:
             attrs = self.entity_description.attributes_fn(self.coordinator.data)
             # Filter out None values
-            return {k: v for k, v in attrs.items() if v is not None}
-        return {}
+            attrs = {k: v for k, v in attrs.items() if v is not None}
+        if self.entity_description.minute:
+            attrs["alpha"] = ALPHA_LABEL
+        return attrs
