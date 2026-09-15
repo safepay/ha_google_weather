@@ -22,6 +22,8 @@ CONF_NIGHT_END = "night_end"
 CONF_INCLUDE_DAILY_FORECAST = "include_daily_forecast"
 CONF_INCLUDE_HOURLY_FORECAST = "include_hourly_forecast"
 CONF_INCLUDE_ALERTS = "include_alerts"
+CONF_INCLUDE_FORECAST_SENSORS = "include_forecast_sensors"
+CONF_FORECAST_DAYS = "forecast_days"
 
 # Defaults
 
@@ -58,6 +60,33 @@ DEFAULT_NIGHT_END = "06:00"  # 6 AM
 DEFAULT_INCLUDE_DAILY_FORECAST = True
 DEFAULT_INCLUDE_HOURLY_FORECAST = True
 DEFAULT_INCLUDE_ALERTS = True
+
+# Read from the cached daily response, so no API calls at any day count. Off by
+# default: ten days is fifty entities for an existing install to gain silently.
+DEFAULT_INCLUDE_FORECAST_SENSORS = False
+DEFAULT_FORECAST_DAYS = 1
+MAX_FORECAST_DAYS = 10  # The daily request already asks for ten in one call.
+
+# Wind direction, as the API spells it to the abbreviation entities report.
+CARDINAL_DIRECTION_MAP = {
+    "NORTH": "N",
+    "NORTHEAST": "NE",
+    "NORTH_NORTHEAST": "NNE",
+    "EAST": "E",
+    "EAST_NORTHEAST": "ENE",
+    "EAST_SOUTHEAST": "ESE",
+    "SOUTHEAST": "SE",
+    "SOUTH_SOUTHEAST": "SSE",
+    "SOUTH": "S",
+    "SOUTHWEST": "SW",
+    "SOUTH_SOUTHWEST": "SSW",
+    "WEST": "W",
+    "WEST_NORTHWEST": "WNW",
+    "WEST_SOUTHWEST": "WSW",
+    "NORTHWEST": "NW",
+    "NORTH_NORTHWEST": "NNW",
+    "CARDINAL_DIRECTION_UNSPECIFIED": "UNSPECIFIED",
+}
 
 # Unit systems
 UNIT_SYSTEM_METRIC = "METRIC"

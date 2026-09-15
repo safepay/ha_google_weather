@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import logging
 from typing import Any
 
@@ -28,14 +28,33 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
 from .const import (
+    CARDINAL_DIRECTION_MAP,
+    CONF_FORECAST_DAYS,
+    CONF_INCLUDE_FORECAST_SENSORS,
     CONF_INCLUDE_HOURLY_FORECAST,
     CONF_LOCATION,
+    DEFAULT_FORECAST_DAYS,
+    DEFAULT_INCLUDE_FORECAST_SENSORS,
     DEFAULT_INCLUDE_HOURLY_FORECAST,
     DOMAIN,
+    MAX_FORECAST_DAYS,
     UNIT_SYSTEM_IMPERIAL,
     VERSION,
 )
 from .coordinator import GoogleWeatherCoordinator
+from .forecast_data import (
+    KEY_HIGH,
+    KEY_LOW,
+    KEY_PRECIPITATION,
+    KEY_PRECIPITATION_PROBABILITY,
+    KEY_SNOW,
+    get_forecast_attributes,
+    get_forecast_high,
+    get_forecast_low,
+    get_forecast_precipitation,
+    get_forecast_probability,
+    get_forecast_snow,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +65,18 @@ class GoogleWeatherSensorDescription(SensorEntityDescription):
 
     value_fn: Callable[[dict], Any] | None = None
     attributes_fn: Callable[[dict], dict[str, Any]] | None = None
+
+
+@dataclass(frozen=True)
+class GoogleWeatherForecastDescription(SensorEntityDescription):
+    """Describes one forecast metric, before a day offset is applied.
+
+    Separate from the above because these read a day out of a list rather than
+    the whole payload, so the callables take the offset as a second argument.
+    """
+
+    value_fn: Callable[[list, int], Any] | None = None
+    attributes_fn: Callable[[list, int], dict[str, Any]] | None = None
 
 
 def get_current_value(data: dict, *keys: str) -> Any:
@@ -64,26 +95,57 @@ def get_snow_forecast_next_24h(data: dict) -> float | None:
     return data.get("snow_forecast_24h")
 
 
-# Mapping of full cardinal directions to abbreviations
-CARDINAL_DIRECTION_MAP = {
-    "NORTH": "N",
-    "NORTHEAST": "NE",
-    "NORTH_NORTHEAST": "NNE",
-    "EAST": "E",
-    "EAST_NORTHEAST": "ENE",
-    "EAST_SOUTHEAST": "ESE",
-    "SOUTHEAST": "SE",
-    "SOUTH_SOUTHEAST": "SSE",
-    "SOUTH": "S",
-    "SOUTHWEST": "SW",
-    "SOUTH_SOUTHWEST": "SSW",
-    "WEST": "W",
-    "WEST_NORTHWEST": "WNW",
-    "WEST_SOUTHWEST": "WSW",
-    "NORTHWEST": "NW",
-    "NORTH_NORTHWEST": "NNW",
-    "CARDINAL_DIRECTION_UNSPECIFIED": "UNSPECIFIED",
-}
+# One entry per forecast metric, instantiated once per day offset. Keeping the
+# metric and the day apart means the table is built once at import, not rebuilt
+# on every call that only wants the keys.
+FORECAST_METRICS: tuple[GoogleWeatherForecastDescription, ...] = (
+    GoogleWeatherForecastDescription(
+        key=KEY_HIGH,
+        name="Forecast High",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        icon="mdi:thermometer-high",
+        suggested_display_precision=1,
+        # No state_class: a prediction does not belong in temperature stats.
+        # Also carries the rest of the day, as attributes.
+        value_fn=get_forecast_high,
+        attributes_fn=get_forecast_attributes,
+    ),
+    GoogleWeatherForecastDescription(
+        key=KEY_LOW,
+        name="Forecast Low",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        icon="mdi:thermometer-low",
+        suggested_display_precision=1,
+        value_fn=get_forecast_low,
+    ),
+    GoogleWeatherForecastDescription(
+        key=KEY_PRECIPITATION,
+        name="Forecast Precipitation",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        icon="mdi:weather-pouring",
+        suggested_display_precision=1,
+        value_fn=get_forecast_precipitation,
+    ),
+    GoogleWeatherForecastDescription(
+        key=KEY_SNOW,
+        name="Forecast Snow",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        icon="mdi:weather-snowy-heavy",
+        suggested_display_precision=1,
+        value_fn=get_forecast_snow,
+    ),
+    GoogleWeatherForecastDescription(
+        key=KEY_PRECIPITATION_PROBABILITY,
+        name="Forecast Precipitation Probability",
+        native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:weather-rainy",
+        value_fn=get_forecast_probability,
+    ),
+)
 
 
 # Observational Sensors
@@ -355,6 +417,20 @@ async def async_setup_entry(
         for description in sensor_descriptions
     )
 
+    # Read from the cached daily response, so no extra API calls.
+    if current_data.get(
+        CONF_INCLUDE_FORECAST_SENSORS, DEFAULT_INCLUDE_FORECAST_SENSORS
+    ):
+        days = min(
+            current_data.get(CONF_FORECAST_DAYS, DEFAULT_FORECAST_DAYS),
+            MAX_FORECAST_DAYS,
+        )
+        async_add_entities(
+            GoogleWeatherForecastSensor(coordinator, entry, metric, offset, location)
+            for offset in range(days)
+            for metric in FORECAST_METRICS
+        )
+
 
 class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEntity):
     """Representation of a Google Weather sensor."""
@@ -446,3 +522,68 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
             # Filter out None values
             return {k: v for k, v in attrs.items() if v is not None}
         return {}
+
+
+class GoogleWeatherForecastSensor(GoogleWeatherSensor):
+    """A forecast-day sensor: as above, but on the Forecast Sensors device.
+
+    Subclassed so the naming and unit logic stays in one place. The offset goes
+    into both key and name, so the existing naming chain yields
+    sensor.<location>_<metric>_<offset> unchanged.
+    """
+
+    entity_description: GoogleWeatherForecastDescription
+
+    def __init__(
+        self,
+        coordinator: GoogleWeatherCoordinator,
+        entry: ConfigEntry,
+        metric: GoogleWeatherForecastDescription,
+        offset: int,
+        location: str,
+    ) -> None:
+        """Initialize the sensor, then move it to its own device."""
+        self._offset = offset
+        super().__init__(
+            coordinator,
+            entry,
+            replace(
+                metric,
+                key=f"{metric.key}_{offset}",
+                name=f"{metric.name} {offset}",
+            ),
+            location,
+        )
+
+        location_name = location.replace("_", " ").title()
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{entry.entry_id}_forecast")},
+            "name": f"{location_name} Forecast Sensors",
+            "manufacturer": "Google",
+            "model": "Weather API - Forecast Sensors",
+            "sw_version": VERSION,
+            "via_device": (DOMAIN, entry.entry_id),
+        }
+
+    @property
+    def _forecast_days(self) -> list[dict[str, Any]]:
+        """The cached daily forecast, trimmed by the coordinator to start today."""
+        return (self.coordinator.data or {}).get("daily_forecast") or []
+
+    @property
+    def native_value(self) -> float | int | str | None:
+        """Return the state of the sensor."""
+        if self.entity_description.value_fn:
+            return self.entity_description.value_fn(self._forecast_days, self._offset)
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        if not self.entity_description.attributes_fn:
+            return {}
+        attrs = self.entity_description.attributes_fn(
+            self._forecast_days, self._offset
+        )
+        # Filter out None values
+        return {key: value for key, value in attrs.items() if value is not None}

@@ -19,10 +19,12 @@ from .const import (
     CONF_CURRENT_NIGHT_INTERVAL,
     CONF_DAILY_DAY_INTERVAL,
     CONF_DAILY_NIGHT_INTERVAL,
+    CONF_FORECAST_DAYS,
     CONF_HOURLY_DAY_INTERVAL,
     CONF_HOURLY_NIGHT_INTERVAL,
     CONF_INCLUDE_ALERTS,
     CONF_INCLUDE_DAILY_FORECAST,
+    CONF_INCLUDE_FORECAST_SENSORS,
     CONF_INCLUDE_HOURLY_FORECAST,
     CONF_LOCATION,
     CONF_NIGHT_END,
@@ -33,14 +35,17 @@ from .const import (
     DEFAULT_CURRENT_NIGHT_INTERVAL,
     DEFAULT_DAILY_DAY_INTERVAL,
     DEFAULT_DAILY_NIGHT_INTERVAL,
+    DEFAULT_FORECAST_DAYS,
     DEFAULT_HOURLY_DAY_INTERVAL,
     DEFAULT_HOURLY_NIGHT_INTERVAL,
     DEFAULT_INCLUDE_ALERTS,
     DEFAULT_INCLUDE_DAILY_FORECAST,
+    DEFAULT_INCLUDE_FORECAST_SENSORS,
     DEFAULT_INCLUDE_HOURLY_FORECAST,
     DEFAULT_NIGHT_END,
     DEFAULT_NIGHT_START,
     DOMAIN,
+    MAX_FORECAST_DAYS,
     API_BASE_URL,
 )
 
@@ -250,6 +255,7 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_INCLUDE_DAILY_FORECAST: True,  # Always enabled
                 CONF_INCLUDE_HOURLY_FORECAST: user_input.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
                 CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
+                CONF_INCLUDE_FORECAST_SENSORS: user_input.get(CONF_INCLUDE_FORECAST_SENSORS, DEFAULT_INCLUDE_FORECAST_SENSORS),
             }
             return await self.async_step_intervals()
 
@@ -264,6 +270,10 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(
                         CONF_INCLUDE_ALERTS,
                         default=DEFAULT_INCLUDE_ALERTS,
+                    ): bool,
+                    vol.Optional(
+                        CONF_INCLUDE_FORECAST_SENSORS,
+                        default=DEFAULT_INCLUDE_FORECAST_SENSORS,
                     ): bool,
                 }
             ),
@@ -324,6 +334,20 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_ALERTS_NIGHT_INTERVAL,
                     default=DEFAULT_ALERTS_NIGHT_INTERVAL,
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            })
+
+        # Forecast sensor days, only once the sensors themselves are enabled
+        if self.forecast_data.get(
+            CONF_INCLUDE_FORECAST_SENSORS, DEFAULT_INCLUDE_FORECAST_SENSORS
+        ):
+            schema_dict.update({
+                # Required, not Optional: a narrow integer range renders as a
+                # slider, and an optional one gets a checkbox in front that
+                # only decides whether the value is sent at all.
+                vol.Required(
+                    CONF_FORECAST_DAYS,
+                    default=DEFAULT_FORECAST_DAYS,
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=MAX_FORECAST_DAYS)),
             })
 
         # Night time period (always shown)
@@ -420,6 +444,7 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                     CONF_INCLUDE_DAILY_FORECAST: True,  # Always enabled
                     CONF_INCLUDE_HOURLY_FORECAST: user_input.get(CONF_INCLUDE_HOURLY_FORECAST, DEFAULT_INCLUDE_HOURLY_FORECAST),
                     CONF_INCLUDE_ALERTS: user_input.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
+                    CONF_INCLUDE_FORECAST_SENSORS: user_input.get(CONF_INCLUDE_FORECAST_SENSORS, DEFAULT_INCLUDE_FORECAST_SENSORS),
                 }
                 return await self.async_step_intervals()
 
@@ -442,6 +467,11 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             vol.Optional(
                 CONF_INCLUDE_ALERTS,
                 default=current_data.get(CONF_INCLUDE_ALERTS, DEFAULT_INCLUDE_ALERTS),
+            ): bool,
+            # Forecast sensors: free, they read the cached daily response
+            vol.Optional(
+                CONF_INCLUDE_FORECAST_SENSORS,
+                default=current_data.get(CONF_INCLUDE_FORECAST_SENSORS, DEFAULT_INCLUDE_FORECAST_SENSORS),
             ): bool,
         }
 
@@ -509,6 +539,18 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
                     CONF_ALERTS_NIGHT_INTERVAL,
                     default=current_data.get(CONF_ALERTS_NIGHT_INTERVAL, DEFAULT_ALERTS_NIGHT_INTERVAL),
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            })
+
+        # Forecast sensor days, only once the sensors themselves are enabled
+        if self.forecast_options.get(
+            CONF_INCLUDE_FORECAST_SENSORS, DEFAULT_INCLUDE_FORECAST_SENSORS
+        ):
+            schema_dict.update({
+                # Required for the reason given in the config flow above.
+                vol.Required(
+                    CONF_FORECAST_DAYS,
+                    default=current_data.get(CONF_FORECAST_DAYS, DEFAULT_FORECAST_DAYS),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=MAX_FORECAST_DAYS)),
             })
 
         # Night time period (always shown)
