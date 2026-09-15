@@ -341,7 +341,10 @@ class GoogleWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_INCLUDE_FORECAST_SENSORS, DEFAULT_INCLUDE_FORECAST_SENSORS
         ):
             schema_dict.update({
-                vol.Optional(
+                # Required, not Optional: a narrow integer range renders as a
+                # slider, and an optional one gets a checkbox in front that
+                # only decides whether the value is sent at all.
+                vol.Required(
                     CONF_FORECAST_DAYS,
                     default=DEFAULT_FORECAST_DAYS,
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=MAX_FORECAST_DAYS)),
@@ -543,7 +546,8 @@ class GoogleWeatherOptionsFlow(config_entries.OptionsFlow):
             CONF_INCLUDE_FORECAST_SENSORS, DEFAULT_INCLUDE_FORECAST_SENSORS
         ):
             schema_dict.update({
-                vol.Optional(
+                # Required for the reason given in the config flow above.
+                vol.Required(
                     CONF_FORECAST_DAYS,
                     default=current_data.get(CONF_FORECAST_DAYS, DEFAULT_FORECAST_DAYS),
                 ): vol.All(vol.Coerce(int), vol.Range(min=1, max=MAX_FORECAST_DAYS)),
