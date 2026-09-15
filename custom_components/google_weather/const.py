@@ -1,7 +1,7 @@
 """Constants for the Google Weather integration."""
 
 DOMAIN = "google_weather"
-VERSION = "1.1.15"
+VERSION = "1.1.16"
 
 # Configuration
 CONF_API_KEY = "api_key"
