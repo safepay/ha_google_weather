@@ -62,7 +62,7 @@ DEFAULT_INCLUDE_HOURLY_FORECAST = True
 DEFAULT_INCLUDE_ALERTS = True
 
 # Read from the cached daily response, so no API calls at any day count. Off by
-# default: ten days is forty entities for an existing install to gain silently.
+# default: ten days is fifty entities for an existing install to gain silently.
 DEFAULT_INCLUDE_FORECAST_SENSORS = False
 DEFAULT_FORECAST_DAYS = 1
 MAX_FORECAST_DAYS = 10  # The daily request already asks for ten in one call.

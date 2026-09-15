@@ -195,6 +195,11 @@ def get_forecast_high(data: dict, offset: int) -> float | None:
     return _degrees(get_forecast_day(data, offset), "maxTemperature")
 
 
+def get_forecast_low(data: dict, offset: int) -> float | None:
+    """Return the day's forecast low."""
+    return _degrees(get_forecast_day(data, offset), "minTemperature")
+
+
 def get_forecast_attributes(data: dict, offset: int) -> dict[str, Any]:
     """Expose the rest of the day, which the weather entity's schema drops."""
     day = get_forecast_day(data, offset)
@@ -206,9 +211,8 @@ def get_forecast_attributes(data: dict, offset: int) -> dict[str, Any]:
     sun = day.get("sunEvents") or {}
     moon = day.get("moonEvents") or {}
 
+    # High and low are omitted: each has its own entity.
     attributes: dict[str, Any] = {
-        "temperature_high": _degrees(day, "maxTemperature"),
-        "temperature_low": _degrees(day, "minTemperature"),
         "feels_like_high": _degrees(day, "feelsLikeMaxTemperature"),
         "feels_like_low": _degrees(day, "feelsLikeMinTemperature"),
         "max_heat_index": _degrees(day, "maxHeatIndex"),
@@ -238,17 +242,27 @@ def build_forecast_descriptions(
     label = f"Day {offset}"
     return (
         GoogleWeatherSensorDescription(
-            key=f"forecast_day_{offset}",
-            name=f"Forecast {label}",
+            key=f"forecast_high_day_{offset}",
+            name=f"Forecast High {label}",
             native_unit_of_measurement=UnitOfTemperature.CELSIUS,
             device_class=SensorDeviceClass.TEMPERATURE,
-            icon="mdi:sun-thermometer",
+            icon="mdi:thermometer-high",
             suggested_display_precision=1,
             # No state_class: a prediction does not belong in temperature stats.
+            # Also carries the rest of the day, as attributes.
             value_fn=lambda data, offset=offset: get_forecast_high(data, offset),
             attributes_fn=lambda data, offset=offset: get_forecast_attributes(
                 data, offset
             ),
+        ),
+        GoogleWeatherSensorDescription(
+            key=f"forecast_low_day_{offset}",
+            name=f"Forecast Low {label}",
+            native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+            device_class=SensorDeviceClass.TEMPERATURE,
+            icon="mdi:thermometer-low",
+            suggested_display_precision=1,
+            value_fn=lambda data, offset=offset: get_forecast_low(data, offset),
         ),
         GoogleWeatherSensorDescription(
             key=f"precipitation_forecast_day_{offset}",
