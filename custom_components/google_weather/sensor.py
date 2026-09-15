@@ -265,8 +265,8 @@ def build_forecast_descriptions(
             value_fn=lambda data, offset=offset: get_forecast_low(data, offset),
         ),
         GoogleWeatherSensorDescription(
-            key=f"precipitation_forecast_day_{offset}",
-            name=f"Precipitation Forecast {label}",
+            key=f"forecast_precipitation_day_{offset}",
+            name=f"Forecast Precipitation {label}",
             native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
             device_class=SensorDeviceClass.PRECIPITATION,
             icon="mdi:weather-pouring",
@@ -276,8 +276,8 @@ def build_forecast_descriptions(
             ),
         ),
         GoogleWeatherSensorDescription(
-            key=f"snow_forecast_day_{offset}",
-            name=f"Snow Forecast {label}",
+            key=f"forecast_snow_day_{offset}",
+            name=f"Forecast Snow {label}",
             native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
             device_class=SensorDeviceClass.PRECIPITATION,
             icon="mdi:weather-snowy-heavy",
@@ -287,8 +287,8 @@ def build_forecast_descriptions(
             ),
         ),
         GoogleWeatherSensorDescription(
-            key=f"precipitation_probability_day_{offset}",
-            name=f"Precipitation Probability {label}",
+            key=f"forecast_precipitation_probability_day_{offset}",
+            name=f"Forecast Precipitation Probability {label}",
             native_unit_of_measurement=PERCENTAGE,
             icon="mdi:weather-rainy",
             value_fn=lambda data, offset=offset: get_forecast_probability(

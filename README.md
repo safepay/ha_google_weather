@@ -68,9 +68,9 @@ A separate "Forecast" device with five sensors per day, for 1-10 days. Day 0 is 
 
 - **Forecast High**: the day's high, and carries the rest of the day as attributes — feels-like, max heat index, sunrise, sunset, moon phase, condition, wind, UV, humidity and cloud cover, plus nighttime values under a `night_` prefix
 - **Forecast Low**: the day's low
-- **Precipitation Forecast**: total expected rain for the day
-- **Snow Forecast**: total expected snow for the day
-- **Precipitation Probability**: the day's chance of precipitation
+- **Forecast Precipitation**: total expected rain for the day
+- **Forecast Snow**: total expected snow for the day
+- **Forecast Precipitation Probability**: the day's chance of precipitation
 
 ### Binary Sensors
 The integration creates a "Binary Sensors" device linked to the weather device:
@@ -213,9 +213,9 @@ Linked to parent device via `via_device`. Only created when **Include Forecast S
 
 - `sensor.home_forecast_high_day_0` → "Home Forecast High Day 0"
 - `sensor.home_forecast_low_day_0` → "Home Forecast Low Day 0"
-- `sensor.home_precipitation_forecast_day_0` → "Home Precipitation Forecast Day 0"
-- `sensor.home_snow_forecast_day_0` → "Home Snow Forecast Day 0"
-- `sensor.home_precipitation_probability_day_0` → "Home Precipitation Probability Day 0"
+- `sensor.home_forecast_precipitation_day_0` → "Home Forecast Precipitation Day 0"
+- `sensor.home_forecast_snow_day_0` → "Home Forecast Snow Day 0"
+- `sensor.home_forecast_precipitation_probability_day_0` → "Home Forecast Precipitation Probability Day 0"
 
 **Note**: These read the daily forecast the integration already fetches, so they use **no additional API calls** at any day count. Lowering the day count removes the sensors for the days no longer covered.
 
