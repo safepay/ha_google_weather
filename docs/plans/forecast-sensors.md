@@ -88,15 +88,44 @@ date would not.
 
 ## Naming and unique IDs
 
-Unique IDs stay `<location_slug>_<sensor_key>`, and the keys are day-indexed:
+The keys are day-indexed:
 
 - `forecast_day_<n>` — the rollup
 - `precipitation_forecast_day_<n>`
 - `snow_forecast_day_<n>`
 - `precipitation_probability_day_<n>`
 
-Friendly names read naturally: *Today* for day 0, *Tomorrow* for day 1, and
-*Day &lt;n+1&gt;* beyond that.
+Three identifiers hang off those, deliberately decoupled:
+
+- **Unique ID** stays `<location_slug>_<sensor_key>`, as everywhere else.
+- **Entity ID** is set explicitly to `sensor.<location_slug>_<sensor_key>`, so
+  it keeps the location prefix users write into dashboards and automations.
+- **Friendly name** is the sensor's own name plus the day — *Precipitation
+  Forecast Tomorrow* — with no location, which the `<Location> Forecast` device
+  supplies instead. Day 0 reads *Today*, day 1 *Tomorrow*, and *Day &lt;n+1&gt;*
+  beyond that.
+
+Concretely, for location "home" and day 1:
+
+```text
+entity_id:     sensor.home_precipitation_forecast_day_1
+unique_id:     home_precipitation_forecast_day_1
+friendly name: Precipitation Forecast Tomorrow
+device:        Home Forecast
+```
+
+The decoupling is forced rather than chosen. The key carries an index
+(`day_1`) while the friendly name reads *Tomorrow*, so the entity ID cannot be
+produced by slugifying the name, which is how the existing sensors derive
+theirs.
+
+Dropping the location from the friendly name is a deliberate divergence.
+Everywhere else in this integration the name is prefixed with it — "Home
+Temperature" — and the entity ID inherits the location only as a by-product of
+that. Here the device carries the location and the name does not repeat it.
+Worth noting that a friendly name can be changed later without orphaning
+anything, unlike a unique ID, so if the inconsistency grates it is the cheap
+half of the decision to revisit.
 
 Keys of `forecast_today` and `forecast_tomorrow` were considered, to match the
 friendly names exactly. Rejected: special-casing the first two entries
