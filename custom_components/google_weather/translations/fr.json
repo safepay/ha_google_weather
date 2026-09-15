@@ -31,14 +31,12 @@
         "data": {
           "include_hourly_forecast": "Inclure les prévisions horaires",
           "include_alerts": "Inclure les alertes météo",
-          "include_forecast_sensors": "Inclure les capteurs de prévision",
-          "forecast_days": "Jours de prévision"
+          "include_forecast_sensors": "Inclure les capteurs de prévision"
         },
         "data_description": {
-          "include_hourly_forecast": "Activer les prévisions météo horaires",
-          "include_alerts": "Activer les alertes météo (non disponibles dans certaines régions)",
-          "include_forecast_sensors": "Crée des capteurs pour chaque jour de prévision. N'utilise aucun appel d'API supplémentaire.",
-          "forecast_days": "Nombre de jours pour lesquels créer des capteurs (1-10)."
+          "include_hourly_forecast": "Active les prévisions météo horaires. Utilise des appels d'API supplémentaires.",
+          "include_alerts": "Active les alertes météo. Utilise des appels d'API supplémentaires. Indisponible dans certaines régions.",
+          "include_forecast_sensors": "Crée des capteurs pour chaque jour de prévision. N'utilise aucun appel d'API supplémentaire."
         }
       },
       "intervals": {
@@ -54,7 +52,8 @@
           "alerts_day_interval": "Alertes météo - Journée (minutes)",
           "alerts_night_interval": "Alertes météo - Nuit (minutes)",
           "night_start": "Début de la nuit (HH:MM)",
-          "night_end": "Fin de la nuit (HH:MM)"
+          "night_end": "Fin de la nuit (HH:MM)",
+          "forecast_days": "Jours de prévision"
         },
         "data_description": {
           "current_day_interval": "Fréquence de mise à jour des conditions actuelles pendant la journée (par défaut : 10 min)",
@@ -66,7 +65,8 @@
           "alerts_day_interval": "Fréquence de vérification des alertes météo pendant la journée (par défaut : 15 min)",
           "alerts_night_interval": "Fréquence de vérification des alertes météo la nuit (par défaut : 30 min)",
           "night_start": "Quand le programme de mise à jour nocturne commence (ex : 22:00 pour 22h)",
-          "night_end": "Quand le programme de mise à jour nocturne se termine (ex : 06:00 pour 6h)"
+          "night_end": "Quand le programme de mise à jour nocturne se termine (ex : 06:00 pour 6h)",
+          "forecast_days": "Nombre de jours pour lesquels créer des capteurs (1-10). N'utilise aucun appel d'API supplémentaire."
         }
       },
       "confirm": {
@@ -94,16 +94,14 @@
           "longitude": "Longitude",
           "include_hourly_forecast": "Inclure les prévisions horaires",
           "include_alerts": "Inclure les alertes météo",
-          "include_forecast_sensors": "Inclure les capteurs de prévision",
-          "forecast_days": "Jours de prévision"
+          "include_forecast_sensors": "Inclure les capteurs de prévision"
         },
         "data_description": {
           "latitude": "Coordonnée de latitude pour les données météo",
           "longitude": "Coordonnée de longitude pour les données météo",
-          "include_hourly_forecast": "Activer les prévisions météo horaires",
-          "include_alerts": "Activer les alertes météo (non disponibles dans certaines régions)",
-          "include_forecast_sensors": "Crée des capteurs pour chaque jour de prévision. N'utilise aucun appel d'API supplémentaire.",
-          "forecast_days": "Nombre de jours pour lesquels créer des capteurs (1-10)."
+          "include_hourly_forecast": "Active les prévisions météo horaires. Utilise des appels d'API supplémentaires.",
+          "include_alerts": "Active les alertes météo. Utilise des appels d'API supplémentaires. Indisponible dans certaines régions.",
+          "include_forecast_sensors": "Crée des capteurs pour chaque jour de prévision. N'utilise aucun appel d'API supplémentaire."
         }
       },
       "intervals": {
@@ -119,7 +117,8 @@
           "alerts_day_interval": "Alertes météo - Journée (minutes)",
           "alerts_night_interval": "Alertes météo - Nuit (minutes)",
           "night_start": "Début de la nuit (HH:MM)",
-          "night_end": "Fin de la nuit (HH:MM)"
+          "night_end": "Fin de la nuit (HH:MM)",
+          "forecast_days": "Jours de prévision"
         },
         "data_description": {
           "current_day_interval": "Fréquence de mise à jour des conditions actuelles pendant la journée (1-1440 minutes)",
@@ -131,7 +130,8 @@
           "alerts_day_interval": "Fréquence de vérification des alertes météo pendant la journée (1-1440 minutes)",
           "alerts_night_interval": "Fréquence de vérification des alertes météo la nuit (1-1440 minutes)",
           "night_start": "Quand le programme de mise à jour nocturne commence (ex : 22:00)",
-          "night_end": "Quand le programme de mise à jour nocturne se termine (ex : 06:00)"
+          "night_end": "Quand le programme de mise à jour nocturne se termine (ex : 06:00)",
+          "forecast_days": "Nombre de jours pour lesquels créer des capteurs (1-10). N'utilise aucun appel d'API supplémentaire."
         }
       },
       "confirm": {

@@ -31,14 +31,12 @@
         "data": {
           "include_hourly_forecast": "Incluir pronósticos por hora",
           "include_alerts": "Incluir alertas meteorológicas",
-          "include_forecast_sensors": "Incluir sensores de pronóstico",
-          "forecast_days": "Días de pronóstico"
+          "include_forecast_sensors": "Incluir sensores de pronóstico"
         },
         "data_description": {
-          "include_hourly_forecast": "Habilitar pronósticos meteorológicos por hora",
-          "include_alerts": "Habilitar alertas meteorológicas (no disponibles en algunas regiones)",
-          "include_forecast_sensors": "Crea sensores para cada día del pronóstico. No consume llamadas adicionales a la API.",
-          "forecast_days": "Número de días para los que crear sensores (1-10)."
+          "include_hourly_forecast": "Activa los pronósticos meteorológicos por hora. Consume llamadas adicionales a la API.",
+          "include_alerts": "Activa las alertas meteorológicas. Consume llamadas adicionales a la API. No disponible en algunas regiones.",
+          "include_forecast_sensors": "Crea sensores para cada día del pronóstico. No consume llamadas adicionales a la API."
         }
       },
       "intervals": {
@@ -54,7 +52,8 @@
           "alerts_day_interval": "Alertas meteorológicas - Día (minutos)",
           "alerts_night_interval": "Alertas meteorológicas - Noche (minutos)",
           "night_start": "Inicio de la noche (HH:MM)",
-          "night_end": "Fin de la noche (HH:MM)"
+          "night_end": "Fin de la noche (HH:MM)",
+          "forecast_days": "Días de pronóstico"
         },
         "data_description": {
           "current_day_interval": "Con qué frecuencia actualizar las condiciones actuales durante el día (predeterminado: 10 min)",
@@ -66,7 +65,8 @@
           "alerts_day_interval": "Con qué frecuencia verificar alertas meteorológicas durante el día (predeterminado: 15 min)",
           "alerts_night_interval": "Con qué frecuencia verificar alertas meteorológicas por la noche (predeterminado: 30 min)",
           "night_start": "Cuándo comienza el programa de actualización nocturna (ej: 22:00 para las 10 PM)",
-          "night_end": "Cuándo finaliza el programa de actualización nocturna (ej: 06:00 para las 6 AM)"
+          "night_end": "Cuándo finaliza el programa de actualización nocturna (ej: 06:00 para las 6 AM)",
+          "forecast_days": "Número de días para los que crear sensores (1-10). No consume llamadas adicionales a la API."
         }
       },
       "confirm": {
@@ -94,16 +94,14 @@
           "longitude": "Longitud",
           "include_hourly_forecast": "Incluir pronósticos por hora",
           "include_alerts": "Incluir alertas meteorológicas",
-          "include_forecast_sensors": "Incluir sensores de pronóstico",
-          "forecast_days": "Días de pronóstico"
+          "include_forecast_sensors": "Incluir sensores de pronóstico"
         },
         "data_description": {
           "latitude": "Coordenada de latitud para datos meteorológicos",
           "longitude": "Coordenada de longitud para datos meteorológicos",
-          "include_hourly_forecast": "Habilitar pronósticos meteorológicos por hora",
-          "include_alerts": "Habilitar alertas meteorológicas (no disponibles en algunas regiones)",
-          "include_forecast_sensors": "Crea sensores para cada día del pronóstico. No consume llamadas adicionales a la API.",
-          "forecast_days": "Número de días para los que crear sensores (1-10)."
+          "include_hourly_forecast": "Activa los pronósticos meteorológicos por hora. Consume llamadas adicionales a la API.",
+          "include_alerts": "Activa las alertas meteorológicas. Consume llamadas adicionales a la API. No disponible en algunas regiones.",
+          "include_forecast_sensors": "Crea sensores para cada día del pronóstico. No consume llamadas adicionales a la API."
         }
       },
       "intervals": {
@@ -119,7 +117,8 @@
           "alerts_day_interval": "Alertas meteorológicas - Día (minutos)",
           "alerts_night_interval": "Alertas meteorológicas - Noche (minutos)",
           "night_start": "Inicio de la noche (HH:MM)",
-          "night_end": "Fin de la noche (HH:MM)"
+          "night_end": "Fin de la noche (HH:MM)",
+          "forecast_days": "Días de pronóstico"
         },
         "data_description": {
           "current_day_interval": "Con qué frecuencia actualizar las condiciones actuales durante el día (1-1440 minutos)",
@@ -131,7 +130,8 @@
           "alerts_day_interval": "Con qué frecuencia verificar alertas meteorológicas durante el día (1-1440 minutos)",
           "alerts_night_interval": "Con qué frecuencia verificar alertas meteorológicas por la noche (1-1440 minutos)",
           "night_start": "Cuándo comienza el programa de actualización nocturna (ej: 22:00)",
-          "night_end": "Cuándo finaliza el programa de actualización nocturna (ej: 06:00)"
+          "night_end": "Cuándo finaliza el programa de actualización nocturna (ej: 06:00)",
+          "forecast_days": "Número de días para los que crear sensores (1-10). No consume llamadas adicionales a la API."
         }
       },
       "confirm": {

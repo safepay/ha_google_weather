@@ -64,7 +64,7 @@ A comprehensive Home Assistant integration that provides weather data from the G
 - Weather Condition (text description)
 
 ### Forecast Sensors (optional, off by default)
-A separate "Forecast" device with five sensors per day, for 1-10 days, numbered from 0 for today. These use **no additional API calls** — they read the daily forecast the integration already fetches.
+A separate "Forecast Sensors" device with five sensors per day, for 1-10 days, numbered from 0 for today. These use **no additional API calls** — they read the daily forecast the integration already fetches.
 
 - **Forecast High**: the day's high, and carries the rest of the day as attributes — feels-like, max heat index, sunrise, sunset, moon phase, condition, wind, UV, humidity and cloud cover, plus nighttime values under a `night_` prefix
 - **Forecast Low**: the day's low
@@ -208,7 +208,7 @@ Linked to parent device via `via_device`.
 
 **Note**: The "Binary Sensors" device is always created with at least the Daytime sensor. Weather alert sensors are only added if your location supports alerts (see [Supported Regions](#supported-regions)).
 
-### Device: "Home Forecast" (Child Device)
+### Device: "Home Forecast Sensors" (Child Device)
 Linked to parent device via `via_device`. Only created when **Include Forecast Sensors** is enabled. Five sensors per forecast day, numbered from 0 for today:
 
 - `sensor.home_forecast_high_0` → "Home Forecast High 0"
@@ -232,7 +232,7 @@ You can choose which optional forecasts and alerts to include during setup:
 - **Daily Forecasts**: Always enabled - up to 10-day forecasts (not configurable, maximum available always fetched, number of days available is region-dependent)
 - **Hourly Forecasts**: Optional - Enable/disable automatic fetching of up to 240-hour forecasts (maximum available always fetched, number of hours available is region-dependent)
 - **Weather Alerts**: Optional - Enable/disable automatic fetching of weather alerts (checkbox always shown, but alert entities only created if supported in your region)
-- **Forecast Sensors**: Optional - Create sensors for each forecast day, on their own "Forecast" device. Uses **no additional API calls**: the daily forecast is already fetched, so this only decides how much of it becomes entities. **Forecast Days** (1-10) sets how many days get sensors.
+- **Forecast Sensors**: Optional - Create sensors for each forecast day, on their own "Forecast" device. Uses **no additional API calls**: the daily forecast is already fetched, so this only decides how much of it becomes entities. **Forecast Days** (1-10), shown on the next step once enabled, sets how many days get sensors.
 
 **Benefits of disabling optional forecasts:**
 - **Reduces API calls**: Disabled endpoints are never fetched automatically, saving API calls

@@ -31,14 +31,12 @@
         "data": {
           "include_hourly_forecast": "Stündliche Vorhersagen einbeziehen",
           "include_alerts": "Wetterwarnungen einbeziehen",
-          "include_forecast_sensors": "Vorhersage-Sensoren einbeziehen",
-          "forecast_days": "Vorhersagetage"
+          "include_forecast_sensors": "Vorhersage-Sensoren einbeziehen"
         },
         "data_description": {
-          "include_hourly_forecast": "Stündliche Wettervorhersagen aktivieren",
-          "include_alerts": "Wetterwarnungen aktivieren (in einigen Regionen nicht verfügbar)",
-          "include_forecast_sensors": "Sensoren für jeden Vorhersagetag erstellen. Verbraucht keine zusätzlichen API-Aufrufe.",
-          "forecast_days": "Anzahl der Tage, für die Sensoren erstellt werden (1-10)."
+          "include_hourly_forecast": "Stündliche Wettervorhersagen aktivieren. Verbraucht zusätzliche API-Aufrufe.",
+          "include_alerts": "Wetterwarnungen aktivieren. Verbraucht zusätzliche API-Aufrufe. In einigen Regionen nicht verfügbar.",
+          "include_forecast_sensors": "Sensoren für jeden Vorhersagetag erstellen. Verbraucht keine zusätzlichen API-Aufrufe."
         }
       },
       "intervals": {
@@ -54,7 +52,8 @@
           "alerts_day_interval": "Wetterwarnungen - Tagsüber (Minuten)",
           "alerts_night_interval": "Wetterwarnungen - Nachts (Minuten)",
           "night_start": "Beginn der Nachtzeit (HH:MM)",
-          "night_end": "Ende der Nachtzeit (HH:MM)"
+          "night_end": "Ende der Nachtzeit (HH:MM)",
+          "forecast_days": "Vorhersagetage"
         },
         "data_description": {
           "current_day_interval": "Wie oft aktuelle Bedingungen tagsüber aktualisiert werden (Standard: 10 Min.)",
@@ -66,7 +65,8 @@
           "alerts_day_interval": "Wie oft Wetterwarnungen tagsüber geprüft werden (Standard: 15 Min.)",
           "alerts_night_interval": "Wie oft Wetterwarnungen nachts geprüft werden (Standard: 30 Min.)",
           "night_start": "Wann der nächtliche Aktualisierungsplan beginnt (z.B. 22:00 für 22 Uhr)",
-          "night_end": "Wann der nächtliche Aktualisierungsplan endet (z.B. 06:00 für 6 Uhr)"
+          "night_end": "Wann der nächtliche Aktualisierungsplan endet (z.B. 06:00 für 6 Uhr)",
+          "forecast_days": "Anzahl der Tage, für die Sensoren erstellt werden (1-10). Verbraucht keine zusätzlichen API-Aufrufe."
         }
       },
       "confirm": {
@@ -94,16 +94,14 @@
           "longitude": "Längengrad",
           "include_hourly_forecast": "Stündliche Vorhersagen einbeziehen",
           "include_alerts": "Wetterwarnungen einbeziehen",
-          "include_forecast_sensors": "Vorhersage-Sensoren einbeziehen",
-          "forecast_days": "Vorhersagetage"
+          "include_forecast_sensors": "Vorhersage-Sensoren einbeziehen"
         },
         "data_description": {
           "latitude": "Breitengradkoordinate für Wetterdaten",
           "longitude": "Längengradkoordinate für Wetterdaten",
-          "include_hourly_forecast": "Stündliche Wettervorhersagen aktivieren",
-          "include_alerts": "Wetterwarnungen aktivieren (in einigen Regionen nicht verfügbar)",
-          "include_forecast_sensors": "Sensoren für jeden Vorhersagetag erstellen. Verbraucht keine zusätzlichen API-Aufrufe.",
-          "forecast_days": "Anzahl der Tage, für die Sensoren erstellt werden (1-10)."
+          "include_hourly_forecast": "Stündliche Wettervorhersagen aktivieren. Verbraucht zusätzliche API-Aufrufe.",
+          "include_alerts": "Wetterwarnungen aktivieren. Verbraucht zusätzliche API-Aufrufe. In einigen Regionen nicht verfügbar.",
+          "include_forecast_sensors": "Sensoren für jeden Vorhersagetag erstellen. Verbraucht keine zusätzlichen API-Aufrufe."
         }
       },
       "intervals": {
@@ -119,7 +117,8 @@
           "alerts_day_interval": "Wetterwarnungen - Tagsüber (Minuten)",
           "alerts_night_interval": "Wetterwarnungen - Nachts (Minuten)",
           "night_start": "Beginn der Nachtzeit (HH:MM)",
-          "night_end": "Ende der Nachtzeit (HH:MM)"
+          "night_end": "Ende der Nachtzeit (HH:MM)",
+          "forecast_days": "Vorhersagetage"
         },
         "data_description": {
           "current_day_interval": "Wie oft aktuelle Bedingungen tagsüber aktualisiert werden (1-1440 Minuten)",
@@ -131,7 +130,8 @@
           "alerts_day_interval": "Wie oft Wetterwarnungen tagsüber geprüft werden (1-1440 Minuten)",
           "alerts_night_interval": "Wie oft Wetterwarnungen nachts geprüft werden (1-1440 Minuten)",
           "night_start": "Wann der nächtliche Aktualisierungsplan beginnt (z.B. 22:00)",
-          "night_end": "Wann der nächtliche Aktualisierungsplan endet (z.B. 06:00)"
+          "night_end": "Wann der nächtliche Aktualisierungsplan endet (z.B. 06:00)",
+          "forecast_days": "Anzahl der Tage, für die Sensoren erstellt werden (1-10). Verbraucht keine zusätzlichen API-Aufrufe."
         }
       },
       "confirm": {

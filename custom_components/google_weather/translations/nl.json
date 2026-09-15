@@ -31,14 +31,12 @@
         "data": {
           "include_hourly_forecast": "Uurlijkse voorspellingen opnemen",
           "include_alerts": "Weerwaarschuwingen opnemen",
-          "include_forecast_sensors": "Voorspellingssensoren toevoegen",
-          "forecast_days": "Voorspellingsdagen"
+          "include_forecast_sensors": "Voorspellingssensoren toevoegen"
         },
         "data_description": {
-          "include_hourly_forecast": "Schakel uurlijkse weervoorspellingen in",
-          "include_alerts": "Schakel weerwaarschuwingen in (niet beschikbaar in sommige regio's)",
-          "include_forecast_sensors": "Maakt sensoren voor elke voorspellingsdag. Gebruikt geen extra API-aanroepen.",
-          "forecast_days": "Aantal dagen waarvoor sensoren worden gemaakt (1-10)."
+          "include_hourly_forecast": "Schakel uurlijkse weervoorspellingen in. Gebruikt extra API-aanroepen.",
+          "include_alerts": "Schakel weerwaarschuwingen in. Gebruikt extra API-aanroepen. Niet beschikbaar in sommige regio's.",
+          "include_forecast_sensors": "Maakt sensoren voor elke voorspellingsdag. Gebruikt geen extra API-aanroepen."
         }
       },
       "intervals": {
@@ -54,7 +52,8 @@
           "alerts_day_interval": "Weerwaarschuwingen - Overdag (minuten)",
           "alerts_night_interval": "Weerwaarschuwingen - 's Nachts (minuten)",
           "night_start": "Begin nachttijd (UU:MM)",
-          "night_end": "Einde nachttijd (UU:MM)"
+          "night_end": "Einde nachttijd (UU:MM)",
+          "forecast_days": "Voorspellingsdagen"
         },
         "data_description": {
           "current_day_interval": "Hoe vaak huidige omstandigheden overdag worden bijgewerkt (standaard: 10 min)",
@@ -66,7 +65,8 @@
           "alerts_day_interval": "Hoe vaak weerwaarschuwingen overdag worden gecontroleerd (standaard: 15 min)",
           "alerts_night_interval": "Hoe vaak weerwaarschuwingen 's nachts worden gecontroleerd (standaard: 30 min)",
           "night_start": "Wanneer het nachtelijke update-schema begint (bijv. 22:00 voor 22 uur)",
-          "night_end": "Wanneer het nachtelijke update-schema eindigt (bijv. 06:00 voor 6 uur)"
+          "night_end": "Wanneer het nachtelijke update-schema eindigt (bijv. 06:00 voor 6 uur)",
+          "forecast_days": "Aantal dagen waarvoor sensoren worden gemaakt (1-10). Gebruikt geen extra API-aanroepen."
         }
       },
       "confirm": {
@@ -94,16 +94,14 @@
           "longitude": "Lengtegraad",
           "include_hourly_forecast": "Uurlijkse voorspellingen opnemen",
           "include_alerts": "Weerwaarschuwingen opnemen",
-          "include_forecast_sensors": "Voorspellingssensoren toevoegen",
-          "forecast_days": "Voorspellingsdagen"
+          "include_forecast_sensors": "Voorspellingssensoren toevoegen"
         },
         "data_description": {
           "latitude": "Breedtegraadcoördinaat voor weergegevens",
           "longitude": "Lengtegraadcoördinaat voor weergegevens",
-          "include_hourly_forecast": "Schakel uurlijkse weervoorspellingen in",
-          "include_alerts": "Schakel weerwaarschuwingen in (niet beschikbaar in sommige regio's)",
-          "include_forecast_sensors": "Maakt sensoren voor elke voorspellingsdag. Gebruikt geen extra API-aanroepen.",
-          "forecast_days": "Aantal dagen waarvoor sensoren worden gemaakt (1-10)."
+          "include_hourly_forecast": "Schakel uurlijkse weervoorspellingen in. Gebruikt extra API-aanroepen.",
+          "include_alerts": "Schakel weerwaarschuwingen in. Gebruikt extra API-aanroepen. Niet beschikbaar in sommige regio's.",
+          "include_forecast_sensors": "Maakt sensoren voor elke voorspellingsdag. Gebruikt geen extra API-aanroepen."
         }
       },
       "intervals": {
@@ -119,7 +117,8 @@
           "alerts_day_interval": "Weerwaarschuwingen - Overdag (minuten)",
           "alerts_night_interval": "Weerwaarschuwingen - 's Nachts (minuten)",
           "night_start": "Begin nachttijd (UU:MM)",
-          "night_end": "Einde nachttijd (UU:MM)"
+          "night_end": "Einde nachttijd (UU:MM)",
+          "forecast_days": "Voorspellingsdagen"
         },
         "data_description": {
           "current_day_interval": "Hoe vaak huidige omstandigheden overdag worden bijgewerkt (1-1440 minuten)",
@@ -131,7 +130,8 @@
           "alerts_day_interval": "Hoe vaak weerwaarschuwingen overdag worden gecontroleerd (1-1440 minuten)",
           "alerts_night_interval": "Hoe vaak weerwaarschuwingen 's nachts worden gecontroleerd (1-1440 minuten)",
           "night_start": "Wanneer het nachtelijke update-schema begint (bijv. 22:00)",
-          "night_end": "Wanneer het nachtelijke update-schema eindigt (bijv. 06:00)"
+          "night_end": "Wanneer het nachtelijke update-schema eindigt (bijv. 06:00)",
+          "forecast_days": "Aantal dagen waarvoor sensoren worden gemaakt (1-10). Gebruikt geen extra API-aanroepen."
         }
       },
       "confirm": {

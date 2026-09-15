@@ -702,9 +702,9 @@ class GoogleWeatherForecastSensor(GoogleWeatherSensor):
         location_name = location.replace("_", " ").title()
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{entry.entry_id}_forecast")},
-            "name": f"{location_name} Forecast",
+            "name": f"{location_name} Forecast Sensors",
             "manufacturer": "Google",
-            "model": "Weather API - Forecast",
+            "model": "Weather API - Forecast Sensors",
             "sw_version": VERSION,
             "via_device": (DOMAIN, entry.entry_id),
         }
