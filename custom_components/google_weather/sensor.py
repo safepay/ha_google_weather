@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import logging
 from typing import Any
 
@@ -26,9 +26,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
-from homeassistant.util import dt as dt_util
 
 from .const import (
+    CARDINAL_DIRECTION_MAP,
     CONF_FORECAST_DAYS,
     CONF_INCLUDE_FORECAST_SENSORS,
     CONF_INCLUDE_HOURLY_FORECAST,
@@ -42,6 +42,19 @@ from .const import (
     VERSION,
 )
 from .coordinator import GoogleWeatherCoordinator
+from .forecast_data import (
+    KEY_HIGH,
+    KEY_LOW,
+    KEY_PRECIPITATION,
+    KEY_PRECIPITATION_PROBABILITY,
+    KEY_SNOW,
+    get_forecast_attributes,
+    get_forecast_high,
+    get_forecast_low,
+    get_forecast_precipitation,
+    get_forecast_probability,
+    get_forecast_snow,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,6 +65,18 @@ class GoogleWeatherSensorDescription(SensorEntityDescription):
 
     value_fn: Callable[[dict], Any] | None = None
     attributes_fn: Callable[[dict], dict[str, Any]] | None = None
+
+
+@dataclass(frozen=True)
+class GoogleWeatherForecastDescription(SensorEntityDescription):
+    """Describes one forecast metric, before a day offset is applied.
+
+    Separate from the above because these read a day out of a list rather than
+    the whole payload, so the callables take the offset as a second argument.
+    """
+
+    value_fn: Callable[[list, int], Any] | None = None
+    attributes_fn: Callable[[list, int], dict[str, Any]] | None = None
 
 
 def get_current_value(data: dict, *keys: str) -> Any:
@@ -70,241 +95,57 @@ def get_snow_forecast_next_24h(data: dict) -> float | None:
     return data.get("snow_forecast_24h")
 
 
-# Mapping of full cardinal directions to abbreviations
-CARDINAL_DIRECTION_MAP = {
-    "NORTH": "N",
-    "NORTHEAST": "NE",
-    "NORTH_NORTHEAST": "NNE",
-    "EAST": "E",
-    "EAST_NORTHEAST": "ENE",
-    "EAST_SOUTHEAST": "ESE",
-    "SOUTHEAST": "SE",
-    "SOUTH_SOUTHEAST": "SSE",
-    "SOUTH": "S",
-    "SOUTHWEST": "SW",
-    "SOUTH_SOUTHWEST": "SSW",
-    "WEST": "W",
-    "WEST_NORTHWEST": "WNW",
-    "WEST_SOUTHWEST": "WSW",
-    "NORTHWEST": "NW",
-    "NORTH_NORTHWEST": "NNW",
-    "CARDINAL_DIRECTION_UNSPECIFIED": "UNSPECIFIED",
-}
-
-
-# Carried under a "night_" prefix; the daytime block stays unprefixed all day.
-NIGHT_ATTRIBUTES = (
-    "condition",
-    "condition_type",
-    "precipitation_probability",
-    "precipitation",
-    "cloud_cover",
-    "wind_speed",
+# One entry per forecast metric, instantiated once per day offset. Keeping the
+# metric and the day apart means the table is built once at import, not rebuilt
+# on every call that only wants the keys.
+FORECAST_METRICS: tuple[GoogleWeatherForecastDescription, ...] = (
+    GoogleWeatherForecastDescription(
+        key=KEY_HIGH,
+        name="Forecast High",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        icon="mdi:thermometer-high",
+        suggested_display_precision=1,
+        # No state_class: a prediction does not belong in temperature stats.
+        # Also carries the rest of the day, as attributes.
+        value_fn=get_forecast_high,
+        attributes_fn=get_forecast_attributes,
+    ),
+    GoogleWeatherForecastDescription(
+        key=KEY_LOW,
+        name="Forecast Low",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        icon="mdi:thermometer-low",
+        suggested_display_precision=1,
+        value_fn=get_forecast_low,
+    ),
+    GoogleWeatherForecastDescription(
+        key=KEY_PRECIPITATION,
+        name="Forecast Precipitation",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        icon="mdi:weather-pouring",
+        suggested_display_precision=1,
+        value_fn=get_forecast_precipitation,
+    ),
+    GoogleWeatherForecastDescription(
+        key=KEY_SNOW,
+        name="Forecast Snow",
+        native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
+        device_class=SensorDeviceClass.PRECIPITATION,
+        icon="mdi:weather-snowy-heavy",
+        suggested_display_precision=1,
+        value_fn=get_forecast_snow,
+    ),
+    GoogleWeatherForecastDescription(
+        key=KEY_PRECIPITATION_PROBABILITY,
+        name="Forecast Precipitation Probability",
+        native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:weather-rainy",
+        value_fn=get_forecast_probability,
+    ),
 )
-
-
-def get_forecast_day(data: dict, offset: int) -> dict[str, Any]:
-    """Return one day of the cached daily forecast, counting today as 0.
-
-    Today is not reliably ``forecastDays[0]``: the cache can be a polling
-    interval old, so just after midnight the first entry may still be
-    yesterday. Count from the first day whose interval has not ended.
-    """
-    daily = data.get("daily_forecast") or []
-    now = dt_util.utcnow()
-    for index, day in enumerate(daily):
-        end_time = (day.get("interval") or {}).get("endTime")
-        if not end_time:
-            continue
-        end = dt_util.parse_datetime(end_time)
-        if end and end > now:
-            wanted = index + offset
-            return daily[wanted] if wanted < len(daily) else {}
-    return daily[offset] if offset < len(daily) else {}
-
-
-def _degrees(day: dict[str, Any], key: str) -> float | None:
-    """Read one of the day's temperature fields."""
-    return (day.get(key) or {}).get("degrees")
-
-
-def _precipitation(block: dict[str, Any], key: str) -> float | None:
-    """Read an accumulation out of a day part's precipitation."""
-    return ((block.get("precipitation") or {}).get(key) or {}).get("quantity")
-
-
-def _probability(block: dict[str, Any]) -> int | None:
-    """Read a day part's chance of precipitation."""
-    return ((block.get("precipitation") or {}).get("probability") or {}).get("percent")
-
-
-def _day_part_attributes(block: dict[str, Any]) -> dict[str, Any]:
-    """Flatten one daytimeForecast or nighttimeForecast block."""
-    condition = block.get("weatherCondition") or {}
-    wind = block.get("wind") or {}
-    direction = wind.get("direction") or {}
-    return {
-        "condition": (condition.get("description") or {}).get("text"),
-        "condition_type": condition.get("type"),
-        "humidity": block.get("relativeHumidity"),
-        "uv_index": block.get("uvIndex"),
-        "cloud_cover": block.get("cloudCover"),
-        "precipitation_probability": _probability(block),
-        "precipitation_type": (
-            (block.get("precipitation") or {}).get("probability") or {}
-        ).get("type"),
-        "precipitation": _precipitation(block, "qpf"),
-        "snow": _precipitation(block, "snowQpf"),
-        "thunderstorm_probability": block.get("thunderstormProbability"),
-        "wind_speed": (wind.get("speed") or {}).get("value"),
-        "wind_gust": (wind.get("gust") or {}).get("value"),
-        "wind_bearing": direction.get("degrees"),
-        "wind_direction": CARDINAL_DIRECTION_MAP.get(direction.get("cardinal")),
-    }
-
-
-def get_forecast_precipitation(data: dict, offset: int, key: str) -> float | None:
-    """Total one accumulation across the day's two parts, which do not overlap."""
-    day = get_forecast_day(data, offset)
-    amounts = [
-        _precipitation(day.get(part) or {}, key)
-        for part in ("daytimeForecast", "nighttimeForecast")
-    ]
-    present = [amount for amount in amounts if amount is not None]
-    # Rounded: summing floats out of JSON leaves 0.30000000000000004.
-    return round(sum(present), 3) if present else None
-
-
-def get_forecast_probability(data: dict, offset: int) -> int | None:
-    """Return the day's chance of precipitation, as the higher of its parts.
-
-    Not combined as independent chances: both halves are driven by the same
-    system, so that would overstate the risk.
-    """
-    day = get_forecast_day(data, offset)
-    chances = [
-        _probability(day.get(part) or {})
-        for part in ("daytimeForecast", "nighttimeForecast")
-    ]
-    present = [chance for chance in chances if chance is not None]
-    return max(present) if present else None
-
-
-def get_forecast_high(data: dict, offset: int) -> float | None:
-    """Return the day's forecast high, the state of the rollup sensor."""
-    return _degrees(get_forecast_day(data, offset), "maxTemperature")
-
-
-def get_forecast_low(data: dict, offset: int) -> float | None:
-    """Return the day's forecast low."""
-    return _degrees(get_forecast_day(data, offset), "minTemperature")
-
-
-def get_forecast_attributes(data: dict, offset: int) -> dict[str, Any]:
-    """Expose the rest of the day, which the weather entity's schema drops."""
-    day = get_forecast_day(data, offset)
-    if not day:
-        return {}
-
-    daytime = day.get("daytimeForecast") or {}
-    nighttime = day.get("nighttimeForecast") or {}
-    sun = day.get("sunEvents") or {}
-    moon = day.get("moonEvents") or {}
-
-    # High and low are omitted: each has its own entity.
-    attributes: dict[str, Any] = {
-        "feels_like_high": _degrees(day, "feelsLikeMaxTemperature"),
-        "feels_like_low": _degrees(day, "feelsLikeMinTemperature"),
-        "max_heat_index": _degrees(day, "maxHeatIndex"),
-        "sunrise": sun.get("sunriseTime"),
-        "sunset": sun.get("sunsetTime"),
-        "moon_phase": moon.get("moonPhase"),
-        # The parts do not tile midnight to midnight, so publish the real window.
-        "forecast_window_start": (daytime.get("interval") or {}).get("startTime"),
-        "forecast_window_end": (nighttime.get("interval") or {}).get("endTime"),
-        **_day_part_attributes(daytime),
-    }
-
-    night = _day_part_attributes(nighttime)
-    attributes.update({f"night_{key}": night[key] for key in NIGHT_ATTRIBUTES})
-
-    return attributes
-
-
-def build_forecast_descriptions(
-    offset: int,
-) -> tuple[GoogleWeatherSensorDescription, ...]:
-    """Build the sensor set for one forecast day.
-
-    The index goes in both key and name, so the existing naming chain yields
-    sensor.<location>_<key> unchanged.
-    """
-    label = str(offset)
-    return (
-        GoogleWeatherSensorDescription(
-            key=f"forecast_high_{offset}",
-            name=f"Forecast High {label}",
-            native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-            device_class=SensorDeviceClass.TEMPERATURE,
-            icon="mdi:thermometer-high",
-            suggested_display_precision=1,
-            # No state_class: a prediction does not belong in temperature stats.
-            # Also carries the rest of the day, as attributes.
-            value_fn=lambda data, offset=offset: get_forecast_high(data, offset),
-            attributes_fn=lambda data, offset=offset: get_forecast_attributes(
-                data, offset
-            ),
-        ),
-        GoogleWeatherSensorDescription(
-            key=f"forecast_low_{offset}",
-            name=f"Forecast Low {label}",
-            native_unit_of_measurement=UnitOfTemperature.CELSIUS,
-            device_class=SensorDeviceClass.TEMPERATURE,
-            icon="mdi:thermometer-low",
-            suggested_display_precision=1,
-            value_fn=lambda data, offset=offset: get_forecast_low(data, offset),
-        ),
-        GoogleWeatherSensorDescription(
-            key=f"forecast_precipitation_{offset}",
-            name=f"Forecast Precipitation {label}",
-            native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
-            device_class=SensorDeviceClass.PRECIPITATION,
-            icon="mdi:weather-pouring",
-            suggested_display_precision=1,
-            value_fn=lambda data, offset=offset: get_forecast_precipitation(
-                data, offset, "qpf"
-            ),
-        ),
-        GoogleWeatherSensorDescription(
-            key=f"forecast_snow_{offset}",
-            name=f"Forecast Snow {label}",
-            native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
-            device_class=SensorDeviceClass.PRECIPITATION,
-            icon="mdi:weather-snowy-heavy",
-            suggested_display_precision=1,
-            value_fn=lambda data, offset=offset: get_forecast_precipitation(
-                data, offset, "snowQpf"
-            ),
-        ),
-        GoogleWeatherSensorDescription(
-            key=f"forecast_precipitation_probability_{offset}",
-            name=f"Forecast Precipitation Probability {label}",
-            native_unit_of_measurement=PERCENTAGE,
-            icon="mdi:weather-rainy",
-            value_fn=lambda data, offset=offset: get_forecast_probability(
-                data, offset
-            ),
-        ),
-    )
-
-
-def forecast_sensor_keys(days: int = MAX_FORECAST_DAYS) -> list[str]:
-    """Every forecast sensor key up to a day count, for registry cleanup."""
-    return [
-        description.key
-        for offset in range(days)
-        for description in build_forecast_descriptions(offset)
-    ]
 
 
 # Observational Sensors
@@ -585,9 +426,9 @@ async def async_setup_entry(
             MAX_FORECAST_DAYS,
         )
         async_add_entities(
-            GoogleWeatherForecastSensor(coordinator, entry, description, location)
+            GoogleWeatherForecastSensor(coordinator, entry, metric, offset, location)
             for offset in range(days)
-            for description in build_forecast_descriptions(offset)
+            for metric in FORECAST_METRICS
         )
 
 
@@ -684,20 +525,35 @@ class GoogleWeatherSensor(CoordinatorEntity[GoogleWeatherCoordinator], SensorEnt
 
 
 class GoogleWeatherForecastSensor(GoogleWeatherSensor):
-    """A forecast-day sensor: as above, but on the Forecast device.
+    """A forecast-day sensor: as above, but on the Forecast Sensors device.
 
-    Subclassed so the naming and unit logic stays in one place.
+    Subclassed so the naming and unit logic stays in one place. The offset goes
+    into both key and name, so the existing naming chain yields
+    sensor.<location>_<metric>_<offset> unchanged.
     """
+
+    entity_description: GoogleWeatherForecastDescription
 
     def __init__(
         self,
         coordinator: GoogleWeatherCoordinator,
         entry: ConfigEntry,
-        description: GoogleWeatherSensorDescription,
+        metric: GoogleWeatherForecastDescription,
+        offset: int,
         location: str,
     ) -> None:
         """Initialize the sensor, then move it to its own device."""
-        super().__init__(coordinator, entry, description, location)
+        self._offset = offset
+        super().__init__(
+            coordinator,
+            entry,
+            replace(
+                metric,
+                key=f"{metric.key}_{offset}",
+                name=f"{metric.name} {offset}",
+            ),
+            location,
+        )
 
         location_name = location.replace("_", " ").title()
         self._attr_device_info = {
@@ -708,3 +564,26 @@ class GoogleWeatherForecastSensor(GoogleWeatherSensor):
             "sw_version": VERSION,
             "via_device": (DOMAIN, entry.entry_id),
         }
+
+    @property
+    def _forecast_days(self) -> list[dict[str, Any]]:
+        """The cached daily forecast, trimmed by the coordinator to start today."""
+        return (self.coordinator.data or {}).get("daily_forecast") or []
+
+    @property
+    def native_value(self) -> float | int | str | None:
+        """Return the state of the sensor."""
+        if self.entity_description.value_fn:
+            return self.entity_description.value_fn(self._forecast_days, self._offset)
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        if not self.entity_description.attributes_fn:
+            return {}
+        attrs = self.entity_description.attributes_fn(
+            self._forecast_days, self._offset
+        )
+        # Filter out None values
+        return {key: value for key, value in attrs.items() if value is not None}

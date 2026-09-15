@@ -66,7 +66,7 @@ A comprehensive Home Assistant integration that provides weather data from the G
 ### Forecast Sensors (optional, off by default)
 A separate "Forecast Sensors" device with five sensors per day, for 1-10 days, numbered from 0 for today. These use **no additional API calls** — they read the daily forecast the integration already fetches.
 
-- **Forecast High**: the day's high, and carries the rest of the day as attributes — feels-like, max heat index, sunrise, sunset, moon phase, condition, wind, UV, humidity and cloud cover, plus nighttime values under a `night_` prefix
+- **Forecast High**: the day's high, and carries the rest of the day as attributes — feels-like, max heat index, sunrise, sunset, moon phase, condition, wind, UV, humidity and cloud cover. Daytime values are unprefixed and the night is repeated under `night_`. Rainfall, snow and chance of precipitation appear only as `day_`/`night_` pairs, since the whole-day totals are sensors of their own
 - **Forecast Low**: the day's low
 - **Forecast Precipitation**: total expected rain for the day
 - **Forecast Snow**: total expected snow for the day

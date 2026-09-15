@@ -24,6 +24,7 @@ from .const import (
     CONF_FORECAST_DAYS,
     CONF_INCLUDE_ALERTS,
     CONF_INCLUDE_FORECAST_SENSORS,
+    CONF_LOCATION,
     DEFAULT_FORECAST_DAYS,
     DEFAULT_INCLUDE_FORECAST_SENSORS,
     DOMAIN,
@@ -32,6 +33,7 @@ from .const import (
     MAX_FORECAST_DAYS,
 )
 from .coordinator import GoogleWeatherCoordinator
+from .forecast_data import forecast_sensor_keys
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -123,8 +125,6 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 async def _remove_alert_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Remove alert binary sensor entities from the entity registry."""
-    from .const import CONF_LOCATION
-
     entity_registry = er.async_get(hass)
     location = entry.data.get(CONF_LOCATION, "home")
     location_slug = location.lower().replace(" ", "_")
@@ -150,9 +150,6 @@ async def _remove_unused_forecast_entities(
     Lowering the day count, or turning the sensors off, would otherwise leave
     entities behind as permanently unavailable.
     """
-    from .const import CONF_LOCATION
-    from .sensor import forecast_sensor_keys
-
     if config.get(CONF_INCLUDE_FORECAST_SENSORS, DEFAULT_INCLUDE_FORECAST_SENSORS):
         keep = min(
             config.get(CONF_FORECAST_DAYS, DEFAULT_FORECAST_DAYS), MAX_FORECAST_DAYS
@@ -160,7 +157,9 @@ async def _remove_unused_forecast_entities(
     else:
         keep = 0
 
-    stale = set(forecast_sensor_keys()) - set(forecast_sensor_keys(keep))
+    stale = set(forecast_sensor_keys(MAX_FORECAST_DAYS)) - set(
+        forecast_sensor_keys(keep)
+    )
     if not stale:
         return
 

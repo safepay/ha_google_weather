@@ -51,6 +51,7 @@ from .const import (
     UNIT_SYSTEM_IMPERIAL,
     UNIT_SYSTEM_METRIC,
 )
+from .forecast_data import drop_expired_days
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -242,9 +243,24 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         time_since_update = (dt_util.now() - last_update).total_seconds() / 60
         return time_since_update >= interval_minutes
 
+    def _trim_expired_forecast_days(self) -> None:
+        """Drop cached daily entries that are now in the past.
+
+        Runs on every tick rather than only after a fetch: the response is
+        fresh when stored and goes stale hours later, so the trim has to happen
+        on the read side of the cache. One scan a minute keeps
+        ``daily_forecast[0]`` meaning today for the weather entity, the
+        forecast sensors and the get_forecast service alike.
+        """
+        daily = self.endpoint_data.get("daily_forecast")
+        if daily:
+            self.endpoint_data["daily_forecast"] = drop_expired_days(daily)
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Google Weather API using smart polling."""
         try:
+            self._trim_expired_forecast_days()
+
             # Build list of enabled endpoints
             # Current conditions and daily forecasts are always enabled
             enabled_endpoints = [ENDPOINT_CURRENT, ENDPOINT_DAILY]
@@ -280,6 +296,7 @@ class GoogleWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             # Update cache and last update times
             self.endpoint_data.update(updated_data)
+            self._trim_expired_forecast_days()
 
             now = dt_util.now()
             for endpoint in updating:
