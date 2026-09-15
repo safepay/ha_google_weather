@@ -64,7 +64,7 @@ A comprehensive Home Assistant integration that provides weather data from the G
 - Weather Condition (text description)
 
 ### Forecast Sensors (optional, off by default)
-A separate "Forecast" device with five sensors per day, for 1-10 days. Day 0 is today. These use **no additional API calls** — they read the daily forecast the integration already fetches.
+A separate "Forecast" device with five sensors per day, for 1-10 days, numbered from 0 for today. These use **no additional API calls** — they read the daily forecast the integration already fetches.
 
 - **Forecast High**: the day's high, and carries the rest of the day as attributes — feels-like, max heat index, sunrise, sunset, moon phase, condition, wind, UV, humidity and cloud cover, plus nighttime values under a `night_` prefix
 - **Forecast Low**: the day's low
@@ -209,13 +209,13 @@ Linked to parent device via `via_device`.
 **Note**: The "Binary Sensors" device is always created with at least the Daytime sensor. Weather alert sensors are only added if your location supports alerts (see [Supported Regions](#supported-regions)).
 
 ### Device: "Home Forecast" (Child Device)
-Linked to parent device via `via_device`. Only created when **Include Forecast Sensors** is enabled. Five sensors per forecast day, where day 0 is today:
+Linked to parent device via `via_device`. Only created when **Include Forecast Sensors** is enabled. Five sensors per forecast day, numbered from 0 for today:
 
-- `sensor.home_forecast_high_day_0` → "Home Forecast High Day 0"
-- `sensor.home_forecast_low_day_0` → "Home Forecast Low Day 0"
-- `sensor.home_forecast_precipitation_day_0` → "Home Forecast Precipitation Day 0"
-- `sensor.home_forecast_snow_day_0` → "Home Forecast Snow Day 0"
-- `sensor.home_forecast_precipitation_probability_day_0` → "Home Forecast Precipitation Probability Day 0"
+- `sensor.home_forecast_high_0` → "Home Forecast High 0"
+- `sensor.home_forecast_low_0` → "Home Forecast Low 0"
+- `sensor.home_forecast_precipitation_0` → "Home Forecast Precipitation 0"
+- `sensor.home_forecast_snow_0` → "Home Forecast Snow 0"
+- `sensor.home_forecast_precipitation_probability_0` → "Home Forecast Precipitation Probability 0"
 
 **Note**: These read the daily forecast the integration already fetches, so they use **no additional API calls** at any day count. Lowering the day count removes the sensors for the days no longer covered.
 

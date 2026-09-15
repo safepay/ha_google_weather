@@ -239,10 +239,10 @@ def build_forecast_descriptions(
     The index goes in both key and name, so the existing naming chain yields
     sensor.<location>_<key> unchanged.
     """
-    label = f"Day {offset}"
+    label = str(offset)
     return (
         GoogleWeatherSensorDescription(
-            key=f"forecast_high_day_{offset}",
+            key=f"forecast_high_{offset}",
             name=f"Forecast High {label}",
             native_unit_of_measurement=UnitOfTemperature.CELSIUS,
             device_class=SensorDeviceClass.TEMPERATURE,
@@ -256,7 +256,7 @@ def build_forecast_descriptions(
             ),
         ),
         GoogleWeatherSensorDescription(
-            key=f"forecast_low_day_{offset}",
+            key=f"forecast_low_{offset}",
             name=f"Forecast Low {label}",
             native_unit_of_measurement=UnitOfTemperature.CELSIUS,
             device_class=SensorDeviceClass.TEMPERATURE,
@@ -265,7 +265,7 @@ def build_forecast_descriptions(
             value_fn=lambda data, offset=offset: get_forecast_low(data, offset),
         ),
         GoogleWeatherSensorDescription(
-            key=f"forecast_precipitation_day_{offset}",
+            key=f"forecast_precipitation_{offset}",
             name=f"Forecast Precipitation {label}",
             native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
             device_class=SensorDeviceClass.PRECIPITATION,
@@ -276,7 +276,7 @@ def build_forecast_descriptions(
             ),
         ),
         GoogleWeatherSensorDescription(
-            key=f"forecast_snow_day_{offset}",
+            key=f"forecast_snow_{offset}",
             name=f"Forecast Snow {label}",
             native_unit_of_measurement=UnitOfPrecipitationDepth.MILLIMETERS,
             device_class=SensorDeviceClass.PRECIPITATION,
@@ -287,7 +287,7 @@ def build_forecast_descriptions(
             ),
         ),
         GoogleWeatherSensorDescription(
-            key=f"forecast_precipitation_probability_day_{offset}",
+            key=f"forecast_precipitation_probability_{offset}",
             name=f"Forecast Precipitation Probability {label}",
             native_unit_of_measurement=PERCENTAGE,
             icon="mdi:weather-rainy",
