@@ -30,11 +30,15 @@
         "description": "Les conditions actuelles et les prévisions quotidiennes sont toujours incluses. Sélectionnez les fonctionnalités supplémentaires ci-dessous.\n\nDésactivez les fonctionnalités pour économiser les appels API. Les alertes météo ne sont pas disponibles dans certaines régions.",
         "data": {
           "include_hourly_forecast": "Inclure les prévisions horaires",
-          "include_alerts": "Inclure les alertes météo"
+          "include_alerts": "Inclure les alertes météo",
+          "include_forecast_sensors": "Inclure les capteurs de prévision",
+          "forecast_days": "Jours de prévision"
         },
         "data_description": {
           "include_hourly_forecast": "Activer les prévisions météo horaires",
-          "include_alerts": "Activer les alertes météo (non disponibles dans certaines régions)"
+          "include_alerts": "Activer les alertes météo (non disponibles dans certaines régions)",
+          "include_forecast_sensors": "Crée des capteurs pour chaque jour de prévision. N'utilise aucun appel d'API supplémentaire.",
+          "forecast_days": "Nombre de jours pour lesquels créer des capteurs (1-10)."
         }
       },
       "intervals": {
@@ -89,13 +93,17 @@
           "latitude": "Latitude",
           "longitude": "Longitude",
           "include_hourly_forecast": "Inclure les prévisions horaires",
-          "include_alerts": "Inclure les alertes météo"
+          "include_alerts": "Inclure les alertes météo",
+          "include_forecast_sensors": "Inclure les capteurs de prévision",
+          "forecast_days": "Jours de prévision"
         },
         "data_description": {
           "latitude": "Coordonnée de latitude pour les données météo",
           "longitude": "Coordonnée de longitude pour les données météo",
           "include_hourly_forecast": "Activer les prévisions météo horaires",
-          "include_alerts": "Activer les alertes météo (non disponibles dans certaines régions)"
+          "include_alerts": "Activer les alertes météo (non disponibles dans certaines régions)",
+          "include_forecast_sensors": "Crée des capteurs pour chaque jour de prévision. N'utilise aucun appel d'API supplémentaire.",
+          "forecast_days": "Nombre de jours pour lesquels créer des capteurs (1-10)."
         }
       },
       "intervals": {

@@ -30,11 +30,15 @@
         "description": "Current conditions and daily forecasts are always included. Select additional features below.\n\nDisable features to save API calls. Weather alerts are unavailable in some regions.",
         "data": {
           "include_hourly_forecast": "Include Hourly Forecasts",
-          "include_alerts": "Include Weather Alerts"
+          "include_alerts": "Include Weather Alerts",
+          "include_forecast_sensors": "Include Forecast Sensors",
+          "forecast_days": "Forecast Days"
         },
         "data_description": {
           "include_hourly_forecast": "Enable hourly weather forecasts",
-          "include_alerts": "Enable weather alerts (unavailable in some regions)"
+          "include_alerts": "Enable weather alerts (unavailable in some regions)",
+          "include_forecast_sensors": "Create sensors for each forecast day. Uses no additional API calls.",
+          "forecast_days": "Number of days to create forecast sensors for (1-10)."
         }
       },
       "intervals": {
@@ -89,13 +93,17 @@
           "latitude": "Latitude",
           "longitude": "Longitude",
           "include_hourly_forecast": "Include Hourly Forecasts",
-          "include_alerts": "Include Weather Alerts"
+          "include_alerts": "Include Weather Alerts",
+          "include_forecast_sensors": "Include Forecast Sensors",
+          "forecast_days": "Forecast Days"
         },
         "data_description": {
           "latitude": "Latitude coordinate for weather data",
           "longitude": "Longitude coordinate for weather data",
           "include_hourly_forecast": "Enable hourly weather forecasts",
-          "include_alerts": "Enable weather alerts (unavailable in some regions)"
+          "include_alerts": "Enable weather alerts (unavailable in some regions)",
+          "include_forecast_sensors": "Create sensors for each forecast day. Uses no additional API calls.",
+          "forecast_days": "Number of days to create forecast sensors for (1-10)."
         }
       },
       "intervals": {

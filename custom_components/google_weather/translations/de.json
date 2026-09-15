@@ -30,11 +30,15 @@
         "description": "Aktuelle Bedingungen und Tagesvorhersagen sind immer enthalten. Wählen Sie unten zusätzliche Funktionen aus.\n\nDeaktivieren Sie Funktionen, um API-Aufrufe zu sparen. Wetterwarnungen sind in einigen Regionen nicht verfügbar.",
         "data": {
           "include_hourly_forecast": "Stündliche Vorhersagen einbeziehen",
-          "include_alerts": "Wetterwarnungen einbeziehen"
+          "include_alerts": "Wetterwarnungen einbeziehen",
+          "include_forecast_sensors": "Vorhersage-Sensoren einbeziehen",
+          "forecast_days": "Vorhersagetage"
         },
         "data_description": {
           "include_hourly_forecast": "Stündliche Wettervorhersagen aktivieren",
-          "include_alerts": "Wetterwarnungen aktivieren (in einigen Regionen nicht verfügbar)"
+          "include_alerts": "Wetterwarnungen aktivieren (in einigen Regionen nicht verfügbar)",
+          "include_forecast_sensors": "Sensoren für jeden Vorhersagetag erstellen. Verbraucht keine zusätzlichen API-Aufrufe.",
+          "forecast_days": "Anzahl der Tage, für die Sensoren erstellt werden (1-10)."
         }
       },
       "intervals": {
@@ -89,13 +93,17 @@
           "latitude": "Breitengrad",
           "longitude": "Längengrad",
           "include_hourly_forecast": "Stündliche Vorhersagen einbeziehen",
-          "include_alerts": "Wetterwarnungen einbeziehen"
+          "include_alerts": "Wetterwarnungen einbeziehen",
+          "include_forecast_sensors": "Vorhersage-Sensoren einbeziehen",
+          "forecast_days": "Vorhersagetage"
         },
         "data_description": {
           "latitude": "Breitengradkoordinate für Wetterdaten",
           "longitude": "Längengradkoordinate für Wetterdaten",
           "include_hourly_forecast": "Stündliche Wettervorhersagen aktivieren",
-          "include_alerts": "Wetterwarnungen aktivieren (in einigen Regionen nicht verfügbar)"
+          "include_alerts": "Wetterwarnungen aktivieren (in einigen Regionen nicht verfügbar)",
+          "include_forecast_sensors": "Sensoren für jeden Vorhersagetag erstellen. Verbraucht keine zusätzlichen API-Aufrufe.",
+          "forecast_days": "Anzahl der Tage, für die Sensoren erstellt werden (1-10)."
         }
       },
       "intervals": {

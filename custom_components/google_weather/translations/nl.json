@@ -30,11 +30,15 @@
         "description": "Huidige omstandigheden en dagelijkse voorspellingen zijn altijd inbegrepen. Selecteer hieronder aanvullende functies.\n\nSchakel functies uit om API-aanroepen te besparen. Weerwaarschuwingen zijn in sommige regio's niet beschikbaar.",
         "data": {
           "include_hourly_forecast": "Uurlijkse voorspellingen opnemen",
-          "include_alerts": "Weerwaarschuwingen opnemen"
+          "include_alerts": "Weerwaarschuwingen opnemen",
+          "include_forecast_sensors": "Voorspellingssensoren toevoegen",
+          "forecast_days": "Voorspellingsdagen"
         },
         "data_description": {
           "include_hourly_forecast": "Schakel uurlijkse weervoorspellingen in",
-          "include_alerts": "Schakel weerwaarschuwingen in (niet beschikbaar in sommige regio's)"
+          "include_alerts": "Schakel weerwaarschuwingen in (niet beschikbaar in sommige regio's)",
+          "include_forecast_sensors": "Maakt sensoren voor elke voorspellingsdag. Gebruikt geen extra API-aanroepen.",
+          "forecast_days": "Aantal dagen waarvoor sensoren worden gemaakt (1-10)."
         }
       },
       "intervals": {
@@ -89,13 +93,17 @@
           "latitude": "Breedtegraad",
           "longitude": "Lengtegraad",
           "include_hourly_forecast": "Uurlijkse voorspellingen opnemen",
-          "include_alerts": "Weerwaarschuwingen opnemen"
+          "include_alerts": "Weerwaarschuwingen opnemen",
+          "include_forecast_sensors": "Voorspellingssensoren toevoegen",
+          "forecast_days": "Voorspellingsdagen"
         },
         "data_description": {
           "latitude": "Breedtegraadcoördinaat voor weergegevens",
           "longitude": "Lengtegraadcoördinaat voor weergegevens",
           "include_hourly_forecast": "Schakel uurlijkse weervoorspellingen in",
-          "include_alerts": "Schakel weerwaarschuwingen in (niet beschikbaar in sommige regio's)"
+          "include_alerts": "Schakel weerwaarschuwingen in (niet beschikbaar in sommige regio's)",
+          "include_forecast_sensors": "Maakt sensoren voor elke voorspellingsdag. Gebruikt geen extra API-aanroepen.",
+          "forecast_days": "Aantal dagen waarvoor sensoren worden gemaakt (1-10)."
         }
       },
       "intervals": {

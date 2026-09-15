@@ -19,7 +19,18 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
-from .const import ALERT_SENSOR_KEYS, CONF_INCLUDE_ALERTS, DOMAIN, ENDPOINT_DAILY, ENDPOINT_HOURLY
+from .const import (
+    ALERT_SENSOR_KEYS,
+    CONF_FORECAST_DAYS,
+    CONF_INCLUDE_ALERTS,
+    CONF_INCLUDE_FORECAST_SENSORS,
+    DEFAULT_FORECAST_DAYS,
+    DEFAULT_INCLUDE_FORECAST_SENSORS,
+    DOMAIN,
+    ENDPOINT_DAILY,
+    ENDPOINT_HOURLY,
+    MAX_FORECAST_DAYS,
+)
 from .coordinator import GoogleWeatherCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -104,6 +115,8 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
         _LOGGER.info("Alerts disabled - removing orphaned alert binary sensor entities")
         await _remove_alert_entities(hass, entry)
 
+    await _remove_unused_forecast_entities(hass, entry, current_config)
+
     # Reload the entry to apply changes
     await hass.config_entries.async_reload(entry.entry_id)
 
@@ -129,6 +142,41 @@ async def _remove_alert_entities(hass: HomeAssistant, entry: ConfigEntry) -> Non
             _LOGGER.debug("Alert entity not found in registry: %s", unique_id)
 
 
+async def _remove_unused_forecast_entities(
+    hass: HomeAssistant, entry: ConfigEntry, config: dict[str, Any]
+) -> None:
+    """Prune forecast sensors for days that are no longer produced.
+
+    Lowering the day count, or turning the sensors off, would otherwise leave
+    entities behind as permanently unavailable.
+    """
+    from .const import CONF_LOCATION
+    from .sensor import forecast_sensor_keys
+
+    if config.get(CONF_INCLUDE_FORECAST_SENSORS, DEFAULT_INCLUDE_FORECAST_SENSORS):
+        keep = min(
+            config.get(CONF_FORECAST_DAYS, DEFAULT_FORECAST_DAYS), MAX_FORECAST_DAYS
+        )
+    else:
+        keep = 0
+
+    stale = set(forecast_sensor_keys()) - set(forecast_sensor_keys(keep))
+    if not stale:
+        return
+
+    entity_registry = er.async_get(hass)
+    location = entry.data.get(CONF_LOCATION, "home")
+    location_slug = location.lower().replace(" ", "_")
+
+    for sensor_key in stale:
+        entity_id = entity_registry.async_get_entity_id(
+            Platform.SENSOR, DOMAIN, f"{location_slug}_{sensor_key}"
+        )
+        if entity_id:
+            _LOGGER.info("Removing unused forecast entity: %s", entity_id)
+            entity_registry.async_remove(entity_id)
+
+
 @callback
 def _device_identifiers(entry: ConfigEntry) -> set[tuple[str, str]]:
     """Identifiers of every device this entry currently provides.
@@ -141,6 +189,7 @@ def _device_identifiers(entry: ConfigEntry) -> set[tuple[str, str]]:
         (DOMAIN, entry.entry_id),
         (DOMAIN, f"{entry.entry_id}_sensors"),
         (DOMAIN, f"{entry.entry_id}_binary_sensors"),
+        (DOMAIN, f"{entry.entry_id}_forecast"),
     }
 
 
