@@ -64,13 +64,14 @@ A comprehensive Home Assistant integration that provides weather data from the G
 - Weather Condition (text description)
 
 ### Forecast Sensors (optional, off by default)
-A separate "Forecast Sensors" device with five sensors per day, for 1-10 days, numbered from 0 for today. These use **no additional API calls** — they read the daily forecast the integration already fetches.
+A separate "Forecast Sensors" device with six sensors per day, for 1-10 days, numbered from 0 for today. These use **no additional API calls** — they read the daily forecast the integration already fetches.
 
 - **Forecast High**: the day's high, and carries the rest of the day as attributes — feels-like, max heat index, sunrise, sunset, moon phase, condition, wind, UV, humidity and cloud cover. Daytime values are unprefixed and the night is repeated under `night_`. Rainfall, snow and chance of precipitation appear only as `day_`/`night_` pairs, since the whole-day totals are sensors of their own
 - **Forecast Low**: the day's low
 - **Forecast Precipitation**: total expected rain for the day
 - **Forecast Snow**: total expected snow for the day
 - **Forecast Precipitation Probability**: the day's chance of precipitation
+- **Forecast Icon Descriptor**: the day's condition as a Home Assistant weather state (`sunny`, `partlycloudy`, `pouring`), for driving an icon in a card or template
 
 ### Binary Sensors
 The integration creates a "Binary Sensors" device linked to the weather device:
@@ -209,13 +210,14 @@ Linked to parent device via `via_device`.
 **Note**: The "Binary Sensors" device is always created with at least the Daytime sensor. Weather alert sensors are only added if your location supports alerts (see [Supported Regions](#supported-regions)).
 
 ### Device: "Home Forecast Sensors" (Child Device)
-Linked to parent device via `via_device`. Only created when **Include Forecast Sensors** is enabled. Five sensors per forecast day, numbered from 0 for today:
+Linked to parent device via `via_device`. Only created when **Include Forecast Sensors** is enabled. Six sensors per forecast day, numbered from 0 for today:
 
 - `sensor.home_forecast_high_0` → "Home Forecast High 0"
 - `sensor.home_forecast_low_0` → "Home Forecast Low 0"
 - `sensor.home_forecast_precipitation_0` → "Home Forecast Precipitation 0"
 - `sensor.home_forecast_snow_0` → "Home Forecast Snow 0"
 - `sensor.home_forecast_precipitation_probability_0` → "Home Forecast Precipitation Probability 0"
+- `sensor.home_forecast_icon_descriptor_0` → "Home Forecast Icon Descriptor 0"
 
 **Note**: These read the daily forecast the integration already fetches, so they use **no additional API calls** at any day count. Lowering the day count removes the sensors for the days no longer covered.
 
