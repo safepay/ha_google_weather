@@ -30,11 +30,13 @@
         "description": "Bieżące warunki i prognozy dzienne są zawsze uwzględniane. Wybierz poniżej dodatkowe funkcje.\n\nWyłącz funkcje, aby oszczędzać wywołania API. Alerty pogodowe są niedostępne w niektórych regionach.",
         "data": {
           "include_hourly_forecast": "Uwzględnij prognozy godzinowe",
-          "include_alerts": "Uwzględnij alerty pogodowe"
+          "include_alerts": "Uwzględnij alerty pogodowe",
+          "include_forecast_sensors": "Uwzględnij czujniki prognozy"
         },
         "data_description": {
-          "include_hourly_forecast": "Włącz prognozy pogody godzinowej",
-          "include_alerts": "Włącz alerty pogodowe (niedostępne w niektórych regionach)"
+          "include_hourly_forecast": "Włącza godzinowe prognozy pogody. Zużywa dodatkowe wywołania API.",
+          "include_alerts": "Włącza ostrzeżenia pogodowe. Zużywa dodatkowe wywołania API. Niedostępne w niektórych regionach.",
+          "include_forecast_sensors": "Tworzy czujniki dla każdego dnia prognozy. Nie zużywa dodatkowych wywołań API."
         }
       },
       "intervals": {
@@ -50,7 +52,8 @@
           "alerts_day_interval": "Alerty pogodowe - Dzień (minuty)",
           "alerts_night_interval": "Alerty pogodowe - Noc (minuty)",
           "night_start": "Początek nocy (GG:MM)",
-          "night_end": "Koniec nocy (GG:MM)"
+          "night_end": "Koniec nocy (GG:MM)",
+          "forecast_days": "Dni prognozy"
         },
         "data_description": {
           "current_day_interval": "Jak często aktualizować bieżące warunki w ciągu dnia (domyślnie: 10 min)",
@@ -62,7 +65,8 @@
           "alerts_day_interval": "Jak często sprawdzać alerty pogodowe w ciągu dnia (domyślnie: 15 min)",
           "alerts_night_interval": "Jak często sprawdzać alerty pogodowe w nocy (domyślnie: 30 min)",
           "night_start": "Kiedy zaczyna się harmonogram nocnych aktualizacji (np. 22:00 dla 22)",
-          "night_end": "Kiedy kończy się harmonogram nocnych aktualizacji (np. 06:00 dla 6)"
+          "night_end": "Kiedy kończy się harmonogram nocnych aktualizacji (np. 06:00 dla 6)",
+          "forecast_days": "Liczba dni, dla których utworzyć czujniki (1-10). Nie zużywa dodatkowych wywołań API."
         }
       },
       "confirm": {
@@ -89,13 +93,15 @@
           "latitude": "Szerokość geograficzna",
           "longitude": "Długość geograficzna",
           "include_hourly_forecast": "Uwzględnij prognozy godzinowe",
-          "include_alerts": "Uwzględnij alerty pogodowe"
+          "include_alerts": "Uwzględnij alerty pogodowe",
+          "include_forecast_sensors": "Uwzględnij czujniki prognozy"
         },
         "data_description": {
           "latitude": "Współrzędna szerokości geograficznej dla danych pogodowych",
           "longitude": "Współrzędna długości geograficznej dla danych pogodowych",
-          "include_hourly_forecast": "Włącz prognozy pogody godzinowej",
-          "include_alerts": "Włącz alerty pogodowe (niedostępne w niektórych regionach)"
+          "include_hourly_forecast": "Włącza godzinowe prognozy pogody. Zużywa dodatkowe wywołania API.",
+          "include_alerts": "Włącza ostrzeżenia pogodowe. Zużywa dodatkowe wywołania API. Niedostępne w niektórych regionach.",
+          "include_forecast_sensors": "Tworzy czujniki dla każdego dnia prognozy. Nie zużywa dodatkowych wywołań API."
         }
       },
       "intervals": {
@@ -111,7 +117,8 @@
           "alerts_day_interval": "Alerty pogodowe - Dzień (minuty)",
           "alerts_night_interval": "Alerty pogodowe - Noc (minuty)",
           "night_start": "Początek nocy (GG:MM)",
-          "night_end": "Koniec nocy (GG:MM)"
+          "night_end": "Koniec nocy (GG:MM)",
+          "forecast_days": "Dni prognozy"
         },
         "data_description": {
           "current_day_interval": "Jak często aktualizować bieżące warunki w ciągu dnia (1-1440 minut)",
@@ -123,7 +130,8 @@
           "alerts_day_interval": "Jak często sprawdzać alerty pogodowe w ciągu dnia (1-1440 minut)",
           "alerts_night_interval": "Jak często sprawdzać alerty pogodowe w nocy (1-1440 minut)",
           "night_start": "Kiedy zaczyna się harmonogram nocnych aktualizacji (np. 22:00)",
-          "night_end": "Kiedy kończy się harmonogram nocnych aktualizacji (np. 06:00)"
+          "night_end": "Kiedy kończy się harmonogram nocnych aktualizacji (np. 06:00)",
+          "forecast_days": "Liczba dni, dla których utworzyć czujniki (1-10). Nie zużywa dodatkowych wywołań API."
         }
       },
       "confirm": {
