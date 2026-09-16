@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from .conditions import CONDITION_MAP
 from .const import CARDINAL_DIRECTION_MAP
 
 # Metric keys. A sensor key is one of these with the day offset appended.
@@ -18,6 +19,7 @@ KEY_LOW = "forecast_low"
 KEY_PRECIPITATION = "forecast_precipitation"
 KEY_SNOW = "forecast_snow"
 KEY_PRECIPITATION_PROBABILITY = "forecast_precipitation_probability"
+KEY_ICON_DESCRIPTOR = "forecast_icon_descriptor"
 
 FORECAST_METRIC_KEYS: tuple[str, ...] = (
     KEY_HIGH,
@@ -25,6 +27,7 @@ FORECAST_METRIC_KEYS: tuple[str, ...] = (
     KEY_PRECIPITATION,
     KEY_SNOW,
     KEY_PRECIPITATION_PROBABILITY,
+    KEY_ICON_DESCRIPTOR,
 )
 
 # Carried under both "day_" and "night_", never unprefixed: each has a
@@ -212,6 +215,20 @@ def get_forecast_attributes(days: list[dict[str, Any]], offset: int) -> dict[str
     )
 
     return attributes
+
+
+def get_forecast_icon_descriptor(days: list[dict[str, Any]], offset: int) -> str | None:
+    """Return the day's condition as a Home Assistant weather state.
+
+    The state rather than Google's descriptor, so cards and templates can match
+    it the way they match a weather entity. Never clear-night: a daytime block
+    is daytime by definition.
+    """
+    daytime = get_forecast_day(days, offset).get("daytimeForecast") or {}
+    condition_type = (daytime.get("weatherCondition") or {}).get("type")
+    if not condition_type:
+        return None
+    return CONDITION_MAP.get(condition_type, condition_type.lower())
 
 
 def forecast_sensor_keys(days: int) -> list[str]:

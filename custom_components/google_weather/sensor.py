@@ -44,12 +44,14 @@ from .const import (
 from .coordinator import GoogleWeatherCoordinator
 from .forecast_data import (
     KEY_HIGH,
+    KEY_ICON_DESCRIPTOR,
     KEY_LOW,
     KEY_PRECIPITATION,
     KEY_PRECIPITATION_PROBABILITY,
     KEY_SNOW,
     get_forecast_attributes,
     get_forecast_high,
+    get_forecast_icon_descriptor,
     get_forecast_low,
     get_forecast_precipitation,
     get_forecast_probability,
@@ -144,6 +146,12 @@ FORECAST_METRICS: tuple[GoogleWeatherForecastDescription, ...] = (
         native_unit_of_measurement=PERCENTAGE,
         icon="mdi:weather-rainy",
         value_fn=get_forecast_probability,
+    ),
+    GoogleWeatherForecastDescription(
+        key=KEY_ICON_DESCRIPTOR,
+        name="Forecast Icon Descriptor",
+        icon="mdi:weather-partly-cloudy",
+        value_fn=get_forecast_icon_descriptor,
     ),
 )
 
