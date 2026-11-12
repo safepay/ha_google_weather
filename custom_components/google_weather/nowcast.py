@@ -42,9 +42,8 @@ RAIN_TYPES = frozenset({"RAIN"})
 # so it counts as precipitation of unknown kind rather than as dry.
 TYPE_UNSET = "DOMINANT_PRECIPITATION_TYPE_UNSPECIFIED"
 
-# MID_ marks a step between the previous named level and this one, so MID_LIGHT
-# is lighter than LIGHT. Display only: intensity labels a quantised qpf bucket
-# and carries nothing qpf does not, so an unrecognised value costs nothing.
+# Documented enum order. Display only: intensity just labels a quantised qpf
+# bucket, so an unrecognised value costs nothing.
 INTENSITY_LADDER = (
     "NO_INTENSITY",
     "MID_LIGHT",

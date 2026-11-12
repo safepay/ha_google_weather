@@ -1,6 +1,6 @@
 # Minute forecast (nowcast) support
 
-**Status:** Proposed · **Last reviewed:** 2026-09-08
+**Status:** Proposed · **Last reviewed:** 2026-11-13
 
 > Live sampling across five cities shows the endpoint works everywhere tried, at
 > two-minute resolution in the US and fifteen-minute in Australia and Europe.
@@ -27,9 +27,9 @@ auth or request plumbing.
 Each segment carries a time frame, a precipitation `type` (`NONE`, `RAIN`,
 `SNOW`, `HAIL`), a `probability`, a `qpf` quantity, a `snowfallAmount` and an
 `intensity`. Onset comes from `type` and `qpf`; accumulation is the raw sum of
-`qpf`. Two fields are not what their names suggest — the `intensity` values are
-incompletely documented, and `probability` is not the chance of rain — and both
-are covered below.
+`qpf`. Two fields are not what their names suggest — `intensity` is a label
+derived from `qpf` rather than independent information, and `probability` is not
+the chance of rain — and both are covered below.
 
 ### What a real response looks like
 
@@ -110,9 +110,11 @@ else.
 
 ### qpf is quantised, and intensity is derived from it
 
-The documented `intensity` values are `PRECIPITATION_INTENSITY_UNSPECIFIED`,
-`NO_INTENSITY`, `LIGHT`, `MODERATE` and `HEAVY`. Live responses also return
-`MID_LIGHT`, `MID_MODERATE` and `MID_HEAVY`, none of which are documented.
+The `intensity` enum is documented in full, in this order:
+`PRECIPITATION_INTENSITY_UNSPECIFIED`, `NO_INTENSITY`, `MID_LIGHT`, `LIGHT`,
+`MID_MODERATE`, `MODERATE`, `MID_HEAVY`, `HEAVY` — `MID_` rungs that live
+responses returned before the reference listed them. No numeric thresholds are
+given, so the mapping below is the only guide to where the buckets sit.
 
 Converting every observed `qpf` to mm/h — multiply by 30 for two-minute
 segments, by 4 for fifteen-minute — gives a mapping that holds across five
@@ -130,18 +132,8 @@ cities and both cadences:
 | 7.0 | `MID_HEAVY` | Chicago |
 | 15.0 | `HEAVY` | Chicago |
 
-A single tapering shower in Chicago walked down every rung in order, which
-confirms the ordering outright rather than by inference. `MID_` marks a step
-*between* the previous named level and this one, so `MID_LIGHT` is lighter than
-`LIGHT`:
-
-```text
-NO_INTENSITY < MID_LIGHT < LIGHT < MID_MODERATE < MODERATE < MID_HEAVY < HEAVY
-```
-
-That is the complete set. A `MID_` variant exists only where there is a gap to
-sit in, and there is nothing below `NO_INTENSITY` for a `MID_NO_INTENSITY` to
-occupy.
+A single tapering shower in Chicago walked down every rung in order,
+corroborating the mapping directly.
 
 **`qpf` is quantised.** Those mm/h figures are the only values seen anywhere —
 eight discrete rates with nothing in between, identical across five cities and
@@ -235,11 +227,13 @@ Three rules follow:
   at exactly the moment the data runs out. The same caution applies to any total
   accumulated over the whole window.
 
-The endpoint is **Experimental (pre-GA)**. It is absent from the versioned REST
-reference, the API FAQ still claims nowcasting is not offered at all, and both
-the documented segment cadence and the intensity enum disagree with what the API
-returns. Treat the shape as unstable and guard every read, more strictly than
-for the GA endpoints.
+The endpoint is **Experimental (pre-GA)**; the guide still carries that banner.
+Since this was written the versioned REST reference has gained a
+`forecast.minutes` resource and the intensity enum has caught up with the API,
+so those two no longer disagree. The segment cadence is still undocumented, and
+the response shape still varies by region and within a location over hours.
+Treat the shape as unstable and guard every read, more strictly than for the GA
+endpoints.
 
 ## Regional resolution
 
@@ -437,10 +431,10 @@ short sum can.
 The equivalent snow sensors are wanted and are not yet writable. Every segment
 carries `snowfallAmount` alongside `qpf`, and it has been zero in all eight
 samples — September is close to the global minimum for falling snow, and probing
-ski fields and ice sheets found none. Three things cannot be guessed:
+ski fields and ice sheets found none. The reference now documents
+`snowfallAmount` as liquid water equivalent, which removes the 10:1 ambiguity;
+two things still cannot be guessed:
 
-- whether `snowfallAmount` is liquid equivalent or snow depth, roughly a 10:1
-  difference
 - whether `qpf` also populates during snow, or stays zero
 - whether `intensity` follows the same ladder for snow, and if so which field it
   keys on
@@ -533,10 +527,12 @@ no entity should read it. Both are set out above.
 - Where fine resolution is actually available. Only the US has shown two-minute
   segments; Australia and London both give fifteen. Changes nothing structural,
   since precision is read per segment.
-- What the nowcast's `probability` actually measures. It falls as `qpf` rises
-  and sits on a different scale from the hourly endpoint's, so it is not the
-  chance of rain. Nothing depends on the answer while no entity reads it, but it
-  would be worth knowing before anything ever does.
+- What the nowcast's `probability` actually measures. The reference now labels
+  it "the predicted chance of precipitation during that segment," but the
+  observed behaviour does not square with that: it falls as `qpf` rises and sits
+  on a different scale from the hourly endpoint's, so it is still not usable as
+  the chance of rain. Nothing depends on the answer while no entity reads it,
+  but it would be worth knowing before anything ever does.
 - Whether a `qpf` floor is needed for onset, so that a trace of drizzle does not
   announce incoming rain. `type` alone may be enough; the quantised rate ladder
   makes a threshold easy to place if not, since 0.2 mm/h is the lowest non-zero
@@ -544,9 +540,10 @@ no entity should read it. Both are set out above.
 - Whether the eight observed rates are the complete set. They are consistent
   across five cities, but nothing above 15 mm/h has been seen and the buckets
   may be wider than the observed values suggest.
-- Everything about snow, which needs one sample of falling snow and is
-  unobtainable in September. See the Snow heading under Entities. This blocks
-  the snow sensors only; the rain sensors are safe to build first.
+- The remaining snow fields, which still need one sample of falling snow,
+  unobtainable in September — though `snowfallAmount` is now documented as
+  liquid water equivalent. See the Snow heading under Entities. This blocks the
+  snow sensors only; the rain sensors are safe to build first.
 
 ## Not in scope
 
