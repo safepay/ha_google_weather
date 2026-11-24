@@ -73,6 +73,8 @@ A separate "Forecast Sensors" device with six sensors per day, for 1-10 days, nu
 - **Forecast Precipitation Probability**: the day's chance of precipitation
 - **Forecast Icon Descriptor**: the day's condition as a Home Assistant weather state (`sunny`, `partlycloudy`, `pouring`), for driving an icon in a card or template
 
+**How a forecast day is defined:** Google splits each day into a daytime block (≈7 am–7 pm local) and a nighttime block (7 pm–7 am). Whole-day rain and snow — here and in the `weather` entity's daily forecast — are the **sum of both**, so a forecast day runs 7 am to 7 am local, rolls over at ~7 am, and won't match a midnight-to-midnight total. Chance of precipitation is the **higher** of the two blocks, not their sum.
+
 ### Binary Sensors
 The integration creates a "Binary Sensors" device linked to the weather device:
 

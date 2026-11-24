@@ -36,6 +36,7 @@ from .const import (
     VERSION,
 )
 from .coordinator import GoogleWeatherCoordinator
+from .forecast_data import get_forecast_precipitation, get_forecast_probability
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -282,7 +283,7 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
 
             forecasts: list[Forecast] = []
 
-            for day in daily_forecast:
+            for index, day in enumerate(daily_forecast):
                 interval = day.get("interval", {})
                 start_time = interval.get("startTime")
 
@@ -297,13 +298,16 @@ class GoogleWeatherEntity(CoordinatorEntity[GoogleWeatherCoordinator], WeatherEn
                 daytime = day.get("daytimeForecast", {})
                 weather_condition = daytime.get("weatherCondition", {})
 
+                # Precipitation and its probability span the whole day, so take
+                # both halves via the shared helpers rather than the daytime
+                # block alone, which omits overnight rain.
                 forecast = Forecast(
                     datetime=dt.isoformat(),
                     condition=self._map_condition(weather_condition.get("type")),
                     native_temperature=day.get("maxTemperature", {}).get("degrees"),
                     native_templow=day.get("minTemperature", {}).get("degrees"),
-                    native_precipitation=daytime.get("precipitation", {}).get("qpf", {}).get("quantity"),
-                    precipitation_probability=daytime.get("precipitation", {}).get("probability", {}).get("percent"),
+                    native_precipitation=get_forecast_precipitation(daily_forecast, index),
+                    precipitation_probability=get_forecast_probability(daily_forecast, index),
                     native_wind_speed=daytime.get("wind", {}).get("speed", {}).get("value"),
                     wind_bearing=daytime.get("wind", {}).get("direction", {}).get("degrees"),
                     humidity=daytime.get("relativeHumidity"),

@@ -8,8 +8,6 @@
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/safepay/ha_google_weather/issues",
-  "requirements": [
-    "requests>=2.31.0"
-  ],
+  "requirements": [],
   "version": "1.1.16"
 }
